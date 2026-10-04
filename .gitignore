@@ -1,0 +1,22 @@
+# Dependencies and generated output
+node_modules/
+dist/
+.output/
+.vinxi/
+.tanstack/
+coverage/
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/31337/
+indexer/generated/
+
+# Local configuration and data
+.env
+.env.*
+!.env.example
+*.sqlite*
+.DS_Store
+.impeccable/
+__pycache__/
+.claude/settings*.json
+music/
