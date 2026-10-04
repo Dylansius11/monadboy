@@ -325,3 +325,138 @@ A failed stage leaves an honest view of funds in the disk or MarginAccount.
 WITHDRAW remains available; sealing must not block play.
 No successful-looking animation may substitute for a receipt.
 
+## 7. Live accounting and exit
+
+### SCORE, DAMAGE, NET
+
+`scoreCard` owns the inspectable shared accounting.
+SCORE is realized flip spread, never negative.
+Count maker fills only for orders whose IDs came from FlippedOrderCreated.
+Initial-order fills change inventory only.
+Event attribution and partial-fill behavior are [U], spike S2.
+
+```text
+SCORE = sum(|flipPrice - price| * filledSize) over eligible flipped-order maker fills
+V_hodl = base0 * currentMid + quote0
+V_now = (marginBase + base in resting sells) * currentMid
+        + marginQuote + quote in resting buys
+DAMAGE = max(0, SCORE - (V_now - V_hodl))
+NET = V_now - V_hodl
+```
+
+The exact identity is `NET = SCORE - DAMAGE = V_now - V_hodl` whenever NET <= SCORE.
+NET = V_now - V_hodl always; NET = SCORE - DAMAGE holds exactly whenever NET <= SCORE (the expected case for a two-sided ladder [I]).
+If NET > SCORE, DAMAGE is 0 and NET exceeds SCORE; how to display that surplus is an open product decision (see `docs/technical/BUILD-PLAN.md`).
+Do not erase the surplus or change the approved DAMAGE clamp to make the display look consistent.
+
+SCORE and DAMAGE have identical visual weight wherever either score presentation appears.
+NET is the comparison with holding the starting inventory at the same current mid, not total portfolio value.
+Show formula inputs, unit conversions, valuation timestamp, fill transactions, and inventory source.
+Inventory must not be counted both in margin balances and resting orders.
+Each eligible SCORE increment triggers a coin sound and pixel pop, not a synthetic time-based accrual.
+
+### Range state and re-centering
+
+`rangeState` uses inclusive low <= mid <= high.
+TIME IN RANGE counts seconds inside that interval.
+The client clock supports live play; worker samples support the leaderboard.
+NAD-SENSE fires within one step of either edge.
+Outside the ladder the character sits and the visible counter freezes.
+Delayed indexing can reveal earlier fills; attribution retains their actual chain time.
+
+RE-CENTER is manual: cancel, withdraw, replan, and provision.
+It shows estimated taker fee on the zap plus transaction cost before confirmation.
+Changing inventory can crystallize a loss; another ladder is not a free reset.
+The game must not incentivize churn by disguising that cost.
+
+### Exit and results
+
+Exit cancels all flip-order IDs, then withdraws maximum native MON and AUSD from MarginAccount.
+The planned methods are `batchCancelFlipOrders` and `batchWithdrawMaxTokens`; live success is [U], spike S2.
+Results show SCORE, DAMAGE, NET, fill count, and time in range with source / transaction links.
+Append the run to the sealed disk, confirm the save, then display SAVED TO CARD.
+A save failure does not undo a withdrawal or pretend the results disappeared.
+
+## 8. Screen requirements
+
+Every reachable control has a visible selection state.
+Cursor location and the applied value are different states.
+The shell owns the key legend; context-sensitive labels rewrite themselves for the current action.
+The console shell never knows about money.
+One flex region absorbs remaining height rather than manually adding pixels to 320.
+Every balance surface carries TESTNET, including modal and proof variants.
+
+| Screen | Purpose | Required content and actions |
+| --- | --- | --- |
+| S0 Boot | Establish the console | Logo, skippable boot after first view, sound respecting mute |
+| S1 Insert Memory Card | Create or restore identity | INSERT CARD, NEW CARD, passkey reader errors, eject; no account jargon |
+| S2 Save Disk select | Choose isolated progress | Three slots, name, character, last play, results with equal SCORE/DAMAGE, empty state, create, OPEN proof, SAVED TO CARD |
+| S3 Cartridge select | Choose activity | STAY IN RANGE, locked COMING SOON slot, Gallery and Leaderboard access |
+| S4 Difficulty | Choose the teaching profile | Bound animated mascots, plain-language tier, count of survivors, HARD GOD MODE gate |
+| S5 Pool Tracker | Inspect and choose a market | SAFETY x HEAT, pin shape and selection, source timestamp, gate boundary, raw inputs, PLAYABLE (TESTNET) / MAINNET ONLY |
+| S6 Set Range | Understand inventory and cost | AUSD amount, WIDE/TIGHT, advanced manual override, stepped chart, pixel level tiles, base/quote preview, slippage and cost, staged transaction links |
+| S7 In Range | Watch real position state | Monanimal, mid and ladder, fill feed, equal SCORE/DAMAGE, NET, NAD-SENSE, sit, RE-CENTER, WITHDRAW, health / indexer markers |
+| S8 Results | Understand the outcome | Equal SCORE/DAMAGE, NET, fills, time in range, evidence links, confirmed save, return path |
+| Gallery | Inspect the cast and expression | Monanimal sprite presentation, names, palettes; expression does not change difficulty |
+| Leaderboard | Compare measured runs | Disk tag, character, equal SCORE/DAMAGE, NET, fills, time in range, last-fill link, TESTNET and computation timestamp |
+
+### Screen-specific honesty
+
+S4 survivor counts use the same snapshot as S5, not a separate optimistic count.
+S5 mainnet-only pins can be inspected but cannot progress into entry.
+S6 draws the same range and levels that the transaction planner encodes.
+S7 marks a paused price feed instead of advancing a fabricated midpoint.
+S8 derives outcome from fills and holdings, never an editable onchain score.
+Leaderboard rankings are derived from Kuru fills, not self-reported disk metadata.
+Windows are 24h, 7d, and all; extra windows may be cut, not replaced with invented rows.
+
+### Sources the player can open
+
+| Visible number | Input-to-pixel chain |
+| --- | --- |
+| SAFETY / HEAT | mainnet book + Trade observations -> worker snapshot -> gates and weighted axes -> pin / breakdown |
+| Range low / high | source mid + volatility + budget + market params -> planLadder -> S6 tiles |
+| SCORE | Kuru maker Trade + flipped-order lineage -> FillSource -> scoreCard -> coin / total |
+| DAMAGE / NET | starting inventory + current mid + margin / resting inventory + SCORE -> scoreCard -> equal-weight card |
+| TIME IN RANGE | low/high + timestamped mids -> rangeState -> client timer or worker sample aggregation |
+| Save proof | sealed blob -> registry receipt -> ciphertext hash / explorer link |
+
+These chains are implementation requirements, not claims that live integrations are complete.
+`FillSource` abstracts Envio and direct logs without changing the SCORE rule.
+`decideMirrorAction` keeps mirror decisions explicit and inspectable.
+No cache becomes the authority just because it is faster to read.
+
+## 9. Success, scope, and roadmap
+
+A first-time player should understand the ground-and-running mechanic within ten seconds without narration.
+The demo must include a real testnet flip fill, a legible sit moment, a formula view, and passkey-only disk restore.
+A builder asking where a number comes from must be able to follow the full source chain.
+A phone review checks density, spacing, selection states, and legibility at a 412px viewport.
+Runtime proof belongs beside implementation; a documentation promise is not a passed scenario.
+
+The submission includes a public MIT repository, a public video no longer than three minutes, and chain evidence [V: rules transcription, secondary](https://github.com/precious-akpan/monad-metropolis-merchant-rails).
+Metropolis submission deadline: 13 October 2026, 11:59 PM ET, equivalent to 14 October 03:59 UTC / 10:59 WIB [V: same secondary source](https://github.com/precious-akpan/monad-metropolis-merchant-rails).
+
+### Build priorities
+
+Docs and the design system precede screens and live integration.
+Prove supply, flip semantics, MON budget, real-device passkeys, and indexing before dependent behavior relies on them.
+S1 through S5 and deployment evidence are tracked in `docs/technical/BUILD-PLAN.md`.
+A real on-camera flip fill and the stateless memory-card restore are never cut.
+
+### Explicitly outside this build
+
+No mainnet spending, native app-store release, custody backend, or second-cartridge gameplay.
+No AI in prices, ranking, range advice, or valuation.
+No new narrator voice system; existing character copy is sufficient.
+Nansen is a stretch, not a dependency.
+No predicted-return ranking or custom distribution sheet for the default player.
+
+### Roadmap
+
+- Deliver testnet STAY IN RANGE with real flips, transparent accounting, and sealed card restore.
+- Harden phone readability, reduced motion, glyph coverage, and source inspection.
+- Re-measure thresholds against actual tracker snapshots and audit inventory / fill accounting.
+- Keep mainnet read-only; any real-money scope requires a separate approved product and safety decision.
+- Keep a locked COMING SOON slot without promising an unapproved game.
+CARTRIDGE_02: open, brainstorm pending
