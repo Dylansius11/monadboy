@@ -11,6 +11,11 @@ Mainnet is read-only; `markets.testnet.json` stays empty until funded spike S2.
 - `bun run --cwd packages/sdk test:coverage` (per-file `kuru/*.ts` line threshold: 95%).
 - Root `typecheck` and `test` include this workspace; the lead runs `bun run verify` after parallel changes land.
 
+`rpcUrl` reads worker `TESTNET_RPC_URL` / `MAINNET_RPC_URL`; explicit browser env
+supports `VITE_TESTNET_RPC_URL`. If both testnet keys are supplied, the worker key
+takes precedence. Missing overrides use the public RPCs. Pass `import.meta.env`
+explicitly in browser callers; Node/Bun callers default to `process.env`.
+
 ## ABI artifact
 
 [V] Generated ABI arrays come from `@kuru-labs/kuru-sdk@0.0.95` without a runtime dependency.

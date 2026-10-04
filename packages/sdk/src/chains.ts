@@ -6,6 +6,6 @@ export type CHAIN = 'testnet' | 'mainnet'
 export function rpcUrl(chain: CHAIN, env: Record<string, string | undefined> =
   typeof process === 'undefined' ? {} : process.env): string {
   return chain === 'testnet'
-    ? env.MONAD_TESTNET_RPC_URL ?? 'https://testnet-rpc.monad.xyz'
-    : env.MONAD_MAINNET_RPC_URL ?? 'https://rpc.monad.xyz'
+    ? env.TESTNET_RPC_URL ?? env.VITE_TESTNET_RPC_URL ?? 'https://testnet-rpc.monad.xyz'
+    : env.MAINNET_RPC_URL ?? 'https://rpc.monad.xyz'
 }

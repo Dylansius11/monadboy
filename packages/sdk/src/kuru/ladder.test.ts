@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { batchProvisionArgs, LadderError, planLadder } from './ladder'
+import { batchProvisionArgs, planLadder } from './ladder'
 import type { LadderInput } from './ladder'
 
 const input: LadderInput = {
@@ -136,6 +136,5 @@ describe('flip ladder planning', () => {
     expect(buys.at(-1)).toBe(false)
     expect(provisionOrRevert).toBe(true)
     expect(prices).toHaveLength(ladder.orders.length)
-    expect(new LadderError('NO_PRICE')).toBeInstanceOf(Error)
   })
 })

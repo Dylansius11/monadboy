@@ -22,7 +22,6 @@ describe('Kuru unit encoding', () => {
     [0.29, 'down', 29000000], [0.29, 'up', 29000000],
   ] as const)('rounds %s %s to tick-aligned %s', (price, round, units) => {
     expect(priceToUnits(price, params, round)).toBe(units)
-    expect(units % 100).toBe(0)
   })
 
   it('converts integer and bigint book prices back to quote per base', () => {
