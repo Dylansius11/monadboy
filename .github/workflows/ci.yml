@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A second push to the same branch cancels the first.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+
+      # Bun installs and runs the scripts, but Vite and Vitest are Node
+      # processes. Pinning Node here keeps CI on the same runtime the README
+      # tells a human to use.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # --frozen-lockfile makes bun.lock authoritative. A dependency that
+      # drifted without a committed lockfile change fails here rather than on
+      # somebody's laptop at 11:35 on the day.
+      - name: install
+        run: bun install --frozen-lockfile
+
+      - name: verify
+        run: bun run verify
+
+  # Added in Phase 5 only.
+  # contracts:
+  #   name: contracts
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 10
+  #
+  #   steps:
+  #     - uses: actions/checkout@v7
+  #
+  #     - uses: foundry-rs/foundry-toolchain@v1
+  #       with:
+  #         version: stable
+  #
+  #     # forge-std is vendored under contracts/lib rather than being a git
+  #     # submodule, so there is nothing to fetch and nothing to go wrong here.
+  #     - name: build
+  #       run: forge build --sizes
+  #       working-directory: contracts
+  #
+  #     - name: test
+  #       run: forge test -vv
+  #       working-directory: contracts
+  #
+  #     # The numbers that become shipped gas limits. Printed into the log on
+  #     # every run so a change in cost is visible in the diff of a PR's checks
+  #     # rather than discovered after somebody hardcodes a stale value.
+  #     #
+  #     # These are STANDARD EVM numbers. Monad prices cold state access far
+  #     # higher, so they are a floor. packages/sdk/src/gas-limits.ts carries the
+  #     # adjustment and the warning.
+  #     - name: gas report
+  #       run: forge test --gas-report
+  #       working-directory: contracts
+  #
+  #     - name: formatting
+  #       run: forge fmt --check
+  #       working-directory: contracts
