@@ -28,12 +28,22 @@ function git(...args: string[]): Buffer {
 
 let files = 0;
 let hits = 0;
-function scan(path: string, content: Buffer, message = false) {
+function scan(path: string, content: Buffer) {
   files++;
-  if (content.subarray(0, 8000).includes(0)) return;
+  if (content.subarray(0, 8000).includes(0)) {
+    const text = content.toString("latin1");
+    for (const { term, pattern } of terms) {
+      if (term.length < 5 || !pattern.test(text)) continue;
+      console.error(`${path}:binary: ${term}`);
+      hits++;
+    }
+    return;
+  }
   content.toString("utf8").split(/\r?\n/).forEach((line, index) => {
-    if (message && line.startsWith("#")) return;
-    line = line.replace(/sha(1|256|384|512)-[A-Za-z0-9+/=]+/g, "");
+    line = line.replace(
+      /(?:sha1-[A-Za-z0-9+/]{27}=|sha256-[A-Za-z0-9+/]{43}=|sha384-[A-Za-z0-9+/]{64}|sha512-[A-Za-z0-9+/]{86}==)(?![A-Za-z0-9+/=])/g,
+      "",
+    );
     for (const { term, pattern } of terms) {
       if (!pattern.test(line)) continue;
       console.error(`${path}:${index + 1}: ${term}`);
@@ -67,7 +77,7 @@ try {
   for (const path of selected) {
     scan(path, staged ? git("show", `:${path}`) : readFileSync(path));
   }
-  if (message) scan("<commit message>", readFileSync(message), true);
+  if (message) scan("<commit message>", readFileSync(message));
   if (hits === 0) console.log(`guard: clean (${files} files)`);
   process.exitCode = hits ? 1 : 0;
 } catch (error) {
