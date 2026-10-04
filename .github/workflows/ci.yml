@@ -40,40 +40,24 @@ jobs:
       - name: verify
         run: bun run verify
 
-  # Added in Phase 5 only.
-  # contracts:
-  #   name: contracts
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 10
-  #
-  #   steps:
-  #     - uses: actions/checkout@v7
-  #
-  #     - uses: foundry-rs/foundry-toolchain@v1
-  #       with:
-  #         version: stable
-  #
-  #     # forge-std is vendored under contracts/lib rather than being a git
-  #     # submodule, so there is nothing to fetch and nothing to go wrong here.
-  #     - name: build
-  #       run: forge build --sizes
-  #       working-directory: contracts
-  #
-  #     - name: test
-  #       run: forge test -vv
-  #       working-directory: contracts
-  #
-  #     # The numbers that become shipped gas limits. Printed into the log on
-  #     # every run so a change in cost is visible in the diff of a PR's checks
-  #     # rather than discovered after somebody hardcodes a stale value.
-  #     #
-  #     # These are STANDARD EVM numbers. Monad prices cold state access far
-  #     # higher, so they are a floor. packages/sdk/src/gas-limits.ts carries the
-  #     # adjustment and the warning.
-  #     - name: gas report
-  #       run: forge test --gas-report
-  #       working-directory: contracts
-  #
-  #     - name: formatting
-  #       run: forge fmt --check
-  #       working-directory: contracts
+  contracts:
+    name: contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.3
+
+      - name: test
+        run: forge test
+        working-directory: contracts
+
+      - name: formatting
+        run: forge fmt --check
+        working-directory: contracts
