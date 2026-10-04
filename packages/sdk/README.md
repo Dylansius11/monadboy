@@ -82,3 +82,58 @@ Bounds are outer resting prices after outward tick rounding, not flip prices.
 [U] Placement price/size encodings await an actual testnet `FlipOrderCreated` and S2 fill proof.
 [U] `gas-limits.ts` is deliberately absent: only funded spike S2 gas measurements plus 20% headroom may define it.
 No testnet deployment or usable gas limit is asserted.
+
+## Position accounting
+
+`scoreFromFills`, `valueNow`, `valueHodl`, `scoreCard`, and `rangeState` are pure.
+Fill prices are quote per base and sizes are filled base amounts; all values use the same quote unit.
+Initial-order fills affect inventory only; only `isFlippedOrder` fills earn SCORE.
+
+```text
+SCORE = sum(abs(flipPrice - price) * size) over flipped fills
+V_now = (marginBase + restingBase) * mid + marginQuote + restingQuote
+V_hodl = base0 * mid + quote0
+NET = V_now - V_hodl
+DAMAGE = max(0, SCORE - NET)
+```
+
+D-SCORE rule: NET always preserves the actual valuation difference.
+When NET <= SCORE, NET = SCORE - DAMAGE (within floating-point precision).
+When NET > SCORE, DAMAGE is zero and NET remains greater than SCORE; surplus is never erased.
+Inventories must not double-count resting funds as free margin.
+`rangeState` is OUT_OF_RANGE strictly outside `[low, high]`, NAD_SENSE inside and within
+one inclusive `step` of either edge, otherwise IN_RANGE. This API takes step in absolute
+price units; convert the planner's relative step using the relevant mid before calling it.
+
+## Sealed saves
+
+`deriveSealKey(prf, slot)` uses WebCrypto HKDF-SHA256 with salt `utf8("monadboy/v1")`,
+info `utf8("disk:" + slot + ":seal")`, and PRF bytes as input material.
+The AES-GCM-256 key is non-extractable and has encrypt/decrypt usages.
+`sealDisk` and `openDisk` authenticate `encodePacked(['uint256', 'address', 'address'],
+[BigInt(chainId), registry, disk])`: **chainId is exactly 256 bits**, fixed for blob version 1.
+Blob layout is `0x01 || random IV(12 bytes) || ciphertext || GCM tag(16 bytes)`.
+Changing slot, disk, registry, chain, IV, ciphertext or tag prevents successful restore.
+
+`DiskPlaintext` contains version, name, characterId, palette, difficulty, godMode, notes,
+createdAt and runs. Each `RunRecord` contains `{market, openedAt, closedAt, score, damage, fills}`.
+Keep the newest ten runs, then drop oldest runs until JSON's UTF-8 encoding fits 1,536 bytes.
+Never trim name, characterId, or other non-run fields; throw RangeError if they alone exceed
+the limit. Sealing does not mutate the caller's disk. Recovery needs only PRF material,
+the slot, onchain ciphertext, and its authenticated context, not a server or local cache.
+
+## Mera-compatible accounts
+
+[V] Derivation follows the [Mera guide](https://docs.monad.xyz/guides/mera):
+`entropyToMnemonic(prf, englishWordlist)` -> `mnemonicToSeedSync(mnemonic)` ->
+`HDKey.fromMasterSeed(seed).derive("m/44'/60'/0'/0/{index}")`.
+`deriveDiskKey` returns that node's private-key bytes; `diskAddresses` returns addresses
+for indices 0..3, deriving the master seed once. Index 0 identifies the card; 1..3 are disks.
+Account indices must be integers in `[0, 2^31)`; the final path segment is non-hardened.
+Keep PRF bytes, mnemonic, seed, and private keys in trusted client memory only.
+No passkey ceremony/session package is installed in this SDK.
+
+[V] Exact runtime pins: `@scure/bip32` **2.4.0** and `@scure/bip39` **2.4.0**,
+reported by `npm view @scure/bip32 version` and `npm view @scure/bip39 version` on 2026-10-05.
+The current English wordlist export is `@scure/bip39/wordlists/english.js`.
+Coverage includes `kuru/*.ts`, `seal.ts`, and `mera.ts`, with a per-file line threshold of 95%.
