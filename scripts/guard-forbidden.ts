@@ -13,7 +13,9 @@ const terms = encoded.map(([value, rule]) => {
   const source = rule === "word" ? `\\b${escaped}\\b`
     : rule === "date" ? `(?<!\\d)${escaped}`
     : rule === "hero" ? term.replace("-", "[- ]?") : escaped;
-  return { term, pattern: new RegExp(source, "i") };
+  const binaryPattern = term.length < 5
+    ? new RegExp(`(?<![A-Za-z0-9])${source}(?![A-Za-z0-9])`, "i") : undefined;
+  return { term, pattern: new RegExp(source, "i"), binaryPattern };
 });
 const warnings = new RegExp(`\\b(${["ODOT", "DBT", "EMXIF"]
   .map((value) => [...value].reverse().join("")).join("|")})\\b`, "g");
@@ -32,8 +34,14 @@ function scan(path: string, content: Buffer) {
   files++;
   if (content.subarray(0, 8000).includes(0)) {
     const text = content.toString("latin1");
-    for (const { term, pattern } of terms) {
-      if (term.length < 5 || !pattern.test(text)) continue;
+    // Bare 3-4 letter runs in compressed bytes are indistinguishable from noise.
+    // Catch short terms in text such as metadata chunks and font names instead.
+    const runs = [text, content.toString("utf16le"), content.subarray(1).toString("utf16le")]
+      .flatMap((decoded) => decoded.match(/[\x20-\x7e]{6,}/g) ?? []);
+    for (const { term, pattern, binaryPattern } of terms) {
+      const matched = binaryPattern
+        ? runs.some((run) => binaryPattern.test(run)) : pattern.test(text);
+      if (!matched) continue;
       console.error(`${path}:binary: ${term}`);
       hits++;
     }
