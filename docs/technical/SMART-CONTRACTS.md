@@ -1,6 +1,6 @@
 # MONADBOY smart contracts
 
-Labels: **[V]** verified with the linked source or exact command; **[I]** inference or intended integration; **[U]** unresolved, with its settling spike. DiskRegistry v2 below is a design contract, not a deployed implementation. Deployment rows remain empty until evidence exists.
+Labels: **[V]** verified with the linked source or exact command; **[I]** inference or intended integration; **[U]** unresolved, with its settling spike. DiskRegistry v2 is implemented and locally verified, but not deployed. Deployment rows remain empty until evidence exists.
 
 ## 0. Never trust a published address
 
@@ -31,7 +31,7 @@ Require a successful exit and non-empty bytecode: `0x` alone fails. Use a full 0
 
 ## 1. DiskRegistry v2 specification
 
-Target: `contracts/src/DiskRegistry.sol`, Solidity 0.8.28. Each disk record is keyed by `msg.sender`, the independently derived disk EOA. There is no owner, admin, funds custody or application loop. No payable API, receive/fallback funding path, score submission or privileged erase is part of this contract.
+Implementation: `contracts/src/DiskRegistry.sol`, Solidity 0.8.28, Cancun EVM, optimizer enabled with 200 runs. Each disk record is keyed by `msg.sender`, the independently derived disk EOA. There is no owner, admin, funds custody or application loop. No payable API, receive/fallback funding path, score submission or privileged erase is part of this contract.
 
 ```solidity
 struct Disk {
@@ -40,13 +40,13 @@ struct Disk {
     uint8 difficulty;
     bool godMode;
     bytes12 tag;
-    bytes sealed;
+    bytes sealedData;
 }
 
 error SealedTooLarge();
 error BadDifficulty();
 
-function save(bytes calldata sealed, uint8 difficulty, bool godMode, bytes12 tag) external;
+function save(bytes calldata sealedData, uint8 difficulty, bool godMode, bytes12 tag) external;
 function erase() external;
 function diskOf(address disk) external view returns (Disk memory);
 
@@ -61,19 +61,45 @@ event DiskSaved(
 event DiskErased(address indexed disk);
 ```
 
-`save` rejects `sealed.length > 2048` with `SealedTooLarge()` and difficulty outside 0..2 with `BadDifficulty()`. Exactly 2,048 bytes is accepted. First save sets `createdAt`; overwrites retain it and update `updatedAt`, difficulty, godMode, tag and sealed bytes. `DiskSaved.sealedHash` is the hash of the sealed bytes. `erase` deletes only the sender's disk and emits `DiskErased`. `diskOf` returns the struct; an absent/erased record has default zero fields and empty bytes.
+`save` rejects `sealedData.length > 2048` with `SealedTooLarge()` and difficulty outside 0..2 with `BadDifficulty()`. Exactly 2,048 bytes is accepted. First save sets `createdAt`; overwrites retain it and update `updatedAt`, difficulty, godMode, tag and sealed bytes. `DiskSaved.sealedHash` is the hash of the sealed bytes. `erase` deletes only the sender's disk and emits `DiskErased`. `diskOf` returns the struct; an absent/erased record has default zero fields and empty bytes.
+
+The Solidity field and save parameter are named `sealedData`: `sealed` is a reserved keyword in Solidity 0.8.28 (compiler error 2314). This naming does not change function selectors, tuple field order/types or the event contract; generated SDK tuple objects expose `sealedData`.
 
 Public metadata is deliberately not encrypted: disk address, timestamps, difficulty, godMode and tag. Private disk JSON is sealed in the browser. SCORE is **not self-reported onchain**; leaderboard SCORE comes from Kuru `Trade` events.
 
 ### Storage layout reasoning
 
-The first five fields consume `8 + 8 + 1 + 1 + 12 = 30` bytes, so both uint64 timestamps, uint8 difficulty, bool godMode and bytes12 tag pack into one 32-byte slot, leaving two bytes unused. In declared order their offsets are 0, 8, 16, 17 and 18. The dynamic `bytes sealed` field gets a separate slot.
+The first five fields consume `8 + 8 + 1 + 1 + 12 = 30` bytes, so both uint64 timestamps, uint8 difficulty, bool godMode and bytes12 tag pack into one 32-byte slot, leaving two bytes unused. In declared order their offsets are 0, 8, 16, 17 and 18. The dynamic `bytes sealedData` field gets a separate slot.
 
 For a mapping keyed by disk address, each record's first slot is the mapping-derived storage location, with the bytes header in the following slot. Solidity's short-bytes encoding may hold up to 31 bytes in that header; longer sealed blobs store their length there and payload starting at the header's keccak-derived location. Thus "one packed metadata slot" does not mean the encrypted payload occupies one slot. Keep layout commentary alongside the contract and measure save gas with a 1 KiB payload.
 
 ### Required Foundry proof
 
-Happy path; size limit including the accepted boundary; bad difficulty; erase; overwrite preserving `createdAt`; sealed-length fuzzing; gas snapshot for a 1 KiB save. Deployment records the code check, deployment transaction and SDK ABI generated from Foundry output. No deployed registry address is asserted here.
+[V] `cd contracts && forge test`: 17 passed, 0 failed, including accepted 2,048-byte and rejected 2,049-byte boundaries, difficulty validation, sender isolation, event fields/hashes, creation/update timestamps, erase, overwrite, rejected-save state preservation, ETH rejection and 256 sealed-length fuzz runs over 0..4,096 bytes. Tests were written before the implementation; the initial missing-source run exited 1 before any tests executed. `forge fmt --check` exits 0.
+
+[V] `forge snapshot --match-test testGasSave1KiB` records **805,858 gas** in `contracts/.gas-snapshot` for a first save of 1,024 nonzero bytes. Payload construction is excluded from gas metering. This is a local standard-EVM measurement, **not a safe Monad transaction gas limit**. Reproduce with Foundry 1.8.3 and the pinned compiler settings; forge-std is a submodule pinned to release `v1.9.7`, commit `77041d2ce690e692d6e03cc812b57d1ddaa4d505`.
+
+Regenerate the SDK ABI after contract changes:
+
+```sh
+cd contracts
+forge build
+cd ..
+bun packages/sdk/scripts/generate-disk-registry-abi.ts
+```
+
+The generator reads `contracts/out/DiskRegistry.sol/DiskRegistry.json` and writes `packages/sdk/src/abi/disk-registry.ts`. [V] Generated and artifact ABI arrays match exactly (7 entries). No deployed registry address is asserted here.
+
+### Deployment command
+
+The deployment script reads `DEPLOYER_PRIVATE_KEY`; `contracts/.env.example` intentionally has no value. Only after funding is available, set that key, a measured testnet `DEPLOY_GAS_LIMIT` and current `DEPLOY_GAS_PRICE` in the environment and run from `contracts/`:
+
+```sh
+forge script script/Deploy.s.sol:Deploy --rpc-url monad_testnet \
+  --gas-limit "$DEPLOY_GAS_LIMIT" --with-gas-price "$DEPLOY_GAS_PRICE" --broadcast
+```
+
+[U] This command has not been run: the operations wallets are unfunded. Deployment must record the code check, transaction and SDK deployment address after a successful broadcast.
 
 ## 2. Kuru surface we call
 
@@ -123,7 +149,7 @@ Happy path; size limit including the accepted boundary; bad difficulty; erase; o
 | `bestBidAsk` | Read-only `eth_call`; no transaction limit | [I] |
 | `getMarketParams`, `getL2Book`, `MarginAccount.getBalance` | Read-only `eth_call`; no transaction limit | [I] |
 
-DiskRegistry save/deploy limits are measured in Phase 5, including the 1 KiB save snapshot. [V] For low-balance undelegated EOAs, observe the k=3-block emptying rule or retain at least 10 MON ([reserve balance](https://docs.monad.xyz/developer-essentials/reserve-balance)); count prior sender transactions, including approvals, rather than spacing only value transfers.
+DiskRegistry's local 1 KiB snapshot is recorded above; testnet save/deploy limits remain unmeasured until the funded deployment can run. [V] For low-balance undelegated EOAs, observe the k=3-block emptying rule or retain at least 10 MON ([reserve balance](https://docs.monad.xyz/developer-essentials/reserve-balance)); count prior sender transactions, including approvals, rather than spacing only value transfers.
 
 ## 3. Market parameters
 
@@ -153,6 +179,6 @@ Empty address, hash and block cells mean no deployment evidence yet, not a trunc
 |---|---|---|---|---|---|---|
 | Our MON-AUSD market | Testnet [I] | | | | | awaiting funded spike S2 |
 | Optional AUSD-USDC market | Testnet [I] | | | | | conditional on spike S1 supply |
-| DiskRegistry v2 | Testnet [I] | | | | | deployment in Phase 5 |
+| DiskRegistry v2 | Testnet [I] | | | | | locally verified; awaiting funded deployment |
 
 [U, S3] Deployer, bot and drip funding must cover deployment, price-mirror inventory and 20 player drips. The current Phase 4 blocker is recorded in [BUILD-PLAN](BUILD-PLAN.md), not hidden by an empty deploy row.

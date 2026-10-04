@@ -27,9 +27,9 @@ Key: disk account (`msg.sender` on writes). Value: `Disk` from [SMART-CONTRACTS]
 | `difficulty` | `uint8` | 0..2; separate from GOD MODE |
 | `godMode` | `bool` | Modifier; cannot bypass unsellable-token gate |
 | `tag` | `bytes12` | Public tag |
-| `sealed` | `bytes` | Versioned encrypted disk blob, at most 2,048 bytes |
+| `sealedData` | `bytes` | Versioned encrypted disk blob, at most 2,048 bytes; `sealed` is reserved in Solidity |
 
-A missing or erased disk has zero metadata and empty sealed bytes. Empty sealed bytes are the discovery test from the approved restore path. The metadata occupies one packed slot; dynamic bytes has a separate header and payload storage. No onchain score field is accepted.
+A missing or erased disk has zero metadata and empty `sealedData`. Empty sealed bytes are the discovery test from the approved restore path. The metadata occupies one packed slot; dynamic bytes has a separate header and payload storage. No onchain score field is accepted.
 
 ### Kuru orders and balances
 
