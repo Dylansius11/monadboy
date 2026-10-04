@@ -136,3 +136,128 @@ If a symbol is absent, use a supported ASCII equivalent or an explicit pixel ico
 Test arrows, signs, currency labels, punctuation, and tiny-unit text at actual phone scale.
 No em-dashes in player-visible strings.
 
+## 5. Primitives and states
+
+| Primitive | Treatment |
+| --- | --- |
+| Panel | White panel, 1px edge, 2px down/right sunk-colour hard shadow, no blur |
+| Bevel | Not used for DAYLIGHT screen panels |
+| PixelText | Role-driven sizes and line heights from section 4 |
+| Cursor | Solid accent fill, inverted text, not a required cursor glyph |
+| Meter | 4px segments with 1px gaps; accent filled, sunk empty |
+| Sprite | Sprite-sheet frame on a panel well, stepped animation |
+| Dialog | Panel with a portrait slot on the left |
+| Marquee | Linear horizontal scroll for overflow warnings |
+| Tab | Panel; active bottom border joins the body |
+| Field | Sunk inset, 1px edge, blinking ink block caret |
+| Toggle | Accent on / sunk off, plus a supported state glyph |
+| Pin | Four shape variants before colour variation |
+| Ladder tile | 8px column; sunk empty, accent in range, ink active, screen + 1px edge out |
+| Chart | Stepped SVG polyline, 1px ink |
+| Scanline | Optional overlay, default off |
+
+The tile draws a Kuru ladder level, never an unrelated range structure.
+Do not create another spacing or type convention inside a primitive.
+
+| State | Visible treatment |
+| --- | --- |
+| Rest | Panel fill and 1px meaningful edge |
+| Focused / selected | Accent fill, inverted text, meaningful edge retained |
+| Pressed | Translate 1px down and right for 80ms, no easing |
+| Disabled | Sunk fill, dim text, soft edge, unmistakably unavailable |
+
+Every reachable action has visible focus. Cursor position is not the same as the applied setting.
+Applied values remain identifiable when the cursor moves away.
+Context-dependent key labels update when their action changes.
+No essential information is hover-only: D-pad, touch, and keyboard are first-class.
+The key legend belongs to the console shell, not each screen's height budget.
+
+## 6. Motion contract
+
+The more often the player sees an animation, the less it should animate.
+Cursor navigation is instantaneous, not a traveling tween.
+
+| Interaction | Exact motion |
+| --- | --- |
+| Cursor move | None, zero duration |
+| Button press | 1px down/right, 80ms, no easing |
+| Screen transition | 120ms wipe |
+| Panel open | 100ms, four steps |
+| Character run | `steps(4)`, 8fps, loop |
+| NAD-SENSE | 600ms `steps(2)`, loop while active |
+| Out of range | 200ms freeze, then desaturate over 400ms |
+| Boot | 1800ms, skippable |
+| Results reveal | 60ms stagger between rows |
+
+```css
+--ease-sprite-2: steps(2, end);
+--ease-sprite-4: steps(4, end);
+--ease-sprite-8: steps(8, end);
+--ease-out-screen: cubic-bezier(0.23, 1, 0.32, 1);
+--ease-in-out-screen: cubic-bezier(0.77, 0, 0.175, 1);
+--press-x: 1px;
+--press-y: 1px;
+--press-ms: 80ms;
+```
+
+No ease-in token. It delays the first visible response and reads as lag.
+Sprites and grid-positioned UI use steps, never springs or fractional coordinates.
+Real curves are reserved for full-screen effects; springs are allowed only on the illustrated shell.
+Press feedback is translation, not `scale(0.97)`, which blurs pixel borders.
+Separate fit scaling and interaction transforms on different wrappers.
+Reduced motion disables boot and NAD-SENSE pulsing; retain direct input feedback and state changes.
+Existing motion is preserved; a live data connection is not permission to restyle it.
+
+## 7. Sprite, scanline, and shell rules
+
+Author logical sprite pixel frames at 16px or 32px; scale by whole-number factors only.
+A 64px sheet / display footprint may package or display a frame but is not permission for fractional resampling.
+Keep sprite-sheet metadata, frame boundaries, integer positions, and `image-rendering: pixelated` aligned.
+Judge silhouettes at actual 1x logical size before inspecting enlarged art.
+Running, edge-warning, and sitting states must be distinguishable without reading a formula.
+Palette changes do not decouple the mascot from its difficulty.
+
+Scanlines are optional and off by default.
+
+```css
+.scanlines {
+  background: repeating-linear-gradient(
+    to bottom, transparent 0 3px, rgba(14, 9, 28, 0.14) 3px 4px
+  );
+  pointer-events: none;
+}
+```
+
+The overlay removes a row in four from small glyphs, so legibility wins over nostalgic texture.
+Never use chromatic aberration or barrel distortion; both resample the grid.
+
+The shell uses these illustrated-plastic constants:
+
+```css
+--shell: #6E54FF;
+--shell-d: #4A35C4;
+--shell-dd: #3A2A9E;
+--shell-l: #9C89FF;
+--btn: #E4DFFF;
+--btn-d: #B3A6EC;
+```
+
+`apps/web/src/console` owns shell materials, input, fit scale, and the key legend, never money.
+On desktop the centered console sits on an ink-coloured desk.
+Optional ambient motifs are slow motes for Molandak, rising bubbles for Moyaki, and sparse drifting specks for Mouch.
+They are the first visual embellishment to omit if they distract from the subject.
+Ambient embellishment has a 20-minute optional work budget; it never blocks screen readability or play.
+On mobile there is no desk backdrop.
+
+## 8. Verification contract
+
+Phase 2 palette checks compare CSS and TypeScript, contrast pairs, decorative exceptions, and grid constants.
+They enforce 4px spacing, 480x320 viewport, integer bitmap sizes, grid-aligned line heights, and stepped easing tokens.
+A token addition updates its mirror and contrast contract or explicitly records why it is decorative.
+Tests do not prove phone readability or motion quality.
+
+Render at a 412px phone viewport and inspect every screen, including formula and error panels.
+Wait for the real font, check all glyphs, inspect overflow, and exercise every reachable selection state.
+Judge the transition out of range, not only the calm live screen.
+Confirm equal-weight SCORE/DAMAGE, readable TESTNET labels, and sprite / accent separation.
+Report whether the surface was actually seen rendered; Phase 1 has no screen implementation to inspect.
