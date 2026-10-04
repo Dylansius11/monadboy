@@ -84,3 +84,142 @@ Proof views can show transaction links and formulas without turning the primary 
 11. Every number on screen has a source the player can open.
 12. Label testnet on every balance screen. Never imply real money.
 
+## 3. Difficulty is a teaching mechanism
+
+### Mascot binding: Path A
+
+The mascot is bound to difficulty.
+Molandak is EASY, Moyaki is NORMAL, and Mouch is HARD.
+GOD MODE modifies HARD; it does not introduce a fourth character.
+
+| Difficulty | Monanimal | Teaching role |
+| --- | --- | --- |
+| EASY | Molandak, armoured purple hedgehog | Fewer things can hurt you |
+| NORMAL | Moyaki, purple cat-fish with pink fins | Balanced exposure, riding the current |
+| HARD | Mouch, purple fly | More volatile conditions, fewer comfort checks |
+| GOD MODE | Mouch, red palette and skull | Explicit absence of comfort filters |
+
+Binding makes the character itself the risk profile.
+A player who identifies with Molandak has learned the safety preference without a risk questionnaire.
+Decoupling would turn that teaching mechanism back into two unrelated settings.
+Three meaningful combinations also keep art, audio, and copy coherent.
+Palette expression may change without changing difficulty.
+
+### Deterministic, inspectable scoring
+
+SAFETY and HEAT are transparent heuristics, not a model's judgement.
+An unexplainable oracle would relocate the fear rather than remove it.
+Latency, nondeterminism, or a model outage must not prevent a price, formula, or range from appearing.
+No narrator expansion is required for this cartridge.
+Existing character copy is enough; numbers come from arithmetic and identified sources.
+
+### Two axes: SAFETY x HEAT
+
+Do not collapse the signals into one quality score.
+EASY means high SAFETY and limited HEAT, not simply a high aggregate number.
+A quiet, deep market and a volatile, deep market should remain visibly different.
+One blended score can obscure that difference.
+
+The tracker, tier filter, and scatter are the same model seen three ways.
+SAFETY is the horizontal axis; HEAT is the vertical axis.
+Each input is normalized to 0 through 100 before weighting.
+Weights sum to 1 on each axis.
+
+```text
+SAFETY = 0.35 * liquidity_depth
+       + 0.25 * market_age
+       + 0.20 * quote_asset_quality
+       + 0.20 * (100 - maker_concentration)
+
+HEAT   = 0.45 * realized_volatility
+       + 0.30 * turnover
+       + 0.25 * momentum
+```
+
+Depth means L2 book liquidity within +/-2% of mid, not an AMM balance.
+Market age uses the first Trade block.
+Concentration uses the top three makers' share of 24-hour Trade volume.
+Volatility uses log returns of 24-hour Trade prices.
+Momentum means 24-hour trade-count acceleration, not social scraping.
+These are planned worker snapshot inputs; their complete live acquisition is [U], settled by S2 event / book validation and Phase 6 snapshot measurement.
+
+Turnover is 24-hour volume divided by depth and is banded, not monotonic.
+The score peaks around 0.5x through 3x, falling on both sides.
+More activity per unit of depth is not always better; extreme turnover can be manipulation or shallow liquidity.
+The formula must not reward the very condition its filter is intended to expose.
+
+### Gates first, scores second
+
+Hard gates decide eligibility. Scores rank only survivors.
+Thresholds live in `apps/web/src/config/thresholds.ts` and are re-measured against the Kuru snapshot in Phase 6.
+The depth floors below retain the tier shape; they are calibration targets, not verified liquidity measurements.
+
+| Tier | Required gates | SAFETY | HEAT |
+| --- | --- | --- | --- |
+| EASY | depth >= $250k; age >= 14d; strong quote; unsellable gate clean | >= 70 | <= 60 |
+| NORMAL | depth >= $75k; age >= 3d; strong or mid quote; gate clean | >= 50 | <= 80 |
+| HARD | depth >= $20k; age >= 6h; strong or mid quote; gate clean | >= 30 | <= 100 |
+| GOD MODE | unsellable gate clean, nothing else | raw, unranked | raw, unranked |
+
+Strong quotes are `{USDC, AUSD, MON}`.
+Mid quotes are `{WETH, WBTC, cbBTC, XAUT}`.
+HARD still restricts the quote asset.
+The quote sets express product policy, not a guarantee about any token.
+The unsellable gate uses token transfer simulation via `eth_call`; adequacy on supported markets is [U], confirmed in S2 and Phase 6 gate validation.
+An empty book is thin, not an exception and not a reassuring midpoint.
+
+### GOD MODE
+
+GOD MODE removes comfort filters, never the unsellable gate.
+Sending a player into an asset they cannot exit is negligence, not an edgy difficulty.
+Red palette, skull, raw inputs, and an explicit typed confirmation make the missing protections visible.
+The confirmation copy is `TYPE "I KNOW" TO CONTINUE`.
+No reassurance or forecast accompanies it.
+
+### The credibility rule
+
+Copy says `THESE PASSED MOLANDAK'S CHECKS`.
+Copy does not say that a market will make money.
+A heuristic describes present measurements and policy, never future returns.
+Every score term has an inspectable input, timestamp, unit, formula, and source.
+If an input is missing, its absence is shown rather than hidden inside a plausible number.
+
+## 4. Testnet market and real-data boundaries
+
+The playable venue is Kuru flip orders on our MON-AUSD testnet market.
+Mainnet markets supply read-only tracker measurements.
+Only a market with an entry in `packages/sdk/src/markets.testnet.json` can start a run.
+All other pins say MAINNET ONLY and remain useful for inspection.
+
+Monad testnet is chain 10143 and mainnet is chain 143 [V: current facts](https://docs.monad.xyz/ai/current-facts.md).
+The testnet RPC is `https://testnet-rpc.monad.xyz`; the mainnet RPC is `https://rpc.monad.xyz` [V: same source](https://docs.monad.xyz/ai/current-facts.md).
+Deployed app addresses and transaction evidence live in README and the smart-contract document, not scattered across screens.
+
+The mirror bot targets mainnet MON_USDC, not MON_AUSD.
+The approved source choice reflects an empty MON_AUSD book; current source liveness remains [U], verified in S2 / Phase 6 before dependent play.
+The primary label is `TESTNET BOOK, MAINNET PRICE (KURU MON/USDC)`.
+Treating USDC and AUSD as one USD each is an explicit conversion assumption [I], not measured parity.
+
+The worker reads the source every 5 seconds.
+When relative deviation exceeds 0.05%, the planned bot trades toward the source, within its configured notional cap.
+Thin resting quotes refresh at target +/-0.1% to support the zap.
+Three consecutive source failures pause the bot; it never invents a replacement price.
+Health turns red and the screen says PRICE FEED PAUSED.
+Low bot inventory turns health amber.
+The exact execution surface and successful bot behavior are [U], settled by S2 and the Phase 6 mirror smoke.
+
+AUSD testnet token and faucet have deployed code [V: README cast checks, 2026-10-05].
+That does not prove funding is currently obtainable.
+Faucet cadence and usable supply remain [U], spike S1.
+Testnet MON budget remains [U], spike S3.
+An optional AUSD-USDC EASY market depends on S1 finding a usable USDC source.
+Otherwise EASY plays MON-AUSD with a WIDE default and the interface says so.
+The official testnet MON-USDC market is the venue fallback, with liquidity checked before use [U: S1/S2].
+
+The frontend signs for the disk. The worker never signs for a player.
+Chain state is truth; Envio and SQLite are read models.
+Envio HyperIndex is intended to drive the fill feed, results history, and leaderboard.
+Hosted testnet indexing and lag remain [U], spike S5.
+A viem read of the last 200 blocks of Trade logs is the live-screen fallback; its decoding is [U], spike S2.
+When that fallback is active, show INDEXER OFFLINE rather than implying the service is healthy.
+
