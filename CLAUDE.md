@@ -8,9 +8,8 @@ Read `docs/PRD.md` before product, copy, or scope decisions.
 
 ## 2. Deadline
 
-Metropolis submission: Tuesday 13 October 2026, 11:59 PM ET; Wednesday 14 October, 10:59 WIB [V: rules transcription, secondary](https://github.com/precious-akpan/monad-metropolis-merchant-rails).
-Internal target: Tuesday 13 October, 18:00 WIB.
-Judging runs 14 to 27 October [V: event page](https://monad.xyz/developers/hackathons/metropolis); the deployed app and worker must stay up.
+Metropolis submission Tue 13 Oct 2026 11:59 PM ET (Wed 14 Oct 10:59 WIB); internal target Tue 13 Oct 18:00 WIB; judging 14 to 27 Oct means the deployed app and worker must stay up.
+Deadline [V: rules transcription, secondary](https://github.com/precious-akpan/monad-metropolis-merchant-rails); judging dates [V: event page](https://monad.xyz/developers/hackathons/metropolis).
 
 ## 3. Testnet first
 

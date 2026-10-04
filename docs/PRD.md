@@ -386,6 +386,18 @@ The console shell never knows about money.
 One flex region absorbs remaining height rather than manually adding pixels to 320.
 Every balance surface carries TESTNET, including modal and proof variants.
 
+### Presentation and production data
+
+Preserve the existing console shell, pixel UI primitives, palette, sprites, fonts, motion, and key legend in look and feel.
+Connecting real data changes sources and copy, not the chosen visual language or the 480x320 layout.
+The web app is a portrait, standalone PWA with a web manifest and icons from the existing logo assets.
+Native app-store publication is outside scope; mobile-web bounty eligibility remains an organizer decision.
+
+Production screens use real worker snapshots, chain state, and indexed fills, never substitute fixtures.
+Fixture fallback is restricted to tests and an explicit dev-only flag.
+Any fixture displayed on screen carries a visible FIXTURE marker, including failure and preview surfaces.
+The data adapter does not turn a live-source failure into an unmarked plausible number.
+
 | Screen | Purpose | Required content and actions |
 | --- | --- | --- |
 | S0 Boot | Establish the console | Logo, skippable boot after first view, sound respecting mute |

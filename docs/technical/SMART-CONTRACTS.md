@@ -83,13 +83,18 @@ Happy path; size limit including the accepted boundary; bad difficulty; erase; o
 |---|---|---|
 | Router | `deployProxy(uint8,address,address,uint96,uint32,uint32,uint96,uint96,uint256,uint256,uint96) returns (address)` | Deploy MON-AUSD; optional AUSD-USDC |
 | OrderBook | `batchProvisionLiquidity(uint32[],uint32[],uint96[],bool[],bool)` | Whole ladder in one transaction |
+| OrderBook | `addFlipBuyOrder(uint32,uint32,uint96,bool)` | S2 fallback: individual buy level |
+| OrderBook | `addFlipSellOrder(uint32,uint32,uint96,bool)` | S2 fallback: individual sell level |
 | OrderBook | `batchCancelFlipOrders(uint40[])` | Cancel the ladder before withdrawal / re-centering |
 | OrderBook | `placeAndExecuteMarketBuy(uint96,uint256,bool,bool)` payable | Initial base zap and bot buy |
 | OrderBook | `placeAndExecuteMarketSell(uint96,uint256,bool,bool)` payable | Bot sell toward source price |
 | OrderBook | `bestBidAsk() returns (uint256,uint256)` | Mainnet source and testnet midpoint reads |
+| OrderBook | `getMarketParams() returns (uint32,uint96,address,uint256,address,uint256,uint32,uint96,uint96,uint256,uint256)` | Read deployment params and encode ladder orders |
+| OrderBook | `getL2Book() returns (bytes)` | Mainnet tracker depth within +/-2% of mid |
 | OrderBook | `batchUpdate(uint32[],uint96[],uint32[],uint96[],uint40[],bool)` | Refresh bot's plain resting quotes |
 | MarginAccount | `deposit(address,address,uint256)` payable | Prefund player/bot margin; native deposit carries value |
 | MarginAccount | `batchWithdrawMaxTokens(address[])` | Withdraw all free MON/AUSD after cancellation |
+| MarginAccount | `getBalance(address,address) returns (uint256)` | Read user/token margin for valuation and recovery |
 
 [V] `batchUpdate` arguments are buyPrices, buySizes, sellPrices, sellSizes, orderIdsToCancel, postOnly. `deployProxy` arguments are type, base, quote, sizePrecision, pricePrecision, tickSize, minSize, maxSize, takerFeeBps, makerFeeBps, kuruAmmSpread (SDK extraction above). [V] ERC-20 deposits transfer from the caller; native token deposits use `address(0)` plus `msg.value` ([MarginAccount](https://docs.kuru.io/contracts/MarginAccount)). Orders require prefunded margin.
 
@@ -108,12 +113,15 @@ Happy path; size limit including the accepted boundary; bad difficulty; erase; o
 | `MarginAccount.deposit` ERC-20 | measured in spike S2 | [U, S2] |
 | `MarginAccount.deposit` native | measured in spike S2 | [U, S2] |
 | `batchProvisionLiquidity` 2+2 and maximum ladder | measured in spike S2 | [U, S2] |
+| `addFlipBuyOrder` | measured in spike S2 | [U, S2] |
+| `addFlipSellOrder` | measured in spike S2 | [U, S2] |
 | `batchCancelFlipOrders` | measured in spike S2 | [U, S2] |
 | `placeAndExecuteMarketBuy` | measured in spike S2 | [U, S2] |
 | `placeAndExecuteMarketSell` | measured in spike S2 | [U, S2] |
 | `batchUpdate` | measured in spike S2 | [U, S2] |
 | `batchWithdrawMaxTokens` | measured in spike S2 | [U, S2] |
 | `bestBidAsk` | Read-only `eth_call`; no transaction limit | [I] |
+| `getMarketParams`, `getL2Book`, `MarginAccount.getBalance` | Read-only `eth_call`; no transaction limit | [I] |
 
 DiskRegistry save/deploy limits are measured in Phase 5, including the 1 KiB save snapshot. [V] For low-balance undelegated EOAs, observe the k=3-block emptying rule or retain at least 10 MON ([reserve balance](https://docs.monad.xyz/developer-essentials/reserve-balance)); count prior sender transactions, including approvals, rather than spacing only value transfers.
 

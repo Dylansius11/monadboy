@@ -9,17 +9,17 @@ Labels for network-dependent gates: **[V]** verified source or command, **[I]** 
 | Phase | Status | Scope | Completion gate |
 |---|---|---|---|
 | 0 | DONE | Repo bootstrap, MIT license, ignore rules, forbidden-content guard and small-unit commit discipline | Bootstrap and scoped guard proof recorded |
-| 1 | DOING | Research, product/technical/design docs, lessons, root guidance and tracked skills | Every required doc/skill exists; guard clean; each contract address has non-empty code; review against approved spec |
-| 2 | TODO | Frontend shell, screens, assets and toolchain with unchanged look and feel | Node-runtime verify passes; keyboard S1..S8 phone-viewport smoke with sprites; screenshots and observed console errors recorded |
+| 1 | DONE | Research, product/technical/design docs, lessons, root guidance and tracked skills | Every required doc/skill exists; guard clean; each contract address has non-empty code; review against approved spec |
+| 2 | DOING | Frontend shell, screens, assets and toolchain with unchanged look and feel | Node-runtime verify passes; keyboard S1..S8 phone-viewport smoke with sprites; screenshots and observed console errors recorded |
 | 3 | TODO | Pure `packages/sdk`: typed ABIs, chain/market config, encodings, ladder, SCORE/DAMAGE, seal and Mera derivation | Behavior/boundary tests pass; concrete dependency pins; D-SCORE resolved before Phase 3.4 tests are final |
-| 4 | BLOCKED | Funded spikes S1..S5, testnet market deployment, ladder fill, MON budget, passkey devices and indexer | All three ops wallets hold 0 testnet MON as of 2026-10-05; each spike needs pass/fail evidence and documented fallback |
+| 4 | BLOCKED | Funded spikes S1..S5, testnet market deployment, ladder fill, MON budget, passkey devices and indexer | [V] All three ops wallets hold 0 testnet MON as of 2026-10-05 (supplied balance record below); each spike needs pass/fail evidence and documented fallback |
 | 5 | TODO | DiskRegistry v2 contract, tests, gas snapshot, deployment and SDK ABI | Foundry tests pass; deployed code non-empty; ABI agrees with output; transaction/address recorded |
 | 6 | TODO | Hono worker on Bun + SQLite: mirror, sampling, tracker, drip, leaderboard and health | Scoped route/job tests; 10-minute live mirror run; inspect ticks; tracker returns expected markets; fresh drip succeeds and repeated drip refuses |
 | 7 | TODO | Real web data and signing S1..S8, leaderboard, PWA, removal of production fixtures | Real-phone create/play/fill/withdraw/restore recording; every product rule reviewed; TESTNET labels; SCORE/DAMAGE parity |
 | 8 | TODO | Envio schema/handlers and deployed indexer; worker/web switch to event read model | [U, S5] fresh fill in GraphQL within 10 s; client and leaderboard SCORE agree for the same disk |
 | 9 | TODO | VPS/domain deploy, fresh-device rehearsals, evidence, public submission docs | Phone that never saw app works; health green for 24 h; clean-clone verify; final addresses/txs/video/bounty mapping |
 
-The zero-MON blocker is supplied ops evidence, not a repeated funding check. DEPLOYER, BOT and DRIP are separate roles; no wallet address or secret is needed in this status record. Fund DEPLOYER for deployment, BOT for inventory and DRIP for player supply before dependent broadcasts. [V] Public testnet funding entry point: [Monad faucet](https://faucet.monad.xyz/) ([network facts](https://docs.monad.xyz/ai/current-facts.md)). Request builder supply from Monad if public faucet limits cannot cover S3.
+[V] Supplied ops balance record, checked 2026-10-05: `cast balance --ether <addr> --rpc-url https://testnet-rpc.monad.xyz` returned `0.000000000000000000` for DEPLOYER, BOT and DRIP. This source observation is the zero-MON blocker, not a repeated funding check. The roles are separate; no wallet address or secret is needed in this status record. Fund DEPLOYER for deployment, BOT for inventory and DRIP for player supply before dependent broadcasts. [V] Public testnet funding entry point: [Monad faucet](https://faucet.monad.xyz/) ([network facts](https://docs.monad.xyz/ai/current-facts.md)). Request builder supply from Monad if public faucet limits cannot cover S3.
 
 ## 2. Dependency order
 
