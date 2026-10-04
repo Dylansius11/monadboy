@@ -1,0 +1,12 @@
+{
+  "name": "monadboy",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "guard": "bun scripts/guard-forbidden.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
