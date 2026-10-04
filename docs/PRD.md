@@ -223,3 +223,105 @@ Hosted testnet indexing and lag remain [U], spike S5.
 A viem read of the last 200 blocks of Trade logs is the live-screen fallback; its decoding is [U], spike S2.
 When that fallback is active, show INDEXER OFFLINE rather than implying the service is healthy.
 
+## 5. Memory card and three save disks
+
+The card is a Mera passkey, not an account held by a service.
+Face ID, Touch ID, or a supported security key begins the ceremony [V: Mera guide](https://docs.monad.xyz/guides/mera).
+The same passkey reproduces account keys through its PRF output [V: same guide](https://docs.monad.xyz/guides/mera).
+Real iPhone Safari and Android Chrome creation / restore remain [U], spike S4.
+
+NEW CARD invokes `createPasskeyWithPrfOutput`.
+INSERT CARD invokes `getPasskeyPrfOutput`.
+Without stored credential metadata, discoverable mode can select the passkey [V: Mera guide](https://docs.monad.xyz/guides/mera).
+Only credential identifiers and transports may live in localStorage, never secret key material.
+The production hostname is fixed before the first real card: passkeys bind to `rpId` [V: same guide](https://docs.monad.xyz/guides/mera).
+
+The card serial uses account index 0 for display.
+Disk slots 1, 2, and 3 use the matching derivation indexes and isolated signing sessions.
+Hold the session while the console is on; end it on eject, explicit EJECT CARD, or tab hiding longer than ten minutes.
+Desktop Chrome local-profile passkeys may return PRF_UNAVAILABLE [V: Mera guide](https://docs.monad.xyz/guides/mera).
+Copy explains the supported reader, not an unexplained cryptography failure.
+
+Each disk has a separate seal key as well as an account key.
+`deriveSealKey` uses HKDF-SHA256 with salt `monadboy/v1` and info `disk:{k}:seal`.
+`sealDisk` encrypts with a non-extractable AES-GCM-256 WebCrypto key.
+`openDisk` restores the plaintext only in the browser.
+AAD binds chain ID, registry address, and disk address.
+The blob is version byte 0x01, a 12-byte IV, and ciphertext with authentication tag.
+Plaintext is capped at 1,536 bytes; oldest runs are removed first, with at most the last ten retained.
+
+Private fields include name, character, palette, difficulty, GOD MODE, notes, creation time, and recent runs.
+DiskRegistry v2 stores ciphertext keyed by the disk account.
+It has no funds, administrator, or custody role in the product design.
+`diskAddresses` derives all three disk addresses, then the browser reads and decrypts their registry records.
+Restore requires no application server and no localStorage history.
+
+SAVED TO CARD appears only after a save transaction confirms.
+OPEN reveals the ciphertext hash and explorer link, not the plaintext in a server request.
+A fresh disk requests MON and AUSD from the worker drip.
+Drip guards require a fresh address, enforce per-IP and daily caps, and keep an operational ledger.
+Funding availability is [U], S1 and S3, never a silently simulated success.
+
+The decisive demo is clearing site data or using another phone, inserting the same card, and recovering disks.
+It demonstrates ownership and the non-wallet use of passkey-derived material in one understandable moment.
+
+## 6. Range control and entry
+
+The player controls three things, not an order-book parameter sheet:
+
+1. Amount, one number in AUSD.
+2. WIDE or TIGHT.
+3. An advanced manual range behind a toggle, never the default.
+
+Manual range overrides the WIDE / TIGHT preset when enabled.
+AUTOPILOT means native re-arming after fills [V: Kuru flip orders](https://docs.kuru.io/concepts/flip-orders).
+It is not an automatic re-centering service or a discretionary user-key bot.
+
+### Arithmetic, not intelligence
+
+The shared SDK owns `planLadder` and `batchProvisionArgs`.
+Inputs are mid, mode, quote budget, daily realized volatility, and market precision / size parameters.
+Advice is derived from observed volatility, not predicted prices.
+
+```text
+halfWidth = clamp(k * sigmaDaily * sqrt(horizonDays), 0.5%, 20%)
+k = 1.0 for TIGHT; 2.5 for WIDE; horizonDays = 1
+step = smallest s in {0.10%, 0.25%, 0.50%, 1.00%, 2.00%}
+       with ceil(halfWidth / s) <= 8
+levels = ceil(halfWidth / step), clamped to 2..8 per side
+quotePerLevel = budgetQuote / (2 * levels)
+```
+
+Buy prices round down to ticks; their flip prices round up and are strictly higher.
+Sell prices round up; their flip prices round down and are strictly lower.
+Buy size is quotePerLevel / buy price, rounded down to size precision.
+Sell size is quotePerLevel / mid, rounded down, funded by the zap.
+If a size is below minimum, drop the outermost pair and recompute.
+If fewer than two levels survive, show AMOUNT TOO SMALL FOR THIS RANGE.
+If width shrinks, report the clamped result rather than hiding it.
+
+The output includes step, levels, low, high, orders, baseNeeded, quoteNeeded, and clamped.
+Encoding uses integer price * pricePrecision and base size * sizePrecision.
+Tick compatibility, encodings, and `provisionOrRevert` semantics are [U], spike S2.
+A planned batch is one whole ladder; fallback is individual flip orders if S2 rejects batch semantics.
+
+### What the entry costs
+
+The deposit split is visible before confirm.
+A single AUSD amount needs some MON inventory for sell levels, so the zap is necessary, not cosmetic.
+S6 shows quoted base and quote, slippage, taker fee, and transaction cost.
+The market design targets taker 30 bps and maker 0; these are planned parameters, not verified deployment values [U: S2 / Phase 5 deploy].
+Minimum size targets roughly 0.05 AUSD per level and is recorded after deployment [U: S2].
+
+The approved sequence is allowance / approval, zap, quote deposit, ladder provision, then sealed save.
+Each stage has its own loading progress and transaction link.
+The zap should land bought MON in MarginAccount; actual `isMargin` behavior is [U], spike S2.
+If it instead lands in the disk, deposit native MON before provisioning.
+All transaction calls pass explicit gas because Monad charges the declared limit [V: gas pricing](https://docs.monad.xyz/developer-essentials/gas-pricing).
+For an undelegated low-balance account, the emptying exception requires no other sender transaction in the prior three blocks [V: reserve balance](https://docs.monad.xyz/developer-essentials/reserve-balance).
+Sequence by blocks, not a guessed time delay.
+
+A failed stage leaves an honest view of funds in the disk or MarginAccount.
+WITHDRAW remains available; sealing must not block play.
+No successful-looking animation may substitute for a receipt.
+
