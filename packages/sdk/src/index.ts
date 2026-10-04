@@ -1,4 +1,6 @@
 export * from './chains'
+export * from './markets'
+export * from './markets.mainnet'
 export * from './abi/kuru-orderbook'
 export * from './abi/kuru-margin-account'
 export * from './abi/kuru-router'
