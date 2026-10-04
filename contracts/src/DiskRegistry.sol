@@ -44,6 +44,8 @@ contract DiskRegistry {
         if (difficulty > 2) revert BadDifficulty();
 
         Disk storage disk = _disks[msg.sender];
+        // uint64 seconds overflow only after roughly 584 billion years since the Unix epoch.
+        // forge-lint: disable-next-line(unsafe-typecast)
         uint64 timestamp = uint64(block.timestamp);
         if (disk.createdAt == 0) disk.createdAt = timestamp;
         disk.updatedAt = timestamp;

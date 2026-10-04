@@ -12,6 +12,12 @@ optimizer_runs = 200
 # Compiler warnings must be resolved before deployment.
 deny = "warnings"
 
+# Keep full-suite fuzz gas snapshots reproducible locally and in CI.
+[fuzz]
+seed = "0x0000000000000000000000000000000000000000000000000000000000000001"
+# Storage-derived dictionary sampling varies across processes even with a seed.
+dictionary_weight = 0
+
 [fmt]
 line_length = 100
 tab_width = 4
