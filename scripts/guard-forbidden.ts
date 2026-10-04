@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 
 // Encode scan terms so the guard can scan its own source without exclusions.
 const encoded: [string, string?][] = [
@@ -78,10 +78,14 @@ try {
     else paths.push(arg);
   }
   const staged = !all && paths.length === 0;
-  const selected = paths.length ? paths : git(...(all
+  // Submodule gitlinks (mode 160000) point at another repository's commit; skip them.
+  const gitlinks = new Set(git("ls-files", "-s", "-z").toString("utf8").split("\0")
+    .filter((entry) => entry.startsWith("160000 ")).map((entry) => entry.split("\t")[1]));
+  const selected = (paths.length ? paths : git(...(all
     ? ["ls-files", "-z"]
     : ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"]))
-    .toString("utf8").split("\0").filter(Boolean);
+    .toString("utf8").split("\0").filter(Boolean))
+    .filter((path) => !gitlinks.has(path) && (staged || !statSync(path).isDirectory()));
   for (const path of selected) {
     scan(path, staged ? git("show", `:${path}`) : readFileSync(path));
   }
