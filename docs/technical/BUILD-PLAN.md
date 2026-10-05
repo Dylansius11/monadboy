@@ -107,9 +107,127 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 
 **Proof to record** Red/green checks, coverage and formula review in external PROGRESS; observed params/topics in Kuru research; measured gas and real-order tx in SMART-CONTRACTS.
 
+## Phase 4 — Funded spikes
+
+**Goal** Turn network assumptions into pass/fail evidence before live gameplay depends on them.
+
+- [ ] **4.0** Fund separate DEPLOYER / BOT / DRIP wallets — proof required: `cast balance --ether <addr> --rpc-url https://testnet-rpc.monad.xyz` for all three; satisfy S3's lean budget below. B1 blocks broadcasts; 50 MON on DEPLOYER starts spikes.
+- [ ] **4.1** S1: broadcast AUSD faucet request with explicit gas — proof required: requestFunds receipt or revert, observed request cadence or >=1,000 AUSD balance; document selected supply fallback if needed.
+- [ ] **4.2** S2: deploy MON-AUSD, read params, deposit and provision 2+2 levels, then BOT taker-fill — proof required: deploy/provision/fill tx hashes; non-empty `cast code`; getMarketParams readback; Trade + FlippedOrderCreated; gas and funding / margin / provisionOrRevert semantics.
+- [ ] **4.3** S3: measure +/-3% bot inventory and twenty player drips — proof required: deployed-book inventory calculation within BOT 80 MON and measured deployment/drip gas; write measured budget beside the 150 MON cap, shrinking minSize / depth first.
+- [ ] **4.4** S4: test Mera create/restore on disposable HTTPS tunnel — proof required: user-observed iPhone Safari and Android Chrome results from dev-only /dev/passkey, hostname and authenticator recorded; route absent from production.
+- [ ] **4.5** S5: initialize testnet Envio spike for our market — proof required: fresh fill tx, GraphQL row and elapsed time <=10 s, or recorded no-go/fallback.
+
+**Acceptance**
+- Each S1..S5 has a pass/fail line with actual evidence, not code existence.
+- markets.testnet.json contains verified deployed params/address; Phase 3 deferred gas and real-order proof are filled.
+- Device testing can proceed without funding; tunnel passkeys never become production cards.
+
+**Proof to record** Spike scripts in scripts/spikes; receipts, params and gas in SMART-CONTRACTS; findings in Kuru / AUSD / Mera / Envio research notes; outcomes and blocker changes in external PROGRESS.
+
 [V] Supplied ops balance record, checked 2026-10-05: `cast balance --ether <addr> --rpc-url https://testnet-rpc.monad.xyz` returned `0.000000000000000000` for DEPLOYER, BOT and DRIP. This source observation is the zero-MON blocker, not a repeated funding check. The roles are separate; no wallet address or secret is needed in this status record. Fund DEPLOYER for deployment, BOT for inventory and DRIP for player supply before dependent broadcasts. [V] Public testnet funding entry point: [Monad faucet](https://faucet.monad.xyz/) ([network facts](https://docs.monad.xyz/ai/current-facts.md)). Request builder supply from Monad if public faucet limits cannot cover S3.
 
-## 2. Dependency order
+## Phase 5 — DiskRegistry v2
+
+**Goal** Save isolated sealed disks onchain without a server restore dependency.
+
+- [x] **5.1** Configure Solidity 0.8.28 Foundry project and pinned forge-std — proof: `00a6d11`; PROGRESS records forge build exit 0.
+- [x] **5.2a** Implement per-disk save/overwrite/erase and limits without funds/admin — proof: `d60452a`, `bd4af28`; PROGRESS records Anvil save/read, preserved createdAt, value rejection and erase.
+- [x] **5.2b** Cover save/error/isolation/size boundaries and stable gas snapshot — proof: `30c09be`, `bd4af28`; PROGRESS records 17/17 tests, 256 fuzz runs, identical snapshot checks and forge fmt exit 0.
+- [x] **5.3a** Add deploy script, contract docs and generated SDK registry ABI — proof: `e7960a7`, `d5b2926`, `bd4af28`; PROGRESS records generated ABI deep-equals out/ (seven entries).
+- [ ] **5.3b** Broadcast registry to testnet and publish verified deployment config — proof required: explicit-gas deploy receipt, `cast code <registry> --rpc-url https://testnet-rpc.monad.xyz` non-empty, address/tx in SMART-CONTRACTS and packages/sdk/src/deployments.testnet.json; explorer verification if supported. B1.
+- [x] **5.4** Run Foundry contract tests in CI — proof: `d5b2926`; tracked .github/workflows/ci.yml defines the contract job.
+
+**Acceptance**
+- In contracts/: `forge test` and `forge snapshot --check` pass; SDK ABI equals generated artifact.
+- Testnet deployment has real code and a recorded receipt. Local contract proof alone does not complete this phase.
+
+**Proof to record** Scoped Foundry / Anvil and ABI checks in external PROGRESS; gas snapshot in contracts/.gas-snapshot; deployed address, byte length and transaction in SMART-CONTRACTS.
+
+## Phase 6 — Worker
+
+**Goal** Serve read models and operate the bot/drip continuously without signing for players.
+
+- [ ] **6.1a** Build Hono/Bun server, zod env and numbered SQLite migrations — proof required: start with `bun run --cwd apps/worker dev`; app.request route checks and a fresh SQLite database with applied migration versions.
+- [ ] **6.1b** Serve /v1/health with build/source state — proof required: `curl http://localhost:<WORKER_PORT>/v1/health`; response reports version, ticks and source ages.
+- [ ] **6.2** Sample mainnet/testnet bestBidAsk and serve /v1/mid — proof required: recorded mid_samples rows; three consecutive source failures transition to paused; HTTP response exposes freshness.
+- [ ] **6.3** Mirror toward mainnet with capped notional, explicit gas and nonce management — proof required: decideMirrorAction behavior tests for threshold/direction/cap/staleness; mirror_ticks rows and transaction receipts under measured limits.
+- [ ] **6.4** Serve seven-market tracker with L2 decoder, 24h fills and shared SDK SAFETY/HEAT — proof required: captured getL2Book decoder result; `curl http://localhost:<WORKER_PORT>/v1/tracker` returns seven markets; MON_AUSD empty-book case is thin; honeypot/playable gates and Kuru calibration checked.
+- [ ] **6.5** Drip MON then AUSD with refusal ledger and block spacing — proof required: `curl -X POST http://localhost:<WORKER_PORT>/v1/drip -H "Content-Type: application/json" -d '{"address":"<fresh-disk>"}'`; receipts, drips row, repeated request refused and every refusal path exercised.
+- [ ] **6.6** Top up AUSD with observed faucet backoff — proof required: job run/log showing successful request and MaxFrequencyExceeded scheduling without repeated broadcasts.
+- [ ] **6.7** Aggregate leaderboard via FillSource and mid_samples — proof required: known-fill valuation result plus `curl 'http://localhost:<WORKER_PORT>/v1/leaderboard?window=24h'`; chain-derived rows, no submitted scores.
+- [ ] **6.8a** Write systemd/Caddy deployment files and VPS instructions — proof required: `systemd-analyze verify deploy/monadboy-worker.service` and `caddy validate --config <configured-Caddyfile>` on target-compatible environment.
+- [ ] **6.8b** Deploy worker on VPS — proof required: service active after restart and HTTPS /v1/health; B3 access required.
+- [ ] **6.9** Exercise ten-minute live mirror, tracker and drip run — proof required: elapsed run log, mirror_ticks drift within configured threshold, seven tracker markets, successful fresh drip and second refusal; B1 / S1..S3.
+
+**Acceptance**
+- Workspace verify and scoped route/job checks pass; live run proves drift control, source ages and refusal ledger.
+- Move scoring to packages/sdk and migrate web callers; do not duplicate scoring.
+- [V] PROGRESS records public RPC getLogs limit of 100 blocks; 24h tracker scan needs HyperSync/Envio or suitable RPC, not an assumed fast raw scan.
+
+**Proof to record** Commands, route outputs and SQL rows in external PROGRESS; measured mainnet inputs/calibration in research; bot/drip receipts and explicit gas in SMART-CONTRACTS.
+
+## Phase 7 — Web integration
+
+**Goal** Replace marked fixtures with real data and local passkey signing while preserving every screen.
+
+- [ ] **7.1** Client-only Mera card session and per-disk viem clients — proof required: HTTPS create/insert/eject run; no Mera server import; sessions end on eject / hidden-tab timeout; only credential metadata persists.
+- [ ] **7.2** S1 MemoryCard: real INSERT / NEW CARD and error copy — proof required: supported-phone passkey prompts and mapped error screenshots; FIXTURE marker removed only after real actions.
+- [ ] **7.3** S2 DiskSelect: derive/read/decrypt three slots, create/drip/save and OPEN — proof required: three disk addresses, registry readbacks, save receipt, ciphertext hash/explorer proof and SAVED TO CARD screenshot.
+- [ ] **7.3a** S3 CartridgeSelect: decrypted disk, STAY IN RANGE and leaderboard navigation — proof required: phone walkthrough preserves selected disk; locked COMING SOON stays locked.
+- [ ] **7.3b** S4 Difficulty: disk preferences, mascot binding and sealed persistence — proof required: change difficulty/GOD MODE, save and restore same preferences; unsellable gate remains active.
+- [ ] **7.4** S5 PoolTracker: live query and playable / mainnet-only gates — proof required: /v1/tracker source/time visible; only PLAYABLE (TESTNET) enters a position.
+- [ ] **7.5** S6 SetRange: live SDK ladder, funding split and confirm sequence — proof required: base/quote/cost screenshot; explicit-gas approve/zap/deposit/provision receipts with IDs, loading steps and partial-failure recovery.
+- [ ] **7.6** S7 InRange: 5s mid polling, real fills, SCORE/DAMAGE and re-center/withdraw — proof required: flipped-fill receipt -> scoreCard increment with sound; NAD-SENSE boundary, sit, displayed re-center cost, PRICE FEED PAUSED and INDEXER OFFLINE states.
+- [ ] **7.7** S8 Results: cancel/withdraw, tx-linked result and sealed run — proof required: batchCancelFlipOrders / batchWithdrawMaxTokens receipts; result inputs inspectable; restored disk contains the appended run.
+- [ ] **7.8** Leaderboard screen — proof required: phone screenshot of /v1/leaderboard-backed rows for selected window with source and no self-reported SCORE.
+- [ ] **7.9** Installable portrait PWA — proof required: manifest/icons from assets/logo, Lighthouse installability report and supported-phone standalone launch; B5 organizer text settles Agora qualification separately.
+- [ ] **7.10** Remove fixtures from production paths — proof required: production route/build review and phone run using real worker/chain/indexer sources; fixtures remain test/dev-only.
+- [ ] **7.11** Record full real-phone play and stateless restore — proof required: HTTPS new card -> funded disk -> tracker/range -> explorer orders -> flipped fill/sound -> withdraw/results; clear site data -> INSERT CARD -> three locally decrypted disks without server restore.
+
+**Acceptance**
+- Full real-phone sequence and restore satisfy the evidence contract below; B2 fixes production rpId first.
+- Review all twelve product rules on every screen; every balance says TESTNET, every number has a source, DAMAGE equals SCORE's visual weight.
+- Signing stays in browser; no production fixture or server restore dependency.
+
+**Proof to record** Screen recordings / screenshots outside repo, paths and observed devices in external PROGRESS; tx/address evidence in SMART-CONTRACTS; Mera support/errors in research notes.
+
+## Phase 8 — Envio indexer
+
+**Goal** Index live fills and disk events, then switch consumers without changing SCORE.
+
+- [ ] **8.1a** Configure chain 10143, deployment start blocks and live event signatures — proof required: indexer codegen succeeds against config.yaml/schema.graphql; our market(s) and registry addresses have recorded code checks.
+- [ ] **8.1b** Implement entities and handlers with SDK-equivalent SCORE — proof required: same captured fills yield identical handler/client score, including initial vs flipped order behavior.
+- [ ] **8.2** Deploy hosted or self-hosted HyperIndex — proof required: live GraphQL endpoint responds with our deployment events; set web/worker GraphQL URLs, record sync cursor.
+- [ ] **8.3** Switch worker FillSource and S7/S8 to Envio — proof required: real indexed-fill run populates gameplay/history/leaderboard; outage uses direct logs with INDEXER OFFLINE, not duplicate arithmetic.
+- [ ] **8.4** Prove latency and SCORE parity — proof required: fresh fill tx and GraphQL appearance <=10 s; same disk's client, indexer and leaderboard SCORE agree.
+
+**Acceptance**
+- S5 evidence passes on intended testnet; config uses live rather than prose event signatures.
+- Read-model lag/outage is visible; direct logs preserve play but do not count as successful Envio integration.
+
+**Proof to record** Fresh tx, query/output, timestamps/cursor and SCORE comparison in Envio research and external PROGRESS; deployment addresses in SMART-CONTRACTS.
+
+## Phase 9 — Deploy and submission
+
+**Goal** Ship the fixed-domain demo with reproducible setup and inspectable submission evidence.
+
+- [ ] **9.1** Resolve VPS access and fixed production hostname — proof required: B2/B3 decisions, reachable SSH and final VITE_RP_ID recorded without secrets; optional RPC credentials never block public-RPC work.
+- [ ] **9.2** Deploy web/worker behind Caddy HTTPS and systemd — proof required: public phone page load, HTTPS /v1/health and service restart recovery.
+- [ ] **9.3** Rehearse on three fresh devices — proof required: iPhone, Android and desktop Chrome with Google Password Manager recordings, including a phone that never saw the app and stateless restore.
+- [ ] **9.4** Observe healthy worker for 24 hours — proof required: timestamped health samples and source/tick ages across 24h; operate through judging 14..27 October.
+- [ ] **9.5** Finalize README and clean-clone local setup — proof required: verified addresses/txs, screenshots/GIF, <=3-minute video and AI disclosure; `git clone <repo-path> <fresh-dir>`, `bun install`, `bun run verify` in fresh clone with observed output.
+- [ ] **9.6** Complete bounty mapping — proof required: each requirement -> actual code path -> video timestamp in README/research/bounties.md; B5 resolved before Agora eligibility claim.
+- [ ] **9.7** Check public submission package — proof required: publicly accessible repo/URL, MIT license, final address/tx/video links and AI-tool disclosure; submission receipt / checklist against Metropolis rules.
+
+**Acceptance**
+- Fresh-phone HTTPS works, worker health is green for 24h and clean-clone commands pass.
+- Non-negotiable real flip fill on camera and stateless restore have evidence; no fixture substitution.
+- Public submission contains actual links/addresses and qualifying bounty proof, not pending evidence slots.
+
+**Proof to record** Rehearsal/uptime/clone output in external PROGRESS; public evidence in README and bounties research; addresses/txs in SMART-CONTRACTS; media stored outside repo.
+
+## Dependency order
 
 Phase 2 visual/toolchain work and Phase 3 pure SDK work can proceed while Phase 4 is blocked. Funded spikes need chain configs/ABIs/encodings from Phase 3; start them as soon as funding exists, without claiming untested semantics. Phase 5 contract work does not require completed mirror deployment, but its broadcast needs funded deployment capacity.
 
@@ -117,7 +235,7 @@ Phase 6 worker aggregation uses the `FillSource` interface with direct logs befo
 
 Shared names are fixed: `planLadder`, `batchProvisionArgs`, `scoreCard`, `rangeState`, `deriveSealKey`, `sealDisk`, `openDisk`, `diskAddresses`, `FillSource`, `decideMirrorAction`.
 
-## 3. Spike go / no-go gates
+## Spike go / no-go gates
 
 Each gate is currently [U]. A pass requires actual evidence, not an SDK declaration, code existence or simulated success. Put transaction hashes, receipts/logs, parameter readbacks, gas measurements and observed device/indexer results in the corresponding research note and [SMART-CONTRACTS](SMART-CONTRACTS.md).
 
@@ -133,7 +251,7 @@ Each gate is currently [U]. A pass requires actual evidence, not an SDK declarat
 
 S2 additionally records `isMargin`, minimum-output units, zap funding semantics, max-size/spread choices and gas limits. S4 tunnel cards are disposable: [V] Mera passkeys bind to the hostname ([guide](https://docs.monad.xyz/guides/mera)); fix production `VITE_RP_ID` before any real card.
 
-## 4. Phase evidence contract
+## Phase evidence contract
 
 | Area | Evidence, not merely compilation |
 |---|---|
@@ -150,7 +268,7 @@ S2 additionally records `isMargin`, minimum-output units, zap funding semantics,
 
 [V] Every transaction declares gas because Monad charges the limit ([gas pricing](https://docs.monad.xyz/developer-essentials/gas-pricing)). [V] Low-balance undelegated senders must observe the k=3-block emptying rule, including absence of prior sender transactions/delegation changes ([reserve balance](https://docs.monad.xyz/developer-essentials/reserve-balance)); block-based spacing is required, not a guessed fixed delay.
 
-## 5. Cut ladder
+## Cut ladder
 
 Cut in this exact order, recording the decision and affected phase status in the same commit:
 
@@ -163,13 +281,13 @@ Cut in this exact order, recording the decision and affected phase status in the
 
 A market/funding fallback is not a feature-completion claim. Maintain exact deployed configuration, supply assumptions and gate evidence. [U, organizer clarification during S4] Agora mobile-web/PWA qualification and requirement text remain unresolved; do not make an unverified bounty claim.
 
-## 6. Open decisions
+## Open decisions
 
-D-SCORE: display of NET > SCORE surplus (DAMAGE clamps at 0, identity breaks). Owner: user. Needed before Phase 3.4 tests are final.
+[V] D-SCORE uses B6 default **(a)** in Phase 3 (`c01b1fc`; PROGRESS Phase 3): keep the DAMAGE clamp and show surplus as part of NET only. Owner: user for an override; current tests are final for (a), not blocked pending a new choice.
 
-Keep `DAMAGE = max(0, SCORE - (V_now - V_hodl))` and `NET = V_now - V_hodl`. The identity `NET = SCORE - DAMAGE` is exact only when `NET <= SCORE`; that condition is expected for a two-sided ladder [I], not universally proven. For `NET > SCORE`, DAMAGE is zero and the surplus needs an explicit display decision. Do not alter the approved DAMAGE clamp or hide surplus with a fake NET.
+Keep `DAMAGE = max(0, SCORE - (V_now - V_hodl))` and `NET = V_now - V_hodl`. The identity `NET = SCORE - DAMAGE` is exact only when `NET <= SCORE`; that condition is expected for a two-sided ladder [I], not universally proven. For `NET > SCORE`, DAMAGE is zero and NET displays the surplus. Do not alter the approved DAMAGE clamp or hide surplus with a fake NET.
 
-## 7. Submission readiness
+## Submission readiness
 
 Phase 9 fills README evidence slots with real deployed addresses/transaction hashes, a <=3-minute video, screenshots/GIF and bounty requirement -> code path -> timestamp mapping. Public repository, MIT licensing and AI-tool disclosure remain required delivery checks. The app and worker stay online through Metropolis judging, 14 to 27 October.
 
