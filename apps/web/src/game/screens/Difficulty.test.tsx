@@ -202,4 +202,58 @@ describe('the GOD MODE gate', () => {
     expect(getByText('> _ _ _ _ _')).toBeInTheDocument()
     expect(getByText(/not that one/i)).toBeInTheDocument()
   })
+
+  it('B from an empty word closes the overlay', () => {
+    const { container, getByText } = renderDifficulty({ difficulty: 'hard' })
+    openGodModeOverlay()
+    expect(overlayOf(container)).toBeInTheDocument()
+
+    press('B')
+
+    expect(container.querySelector('.bg-alarm')).not.toBeInTheDocument()
+
+    expect(getByText(/choose your monanimal/i)).toBeInTheDocument()
+  })
+})
+
+describe('session choices through console input', () => {
+  function SessionDifficulty() {
+    const { difficulty, godMode } = useSession()
+    return (
+      <Difficulty
+        difficulty={difficulty}
+        godMode={godMode}
+        onChange={() => {}}
+        onConfirm={() => {}}
+        onBack={() => {}}
+      />
+    )
+  }
+
+  it('binds every chosen tier to its mascot and clears GOD MODE on downgrade', () => {
+    const { container, getByText } = renderScreen(<SessionDifficulty />)
+    expect(getByText('FIXTURE')).toBeInTheDocument()
+    press('RIGHT')
+    expect(useSession.getState().characterId).toBe('moyaki')
+    press('RIGHT')
+    expect(useSession.getState().characterId).toBe('mouch')
+    openGodModeOverlay()
+    for (const letter of WORD_LETTERS) chooseCandidate(container, letter)
+    press('UP', 'A')
+    expect(useSession.getState().godMode).toBe(true)
+    press('LEFT')
+    expect(useSession.getState()).toMatchObject({
+      difficulty: 'normal', characterId: 'moyaki', godMode: false,
+    })
+    press('LEFT')
+    expect(useSession.getState().characterId).toBe('molandak')
+  })
+
+  it('never enables GOD MODE on EASY or NORMAL through console input', () => {
+    renderScreen(<SessionDifficulty />)
+    press('DOWN', 'A', 'RIGHT', 'DOWN', 'A')
+    expect(useSession.getState()).toMatchObject({
+      difficulty: 'normal', characterId: 'moyaki', godMode: false,
+    })
+  })
 })
