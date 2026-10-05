@@ -9,12 +9,12 @@ export const Route = createFileRoute('/_console/cartridges')({
 })
 
 /**
- * S3's route. ARCHITECTURE.md 2.1: a route owns navigation and nothing else.
+ * S3's route (ARCHITECTURE.md §6): a route owns navigation and session wiring.
  *
  * `disk` may be undefined, and that is a render state rather than a redirect:
  * every screen in this app opens directly at its URL and still renders
- * (session.ts), which is how nine screens get looked at without playing four
- * screens of preamble each time. Gate 2.4.
+ * (session.ts), which is how eight screens get looked at without playing the
+ * screens before them each time.
  */
 function CartridgeSelectRoute() {
   const navigate = useNavigate()

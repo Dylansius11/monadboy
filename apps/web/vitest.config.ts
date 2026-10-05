@@ -53,7 +53,7 @@ export default defineConfig({
       reporter: ['text', 'html'],
       include: ['src/lib/**', 'src/design/**'],
       // Only the pure modules are held to a number. console/, ui/, and game/
-      // are visual and tested by looking at them, per ARCHITECTURE.md 10.
+      // are visual and tested by looking at them in the running app.
       thresholds: { lines: 80, functions: 80, branches: 75, statements: 80 },
     },
   },

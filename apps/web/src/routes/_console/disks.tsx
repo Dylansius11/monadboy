@@ -9,7 +9,7 @@ export const Route = createFileRoute('/_console/disks')({
 })
 
 /**
- * S2's route. ARCHITECTURE.md 2.1: a route owns navigation and nothing else.
+ * S2's route (ARCHITECTURE.md §6): a route owns navigation and session wiring.
  *
  * Opening a disk sets BOTH the disk and the difficulty it is bound to. A disk
  * IS a difficulty (ERD.md section 2, SAVE_DISK ||--|| DIFFICULTY), so letting

@@ -153,7 +153,12 @@ function DiskRow({
               --
             </PixelText>
           ) : (
-            <Value amount={net} prefix="$" decimals={2} signed role="body" />
+            <>
+              <Value amount={net} prefix="$" decimals={2} signed role="body" />
+              <PixelText role="micro" tone="dim" upper>
+                testnet
+              </PixelText>
+            </>
           )}
           <PixelText role="micro" tone="dim" upper>
             {disk.runs === 0

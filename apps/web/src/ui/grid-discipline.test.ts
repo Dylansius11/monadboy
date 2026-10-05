@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Gate 1.4: every primitive is on the 4px grid.
+ * Every primitive is on the 4px grid.
  *
  * Tailwind's base unit is 4px, so a spacing utility cannot be off-grid. The
  * one way back onto a bad number is an arbitrary value, `p-[7px]`. This test

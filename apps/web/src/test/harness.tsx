@@ -6,22 +6,23 @@ import type { ConsoleIntent } from '../console/intents'
 /**
  * How a screen is tested.
  *
- * ARCHITECTURE.md section 10 says ui/ and game/ are tested by looking at them,
- * and that stays true for LOOK. These tests cover the other half: what the
+ * ui/ and game/ are checked by looking at them (the vitest config only holds
+ * lib/ and design/ to a coverage number), and that stays true for LOOK. These
+ * tests cover the other half: what the
  * screen does when a button is pressed, and what it renders when the data it
- * wanted is not there. Both of those are gate conditions (2.1 and 2.4) and
- * neither is visible in a screenshot.
+ * wanted is not there. Neither is visible in a screenshot.
  *
  * Two rules make this cheap:
  *
  *   1. A SCREEN IS A COMPONENT, not a route. Route files are wrappers that own
  *      useNavigate and pass callbacks down. So a screen test never needs a
  *      router, and a `.test.tsx` never sits in src/routes/ where the route
- *      generator would turn it into a route.
+ *      generator would turn it into a route. The one routed walk of the
+ *      whole loop lives beside this file in loop.test.tsx.
  *   2. INPUT GOES THROUGH THE REAL KEYBOARD PATH. `press('A')` dispatches an
  *      actual keydown, which runs the real intent mapping, the real repeat
  *      policy, and the real store. A test that called a handler directly would
- *      pass while the screen was unreachable by keyboard, which is Gate 1.2.
+ *      pass while the screen was unreachable by keyboard.
  */
 
 /** Every screen mounts inside the console's input provider and nothing else. */

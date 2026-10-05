@@ -58,7 +58,7 @@ const TABS = [
 const CHARACTER_IDS = Object.keys(characters) as Array<CharacterId>
 
 /**
- * The primitive gallery. Gate 1.4.
+ * The primitive gallery.
  *
  * Every component on one screen, at real size, inside the real console. It is
  * not a storybook: it is the thing you look at to answer "does this system hold

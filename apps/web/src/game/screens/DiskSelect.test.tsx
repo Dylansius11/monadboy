@@ -66,6 +66,20 @@ describe('the shelf', () => {
   })
 })
 
+describe('money is testnet money', () => {
+  it('labels every disk that shows a money value as TESTNET', () => {
+    const { getByText } = renderDiskSelect()
+    for (const name of ['safe money', 'degen box']) {
+      expect(getByText(name).closest('button')).toHaveTextContent(/testnet/i)
+    }
+  })
+
+  it('shows no TESTNET label where there is no money value to qualify', () => {
+    const { getByText } = renderDiskSelect()
+    expect(getByText('new game').closest('button')).not.toHaveTextContent(/testnet/i)
+  })
+})
+
 describe('never hide a loss', () => {
   it('renders the losing disk with a minus glyph and a loss tone', () => {
     const { container } = renderDiskSelect()
