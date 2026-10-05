@@ -63,6 +63,23 @@ describe('screen fixture inputs', () => {
       expect(plan.low).toBeLessThan(plan.high)
     }
   })
+
+  it('plans the executable testnet MON/AUSD fixture with MON_AUSD market rules', () => {
+    const entry = scoredPools('easy').find(({ network }) => network === 'testnet')
+    if (!entry) throw new Error('missing executable testnet fixture')
+    const { pool, book } = entry
+    const market = mainnetMarkets.find(({ baseSymbol, quoteSymbol }) =>
+      baseSymbol === pool.tokenX.symbol && quoteSymbol === pool.tokenY.symbol)
+    expect(market?.symbol).toBe('MON_AUSD')
+    if (!market || book.bid === null || book.ask === null) throw new Error('missing fixture ladder inputs')
+    const mid = (book.bid + book.ask) / 2
+    const { plan } = planForWidth(mid, 'wide', ladderPlanner, {
+      budgetQuote: 100, sigmaDaily: pool.realizedVol24h!, params: market.params,
+    })
+    expect(plan.low).toBeLessThan(mid)
+    expect(plan.high).toBeGreaterThan(mid)
+    expect(plan.levels).toBeGreaterThanOrEqual(2)
+  })
 })
 
 describe('scoring profile invariants', () => {

@@ -41,9 +41,7 @@ function bucket(score: number, low: string, mid: string, high: string): string {
 const poolBookThin = (entry: ScoredPool): boolean =>
   entry.book.bid === null || entry.book.ask === null
 
-/** Development fixture identity only; deployment eligibility is wired in Phase 7. */
-const isPlayable = ({ pool }: ScoredPool): boolean =>
-  pool.tokenX.symbol === 'MON' && pool.tokenY.symbol === 'AUSD'
+const isPlayable = ({ network }: ScoredPool): boolean => network === 'testnet'
 
 const FIXTURE_SOURCE = fallback(
   'Development market fixtures',

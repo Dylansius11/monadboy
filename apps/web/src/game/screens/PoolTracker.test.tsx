@@ -63,10 +63,12 @@ function scoredPool(overrides: {
   score?: Partial<PoolScore>
   failures?: Array<GateFailure>
   passes?: boolean
+  network?: ScoredPool['network']
 }): ScoredPool {
   const failures = overrides.failures ?? []
   return {
     FIXTURE: true,
+    network: overrides.network ?? 'mainnet',
     book: { bid: 1, ask: 1.001 },
     pool: pool(overrides.pool),
     score: score(overrides.score),
@@ -414,12 +416,11 @@ describe('the inspect panel says who is talking', () => {
 })
 
 describe('fixture source and deployment boundaries', () => {
-  const playable = (): ScoredPool => scoredPool({
-    pool: {
-      tokenX: { address: '0xaaaa', symbol: 'MON', decimals: 18 },
-      tokenY: { address: '0xbbbb', symbol: 'AUSD', decimals: 6 },
-    },
-  })
+  const playable = (): ScoredPool => {
+    const entry = scoredPools('easy').find(({ network }) => network === 'testnet')
+    if (!entry) throw new Error('missing executable testnet fixture')
+    return entry
+  }
 
   it('selects a passing TESTNET pool in session only after inspecting it', () => {
     const entry = playable()
@@ -444,7 +445,7 @@ describe('fixture source and deployment boundaries', () => {
 
   it('renders the MON/AUSD null book as thin and refuses play even in GOD MODE', () => {
     const pools = scoredPools('hard', true)
-    const empty = pools.find((entry) => entry.pool.tokenY.symbol === 'AUSD')
+    const empty = pools.find((entry) => entry.network === 'mainnet' && entry.pool.tokenY.symbol === 'AUSD')
     if (!empty) throw new Error('missing MON/AUSD fixture')
     const { getByText, onPlayPool } = renderTracker({
       pools: [empty, ...pools.filter((entry) => entry !== empty)],
@@ -452,7 +453,7 @@ describe('fixture source and deployment boundaries', () => {
       gates: fixtureGates('hard'),
     })
     press('A')
-    expect(getByText(/Thin book.*PLAYABLE \(TESTNET\)/)).toBeInTheDocument()
+    expect(getByText(/Thin book.*MAINNET ONLY/)).toBeInTheDocument()
     expect(getByText(GATE_COPY.honeypot)).toBeInTheDocument()
     press('A')
     expect(useSession.getState().pairAddress).toBeNull()
@@ -467,6 +468,16 @@ describe('fixture source and deployment boundaries', () => {
     expect(onPlayPool).not.toHaveBeenCalled()
   })
 
+  it('blocks a two-sided passing mainnet MON/AUSD book rather than trusting its symbols', () => {
+    const entry = { ...playable(), network: 'mainnet' as const }
+    const { getAllByText, onPlayPool } = renderTracker({ pools: [entry] })
+    press('A')
+    expect(getAllByText(/MAINNET ONLY/)).toHaveLength(2)
+    press('A')
+    expect(useSession.getState().pairAddress).toBeNull()
+    expect(onPlayPool).not.toHaveBeenCalled()
+  })
+
   it('shows the scoring library SAFETY and HEAT failures and neutral offline momentum', () => {
     const market = pool({ tvlUsd: 0, realizedVol24h: 4 })
     const computed = scorePool({
@@ -476,7 +487,7 @@ describe('fixture source and deployment boundaries', () => {
     const gates = { ...fixtureGates('easy'), maxHeat: 1 }
     const result = evaluateGates(market, computed, gates, FIXTURE_NOW)
     const entry: ScoredPool = {
-      FIXTURE: true, pool: market, book: { bid: 1, ask: 1.001 },
+      FIXTURE: true, network: 'mainnet', pool: market, book: { bid: 1, ask: 1.001 },
       score: computed, gates: result, passes: result.passed,
     }
     const { getByText } = renderTracker({ pools: [entry, PASSING_LOW], gates })

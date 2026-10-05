@@ -14,13 +14,30 @@ describe('fixture screening', () => {
   it('keeps an empty MON_AUSD book visible but filtered at every difficulty', () => {
     for (const difficulty of ['easy', 'normal', 'hard'] as const) {
       const empty = scoredPools(difficulty).find(
-        ({ pool }) => pool.tokenX.symbol === 'MON' && pool.tokenY.symbol === 'AUSD',
+        ({ pool, network }) => network === 'mainnet' && pool.tokenX.symbol === 'MON' && pool.tokenY.symbol === 'AUSD',
       )!
       expect(empty.book).toEqual({ bid: null, ask: null })
       expect(empty.pool.tvlUsd).toBe(0)
       expect(empty.passes).toBe(false)
       expect(empty.score.liquidityDepth).toBe(0)
     }
+  })
+
+  it('keeps a distinct executable testnet MON/AUSD fixture passing EASY', () => {
+    const markets = scoredPools('easy')
+    const playable = markets.filter(({ network }) => network === 'testnet')
+    expect(playable).toHaveLength(1)
+    const entry = playable[0]
+    expect(entry).toMatchObject({
+      FIXTURE: true, network: 'testnet', passes: true,
+      pool: { tokenX: { symbol: 'MON' }, tokenY: { symbol: 'AUSD' } },
+    })
+    expect(entry.book.bid).toBeGreaterThan(0)
+    expect(entry.book.ask).toBeGreaterThan(entry.book.bid!)
+    expect(entry.gates.failures).toEqual([])
+    expect(markets.filter(({ network }) => network === 'mainnet')
+      .every(({ pool }) => pool.pairAddress !== entry.pool.pairAddress)).toBe(true)
+    expect(findPool(entry.pool.pairAddress)).toEqual(entry)
   })
 
   it('loosens the filter without hiding failed markets', () => {

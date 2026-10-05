@@ -22,6 +22,7 @@ const AUSD = { address: fixtureAddress(3), symbol: 'AUSD', decimals: 6 }
 
 export interface FixtureMarket {
   FIXTURE: true
+  network: 'mainnet' | 'testnet'
   pool: Pool
   book: { bid: number | null; ask: number | null }
   honeypotClean: boolean
@@ -31,6 +32,7 @@ export interface FixtureMarket {
 export const FIXTURE_MARKETS: Array<FixtureMarket> = [
   {
     FIXTURE: true,
+    network: 'mainnet',
     pool: {
       pairAddress: fixtureAddress(0xab),
       tokenX: MON,
@@ -47,6 +49,7 @@ export const FIXTURE_MARKETS: Array<FixtureMarket> = [
   },
   {
     FIXTURE: true,
+    network: 'mainnet',
     pool: {
       pairAddress: fixtureAddress(0xac),
       tokenX: MON,
@@ -64,6 +67,7 @@ export const FIXTURE_MARKETS: Array<FixtureMarket> = [
   },
   {
     FIXTURE: true,
+    network: 'mainnet',
     pool: {
       pairAddress: fixtureAddress(0xad),
       tokenX: AUSD,
@@ -78,10 +82,29 @@ export const FIXTURE_MARKETS: Array<FixtureMarket> = [
     book: { bid: 1.00006, ask: 1.000074 },
     honeypotClean: true,
   },
+  {
+    FIXTURE: true,
+    network: 'testnet',
+    // Stands in for our MON/AUSD market deployed in spike S2; never a live read.
+    pool: {
+      pairAddress: fixtureAddress(0xae),
+      tokenX: MON,
+      tokenY: AUSD,
+      tvlUsd: 80_000,
+      volume24hUsd: 40_000,
+      createdAt: FIXTURE_NOW - 30 * 86_400,
+      createdAtIsExact: true,
+      lpConcentration: 0.1,
+      realizedVol24h: 0.2,
+    },
+    book: { bid: 0.03312, ask: 0.03316 },
+    honeypotClean: true,
+  },
 ]
 
 export interface ScoredPool {
   FIXTURE: true
+  network: FixtureMarket['network']
   pool: Pool
   book: FixtureMarket['book']
   score: PoolScore
@@ -97,14 +120,14 @@ export function fixtureGates(difficulty: Difficulty): GateSet {
 /** Failed markets stay visible as dim pins; missing momentum stays neutral. */
 export function scoredPools(difficulty: Difficulty, godMode = false): Array<ScoredPool> {
   const gates = fixtureGates(difficulty)
-  return FIXTURE_MARKETS.map(({ pool, book, honeypotClean }) => {
+  return FIXTURE_MARKETS.map(({ network, pool, book, honeypotClean }) => {
     const score = scorePool(
       { pool, momentumAgeSeconds: 0, honeypotClean, nowSeconds: FIXTURE_NOW },
       PROFILE,
     )
     const result = evaluateGates(pool, score, gates, FIXTURE_NOW)
     const passes = godMode ? score.honeypotClean : result.passed
-    return { FIXTURE: true, pool, book, score, gates: result, passes }
+    return { FIXTURE: true, network, pool, book, score, gates: result, passes }
   })
 }
 
