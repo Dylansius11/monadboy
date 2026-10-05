@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { Results } from '../../../game/screens/Results'
-import { findPool } from '../../../game/fixtures'
+import { executablePool } from '../../../game/eligibility'
 import { useSession } from '../../../state/session'
 
 export const Route = createFileRoute('/_console/play/results/$id')({
@@ -15,7 +15,7 @@ function ResultsRoute() {
   const { difficulty, godMode, characterId, autopilot, amount, lastRun } =
     useSession()
   const pool = useMemo(
-    () => findPool(id, difficulty, godMode)?.pool,
+    () => executablePool(id, difficulty, godMode)?.pool,
     [id, difficulty, godMode],
   )
 

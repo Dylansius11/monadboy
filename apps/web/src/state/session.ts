@@ -6,8 +6,12 @@
  * Caching those reads here would create a second version of the truth.
  *
  * Everything is defaulted, so any screen can be opened directly at its URL and
- * still render. That is not a convenience: it is how nine screens get built and
- * looked at without playing four screens of preamble each time.
+ * still render. That is not a convenience: it is how eight screens get built and
+ * looked at without playing the screens before them each time.
+ *
+ * Routes are the only writers (ARCHITECTURE.md §6). A screen reports a choice
+ * through its callbacks and the route stores it. The pool being played is not
+ * stored here: the URL id is its source.
  */
 
 import { create } from 'zustand'
@@ -40,9 +44,6 @@ export interface SessionState {
   characterId: CharacterId
   /** A modifier on HARD, never a fourth tier. The honeypot check stays on. */
   godMode: boolean
-
-  /** The pool being inspected or played. Null before S5 picks one. */
-  pairAddress: string | null
 
   // ---- what S6 is composing ----------------------------------------------
   /** Quote-token units the player is putting in. */
@@ -79,7 +80,6 @@ export interface SessionState {
 
   insertCard: (cardAddress: string) => void
   chooseDifficulty: (difficulty: Difficulty, godMode?: boolean) => void
-  choosePool: (pairAddress: string) => void
   setAmount: (amount: number) => void
   setWidth: (width: RangeWidth) => void
   setManualRange: (manual: ManualRange | null) => void
@@ -94,7 +94,6 @@ export const useSession = create<SessionState>((set) => ({
   difficulty: 'easy',
   characterId: CHARACTER_FOR.easy,
   godMode: false,
-  pairAddress: null,
   amount: 100,
   width: 'wide',
   manualRange: null,
@@ -110,7 +109,6 @@ export const useSession = create<SessionState>((set) => ({
       characterId: CHARACTER_FOR[difficulty],
       godMode: difficulty === 'hard' ? godMode : false,
     }),
-  choosePool: (pairAddress) => set({ pairAddress }),
   // Clamped to the balance here rather than in S6, so no screen can put the
   // player into a deposit they cannot fund by taking a different route in.
   setAmount: (amount) =>

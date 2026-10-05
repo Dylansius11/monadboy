@@ -6,7 +6,11 @@ export const Route = createFileRoute('/_console/play/difficulty')({
   component: DifficultyRoute,
 })
 
-/** S4 binds the chosen tier and modifier before opening the tracker. */
+/**
+ * S4's route: the only writer of the chosen tier and modifier. Moving the
+ * cursor to another tier stores it straight away so the screen re-renders with
+ * it; confirming stores the final pair before the tracker opens.
+ */
 function DifficultyRoute() {
   const navigate = useNavigate()
   const { difficulty, godMode, chooseDifficulty } = useSession()

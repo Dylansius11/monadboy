@@ -8,7 +8,7 @@ export const Route = createFileRoute('/_console/play/tracker')({
   component: Tracker,
 })
 
-/** The screen records only executable TESTNET picks; this route opens S6. */
+/** S5 offers only executable TESTNET picks; this route opens S6 with the chosen pool id in the URL. */
 function Tracker() {
   const navigate = useNavigate()
   const { difficulty, godMode, characterId } = useSession()

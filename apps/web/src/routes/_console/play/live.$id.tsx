@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { InRange } from '../../../game/screens/InRange'
-import { findPool } from '../../../game/fixtures'
+import { executablePool } from '../../../game/eligibility'
 import { useSession } from '../../../state/session'
 
 export const Route = createFileRoute('/_console/play/live/$id')({
@@ -9,9 +9,10 @@ export const Route = createFileRoute('/_console/play/live/$id')({
 })
 
 /**
- * S7's route. ARCHITECTURE.md 2.1: five lines of real work, everything else
- * is `InRange` taking props. `onBack` leaves the position and returns to the
- * tracker, which is where the player picked this pool.
+ * S7's route (ARCHITECTURE.md §6): navigation and session wiring only,
+ * everything else is `InRange` taking props. A pool the tracker would refuse
+ * to start is treated as missing. `onBack` leaves the position and returns to
+ * the tracker, which is where the player picked this pool.
  */
 function Live() {
   const { id } = Route.useParams()
@@ -28,7 +29,7 @@ function Live() {
     finishRun,
   } = useSession()
   const pool = useMemo(
-    () => findPool(id, difficulty, godMode)?.pool,
+    () => executablePool(id, difficulty, godMode)?.pool,
     [id, difficulty, godMode],
   )
 

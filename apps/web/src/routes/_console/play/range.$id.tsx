@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { SetRange } from '../../../game/screens/SetRange'
-import { findPool } from '../../../game/fixtures'
+import { executablePool } from '../../../game/eligibility'
 import { useSession } from '../../../state/session'
 
 export const Route = createFileRoute('/_console/play/range/$id')({
@@ -9,8 +9,9 @@ export const Route = createFileRoute('/_console/play/range/$id')({
 })
 
 /**
- * S6's route. ARCHITECTURE.md 2.1: five lines of real work, everything else
- * is `SetRange` taking props. Mirrors live.$id.tsx exactly.
+ * S6's route (ARCHITECTURE.md §6): a route owns navigation and session
+ * wiring, everything else is `SetRange` taking props. A pool the tracker
+ * would refuse to start is treated as missing, so the URL cannot skip the gate.
  */
 function SetRangeRoute() {
   const { id } = Route.useParams()
@@ -29,7 +30,7 @@ function SetRangeRoute() {
     setAutopilot,
   } = useSession()
   const pool = useMemo(
-    () => findPool(id, difficulty, godMode)?.pool,
+    () => executablePool(id, difficulty, godMode)?.pool,
     [id, difficulty, godMode],
   )
 

@@ -5,7 +5,6 @@ import { fixtureGates, passingCount, scoredPools } from '../fixtures'
 import { ageInDays, compactUsd } from '../../lib/format'
 import { GodModeGate } from '../GodModeGate'
 import { Meter, PixelText, Row, Sprite, Toggle } from '../../ui'
-import { useSession } from '../../state/session'
 import type { CharacterId } from '../../config/brand'
 import type { Difficulty as DifficultyTier, GateSet } from '../../types/domain'
 
@@ -62,7 +61,6 @@ export function Difficulty({
   onConfirm,
   onBack,
 }: DifficultyProps) {
-  const chooseDifficulty = useSession((session) => session.chooseDifficulty)
   const [focus, setFocus] = useState<Focus>('tier')
 
   const [godModeOn, setGodModeOn] = useState(godMode)
@@ -102,7 +100,6 @@ export function Difficulty({
         activateGodMode()
         return
       }
-      chooseDifficulty(difficulty, godModeOn)
       onConfirm(difficulty, godModeOn)
       return
     }
@@ -112,7 +109,6 @@ export function Difficulty({
       const index = TIER_ORDER.indexOf(difficulty)
       const nextIndex = intent === 'RIGHT' ? index + 1 : index - 1
       if (nextIndex >= 0 && nextIndex < TIER_ORDER.length) {
-        chooseDifficulty(TIER_ORDER[nextIndex])
         onChange(TIER_ORDER[nextIndex])
       }
       return

@@ -4,12 +4,12 @@ import { characters } from '../../config/brand'
 import { GATE_COPY, UNVERIFIED_COPY } from '../../lib/scoring/gates'
 import { ageInDays, compactUsd } from '../../lib/format'
 import { FIXTURE_NOW } from '../fixtures'
+import { isBookThin, isExecutable, isTestnet } from '../eligibility'
 import { nextPin, panFor, riskBand, scoreToPosition } from '../map'
 import { BAND_FILL, WorldMap } from '../WorldMap'
 import { MapPin, PIN_SIZE, PIN_SIZE_SELECTED } from '../MapPin'
 import { Meter, Panel, PixelText, Sprite } from '../../ui'
 import { fallback } from '../../lib/envelope'
-import { useSession } from '../../state/session'
 import type { ReactNode } from 'react'
 import type { CharacterId } from '../../config/brand'
 import type { ScoredPool } from '../fixtures'
@@ -37,11 +37,6 @@ function bucket(score: number, low: string, mid: string, high: string): string {
   if (score >= 40) return mid
   return low
 }
-
-const poolBookThin = (entry: ScoredPool): boolean =>
-  entry.book.bid === null || entry.book.ask === null
-
-const isPlayable = ({ network }: ScoredPool): boolean => network === 'testnet'
 
 const FIXTURE_SOURCE = fallback(
   'Development market fixtures',
@@ -77,7 +72,6 @@ export function PoolTracker({
   onPlayPool,
   onBack,
 }: PoolTrackerProps) {
-  const choosePool = useSession((session) => session.choosePool)
   const [view, setView] = useState<'map' | 'inspect'>('map')
   const [cursorIndex, setCursorIndex] = useState(0)
   const [zoomStep, setZoomStep] = useState(0)
@@ -99,8 +93,7 @@ export function PoolTracker({
         setView('map')
         return
       }
-      if (intent === 'A' && selected.passes && isPlayable(selected) && !poolBookThin(selected)) {
-        choosePool(selected.pool.pairAddress)
+      if (intent === 'A' && isExecutable(selected)) {
         onPlayPool(selected.pool.pairAddress)
       }
       return
@@ -476,8 +469,8 @@ function InspectPanel({
         </div>
         
         <PixelText role="body" tone="dim" upper>
-          {poolBookThin(entry) ? 'Thin book' : 'Book ready'}
-          {' · '}{isPlayable(entry) ? 'PLAYABLE (TESTNET)' : 'MAINNET ONLY'}
+          {isBookThin(entry) ? 'Thin book' : 'Book ready'}
+          {' · '}{isTestnet(entry) ? 'PLAYABLE (TESTNET)' : 'MAINNET ONLY'}
         </PixelText>
       </div>
 
@@ -585,9 +578,9 @@ function InspectPanel({
         <PixelText role="micro" tone={passes ? 'ink' : 'dim'} upper>
           {!passes
             ? 'Locked by the checks above'
-            : !isPlayable(entry)
+            : !isTestnet(entry)
               ? 'MAINNET ONLY'
-              : poolBookThin(entry)
+              : isBookThin(entry)
                 ? 'Thin book · cannot play'
                 : 'A Play this pool'}
         </PixelText>

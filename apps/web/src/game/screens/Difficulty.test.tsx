@@ -1,20 +1,17 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { within } from '@testing-library/react'
 import { press, renderScreen } from '../../test/harness'
 import { Difficulty } from './Difficulty'
 
 import { fixtureGates, passingCount, scoredPools } from '../fixtures'
 import { ageInDays, compactUsd } from '../../lib/format'
-import { useSession } from '../../state/session'
 import type { DifficultyProps } from './Difficulty'
 import type { Difficulty as DifficultyTier } from '../../types/domain'
 
 const TIERS: ReadonlyArray<DifficultyTier> = ['easy', 'normal', 'hard']
 const TOTAL_POOLS = scoredPools('easy').length
-
-beforeEach(() => useSession.setState(useSession.getInitialState()))
 
 function renderDifficulty(overrides: Partial<DifficultyProps> = {}) {
   const onChange = vi.fn()
@@ -216,44 +213,25 @@ describe('the GOD MODE gate', () => {
   })
 })
 
-describe('session choices through console input', () => {
-  function SessionDifficulty() {
-    const { difficulty, godMode } = useSession()
-    return (
-      <Difficulty
-        difficulty={difficulty}
-        godMode={godMode}
-        onChange={() => {}}
-        onConfirm={() => {}}
-        onBack={() => {}}
-      />
-    )
-  }
-
-  it('binds every chosen tier to its mascot and clears GOD MODE on downgrade', () => {
-    const { container, getByText } = renderScreen(<SessionDifficulty />)
+describe('what the screen reports through its callbacks', () => {
+  it('marks itself as fixture data', () => {
+    const { getByText } = renderDifficulty()
     expect(getByText('FIXTURE')).toBeInTheDocument()
-    press('RIGHT')
-    expect(useSession.getState().characterId).toBe('moyaki')
-    press('RIGHT')
-    expect(useSession.getState().characterId).toBe('mouch')
+  })
+
+  it('confirms GOD MODE only after the word is spelled on HARD', () => {
+    const { container, onConfirm } = renderDifficulty({ difficulty: 'hard' })
+    press('A')
+    expect(onConfirm).toHaveBeenLastCalledWith('hard', false)
     openGodModeOverlay()
     for (const letter of WORD_LETTERS) chooseCandidate(container, letter)
     press('UP', 'A')
-    expect(useSession.getState().godMode).toBe(true)
-    press('LEFT')
-    expect(useSession.getState()).toMatchObject({
-      difficulty: 'normal', characterId: 'moyaki', godMode: false,
-    })
-    press('LEFT')
-    expect(useSession.getState().characterId).toBe('molandak')
+    expect(onConfirm).toHaveBeenLastCalledWith('hard', true)
   })
 
-  it('never enables GOD MODE on EASY or NORMAL through console input', () => {
-    renderScreen(<SessionDifficulty />)
-    press('DOWN', 'A', 'RIGHT', 'DOWN', 'A')
-    expect(useSession.getState()).toMatchObject({
-      difficulty: 'normal', characterId: 'moyaki', godMode: false,
-    })
+  it('never confirms GOD MODE on EASY or NORMAL', () => {
+    const { onConfirm } = renderDifficulty({ difficulty: 'normal' })
+    press('DOWN', 'A')
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith('normal', false)
   })
 })

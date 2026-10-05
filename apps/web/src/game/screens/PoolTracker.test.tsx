@@ -1,21 +1,18 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { fireEvent } from '@testing-library/react'
 import { press, renderScreen } from '../../test/harness'
 import { PoolTracker } from './PoolTracker'
 
 import { FIXTURE_NOW, fixtureGates, scoredPools } from '../fixtures'
-import { useSession } from '../../state/session'
 import { evaluateGates, GATE_COPY } from '../../lib/scoring/gates'
 import { scorePool } from '../../lib/scoring/score'
 import { mainnetProfile } from '../../config/thresholds'
 import type { ScoredPool } from '../fixtures'
 import type { GateFailure } from '../../lib/scoring/gates'
 import type { Pool, PoolScore } from '../../types/domain'
-
-beforeEach(() => useSession.setState(useSession.getInitialState()))
 
 function pool(overrides: Partial<Pool> = {}): Pool {
   return {
@@ -422,15 +419,14 @@ describe('fixture source and deployment boundaries', () => {
     return entry
   }
 
-  it('selects a passing TESTNET pool in session only after inspecting it', () => {
+  it('starts a passing TESTNET pool only after inspecting it', () => {
     const entry = playable()
     const { getByText, onPlayPool } = renderTracker({ pools: [entry] })
     expect(getByText(/FIXTURE source.*fallback.*Not live/)).toBeInTheDocument()
     press('A')
-    expect(useSession.getState().pairAddress).toBeNull()
+    expect(onPlayPool).not.toHaveBeenCalled()
     expect(getByText(/PLAYABLE \(TESTNET\)/)).toBeInTheDocument()
     press('A')
-    expect(useSession.getState().pairAddress).toBe(entry.pool.pairAddress)
     expect(onPlayPool).toHaveBeenCalledExactlyOnceWith(entry.pool.pairAddress)
   })
 
@@ -439,7 +435,6 @@ describe('fixture source and deployment boundaries', () => {
     press('A')
     expect(getAllByText(/MAINNET ONLY/)).toHaveLength(2)
     press('A')
-    expect(useSession.getState().pairAddress).toBeNull()
     expect(onPlayPool).not.toHaveBeenCalled()
   })
 
@@ -456,7 +451,6 @@ describe('fixture source and deployment boundaries', () => {
     expect(getByText(/Thin book.*MAINNET ONLY/)).toBeInTheDocument()
     expect(getByText(GATE_COPY.honeypot)).toBeInTheDocument()
     press('A')
-    expect(useSession.getState().pairAddress).toBeNull()
     expect(onPlayPool).not.toHaveBeenCalled()
   })
 
@@ -464,7 +458,6 @@ describe('fixture source and deployment boundaries', () => {
     const entry = { ...playable(), book: { bid: null, ask: 1 } }
     const { onPlayPool } = renderTracker({ pools: [entry] })
     press('A', 'A')
-    expect(useSession.getState().pairAddress).toBeNull()
     expect(onPlayPool).not.toHaveBeenCalled()
   })
 
@@ -474,7 +467,6 @@ describe('fixture source and deployment boundaries', () => {
     press('A')
     expect(getAllByText(/MAINNET ONLY/)).toHaveLength(2)
     press('A')
-    expect(useSession.getState().pairAddress).toBeNull()
     expect(onPlayPool).not.toHaveBeenCalled()
   })
 
