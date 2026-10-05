@@ -42,15 +42,71 @@ flowchart LR
 
 ## 2. Components and ownership
 
-| Path | Owns | Must never |
+### Current tracked layout
+
+[V] Snapshot from `git ls-files`, 2026-10-05. This is the actual tree, separate from the intended system map above. [BUILD-PLAN](BUILD-PLAN.md) owns task status and completion proof.
+
+```text
+apps/
+  web/
+    public/
+      fonts/
+      sprites/
+    src/
+      config/
+      console/
+      design/
+      game/
+      lib/
+      state/
+      styles/
+      test/
+      types/
+      ui/
+packages/
+  sdk/
+    scripts/
+    src/
+      abi/
+      kuru/
+contracts/
+  src/
+  test/
+  script/
+  lib/forge-std/
+scripts/
+  guard-forbidden.ts
+tools/
+  sprites/
+assets/
+  game-shell/
+  logo/
+  pixel/
+  raw/
+docs/
+  research/
+  technical/
+```
+
+| Tracked path | Current contents | Boundary |
 |---|---|---|
-| `apps/web` | Screens, console shell, game feel, Mera session, signing, transaction sequencing, local UI state | Hold a server secret; import worker code |
-| `apps/web/src/console` | Handheld shell, global key legend | Know about money; enforce with lint rule and test |
-| `packages/sdk` | Chain configs, typed `as const` ABIs, Kuru params and encodings, ladder planning, valuation, seal crypto, explicit gas limits | Touch React or the DOM |
-| `apps/worker` | Hono REST, mirror bot, tracker snapshots, drip ledger, leaderboard, health, SQLite | Sign for a user; treat cached chain-derived data as truth |
-| `contracts` | DiskRegistry v2, Foundry tests and deployment | Hold funds; expose an admin key |
-| `indexer` | Envio HyperIndex configuration, schema and event handlers | Treat self-reported disk scores as fill evidence |
-| `scripts` | One-shot deployment, seeding, address verification and spikes | Commit private keys or unchecked deployment addresses |
+| `apps/web` | Toolchain, public assets, console, UI primitives, fixture game, session and range planner; screens/routes not yet tracked | No server secrets or worker imports |
+| `apps/web/src/console` | Shell, input, global key legend and fit scale | No money logic; lint/test enforce it |
+| `packages/sdk` | Chain config, typed ABIs, market catalog, encodings, ladder, valuation, seal and Mera derivation | No React/DOM; measured gas limits await S2 |
+| `contracts` | DiskRegistry v2, tests, gas snapshot, deploy script and pinned forge-std gitlink | No funds/admin; testnet broadcast not yet recorded |
+| `scripts` | Forbidden-content guard only | No secrets or unchecked deployment addresses |
+| `tools/sprites`, `assets`, `apps/web/public` | Art-processing tools, source art, runtime fonts/sprites | Runtime assets stay distinct from source art |
+| `docs` | Product/design/lessons, sourced research and technical contracts | BUILD-PLAN is the live checklist |
+| `.claude/skills`, `.githooks`, `.github`, `.vscode` | Tracked guidance, content hooks, CI and editor settings | No machine-local secret/config state |
+
+### Planned paths, not yet in the tracked tree
+
+| Path / addition | Intended owner | Completion gate |
+|---|---|---|
+| `apps/web/src/screens`, `apps/web/src/routes` | Screens, router and assembled browser surface | Phase 2 phone walkthrough; Phase 7 live signing/data |
+| `apps/worker` | Hono REST, mirror, tracker, drip ledger, leaderboard, health and SQLite; never signs for users | Phase 6 route/job and live-run evidence |
+| `indexer` | Envio configuration, schema and handlers; no self-reported SCORE | Phases 4/8 fresh-fill latency and SCORE parity |
+| `scripts/spikes` | Network-semantic probes and measured gas evidence | Phase 4 S1..S5 receipts/readbacks |
 
 Shared SDK names: `planLadder`, `batchProvisionArgs`, `scoreCard`, `rangeState`, `deriveSealKey`, `sealDisk`, `openDisk`, `diskAddresses`, `FillSource`, `decideMirrorAction`. Pure functions own arithmetic; the browser and worker own effects. No model is in any number's critical path.
 
