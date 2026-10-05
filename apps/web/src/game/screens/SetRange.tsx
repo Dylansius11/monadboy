@@ -7,6 +7,7 @@ import { FIXTURE_MARKETS } from '../fixtures'
 import { planForOffsets, planForSession } from '../../lib/range/plan'
 import { FALLBACK_REALIZED_VOL } from '../sim'
 import { pct, price, usd } from '../../lib/format'
+import { NO_MARKET_RULES_COPY, ladderErrorCopy } from '../../lib/range/ladder-copy'
 import { Panel, PixelText, Toggle, Value } from '../../ui'
 import type { PlannedRange, RangePlan } from '../../lib/range/plan'
 import type { Ladder, MarketParams } from '@monadboy/sdk'
@@ -17,13 +18,12 @@ const PRESETS = [10, 25, 50, 75, 100] as const
 
 const FINE_STEP = 5
 
-const AUTOPILOT_FEE_PCT = 10
-
-const SWAP_FEE_ESTIMATE_PCT = 0.3
+/** Taker fee of the SPEC testnet market (30 bps): the cost the zap swap pays. */
+const TESTNET_TAKER_FEE_BPS = 30
 
 const STRIP_WIDTH = 464
 
-const STRIP_MIN_HEIGHT = 56
+const STRIP_MIN_HEIGHT = 44
 
 const NOW_MARKER_HEIGHT = 12
 const OVERLAY_STRIP_MIN_HEIGHT = 64
@@ -96,6 +96,7 @@ export function SetRange({
 }: SetRangeProps) {
   const [focusRow, setFocusRow] = useState<FocusRow>('amount')
   const [manualOpen, setManualOpen] = useState(false)
+  const [inspecting, setInspecting] = useState(false)
   
   const [widthCursor, setWidthCursor] = useState<WidthSlot>(() =>
     manualRange ? 'manual' : width,
@@ -111,22 +112,31 @@ export function SetRange({
   const sigmaDaily = pool?.realizedVol24h ?? FALLBACK_REALIZED_VOL
   const { range, error } = useMemo(() => {
     if (!pool) return { range: null, error: null }
-    if (!params) return { range: null, error: 'MARKET_PARAMS_UNAVAILABLE' }
+    if (!params) return { range: null, error: NO_MARKET_RULES_COPY }
     try {
       return { range: planForSession(mid, width, manualRange, ladderPlanner,
         { budgetQuote: amount, sigmaDaily, params }), error: null }
     } catch (failure) {
       if (!(failure instanceof LadderError)) throw failure
-      return { range: null, error: failure.message }
+      return { range: null, error: ladderErrorCopy(failure) }
     }
   }, [pool, mid, width, manualRange, amount, sigmaDaily, params])
 
   useConsoleIntent((intent) => {
+    if (inspecting) {
+      if (intent === 'B' || intent === 'START') setInspecting(false)
+      return
+    }
 
     if (manualOpen) return
 
     if (!pool) {
       if (intent === 'B') onBack()
+      return
+    }
+
+    if (intent === 'START') {
+      setInspecting(true)
       return
     }
 
@@ -157,25 +167,23 @@ export function SetRange({
       return
     }
 
-    if (intent === 'LEFT' || intent === 'RIGHT') {
-      const direction = intent === 'LEFT' ? -1 : 1
-      if (focusRow === 'amount') {
-        onChangeAmount(stepAmount(amount, direction, balance))
-        return
-      }
-      if (focusRow === 'width') {
-        const idx = WIDTH_SLOTS.indexOf(widthCursor)
-        const nextIdx = idx + direction
-        
-        if (nextIdx < 0 || nextIdx >= WIDTH_SLOTS.length) return
-        const next = WIDTH_SLOTS[nextIdx]
-        setWidthCursor(next)
-
-        if (next !== 'manual') onChangeWidth(next)
-        return
-      }
-      onToggleAutopilot(!autopilot)
+    const direction = intent === 'LEFT' ? -1 : 1
+    if (focusRow === 'amount') {
+      onChangeAmount(stepAmount(amount, direction, balance))
+      return
     }
+    if (focusRow === 'width') {
+      const idx = WIDTH_SLOTS.indexOf(widthCursor)
+      const nextIdx = idx + direction
+
+      if (nextIdx < 0 || nextIdx >= WIDTH_SLOTS.length) return
+      const next = WIDTH_SLOTS[nextIdx]
+      setWidthCursor(next)
+
+      if (next !== 'manual') onChangeWidth(next)
+      return
+    }
+    onToggleAutopilot(!autopilot)
   })
 
   if (!pool) {
@@ -203,8 +211,42 @@ export function SetRange({
   // Display SDK funding in quote-value units; any size-rounding dust stays unallocated.
   const quoteAmount = range?.plan.quoteNeeded ?? 0
   const baseAmount = (range?.plan.baseNeeded ?? 0) * mid
-  const swapCostEstimate = (range?.plan.zapQuote ?? 0) * (SWAP_FEE_ESTIMATE_PCT / 100)
+  const swapCostEstimate = (range?.plan.zapQuote ?? 0) * (TESTNET_TAKER_FEE_BPS / 10_000)
   const vol = sigmaDaily
+
+  if (inspecting) {
+    return (
+      <div className="bg-screen flex h-full w-full flex-col gap-2 p-2">
+        <PixelText role="title" upper>FIXTURE inputs</PixelText>
+        <Panel className="flex flex-col gap-1">
+          <PixelText role="micro">TESTNET funds do not move here. Quote token valued at $1.</PixelText>
+          <PixelText role="micro">{`Amount ${usd(amount)} of ${usd(balance)} TESTNET balance`}</PixelText>
+          <PixelText role="micro">
+            {manualRange
+              ? `Manual edges ${pct(manualRange.lowerPct, 0)} / +${pct(manualRange.upperPct, 0)} around mid ${price(mid)}`
+              : `24h vol ${pct(vol * 100, 0)}; width +/-${pct(range?.requestedWidthPct ?? 0, 1)} around mid ${price(mid)}`}
+          </PixelText>
+          <PixelText role="micro">Width is arithmetic from 24h vol, not a prediction.</PixelText>
+          {range ? (
+            <>
+              <PixelText role="micro">
+                {`Edges ${price(lowPrice)} to ${price(highPrice)}; ${pct(range.plan.step * 100, 2)} steps, ${range.plan.levels} levels per side`}
+              </PixelText>
+              <PixelText role="micro">
+                {`Holdings ${usd(quoteAmount)} ${pool.tokenY.symbol} + ${usd(baseAmount)} ${pool.tokenX.symbol} at mid ${price(mid)}`}
+              </PixelText>
+              <PixelText role="micro">
+                {`Swap ${usd(range.plan.zapQuote)} ${pool.tokenY.symbol}; swap cost ~${usd(swapCostEstimate)} est. at a ${pct(TESTNET_TAKER_FEE_BPS / 100, 1)} testnet taker fee, before slippage and gas.`}
+              </PixelText>
+            </>
+          ) : (
+            <PixelText role="micro">{error}</PixelText>
+          )}
+        </Panel>
+        <PixelText role="micro" upper>B or Start close inputs</PixelText>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-screen relative flex h-full w-full flex-col gap-1 p-2">
@@ -219,6 +261,9 @@ export function SetRange({
             Fixture
           </PixelText>
         </div>
+        <PixelText role="micro" tone="dim" upper>
+          Start inputs
+        </PixelText>
         <PixelText role="body" upper>
           {pool.tokenX.symbol} / {pool.tokenY.symbol}
         </PixelText>
@@ -398,7 +443,7 @@ export function SetRange({
           onChange={onToggleAutopilot}
         />
         <PixelText role="micro" tone="dim">
-          {`keeps you in range. fee: ${pct(AUTOPILOT_FEE_PCT, 0)} of earnings.`}
+          re-arms after every fill. re-centering is manual and costs a swap.
         </PixelText>
       </div>
 
@@ -499,7 +544,7 @@ function ManualRangeEditor({
         ladderPlanner, { budgetQuote: amount, sigmaDaily, params }, width), error: null }
     } catch (failure) {
       if (!(failure instanceof LadderError)) throw failure
-      return { preview: null, error: failure.message }
+      return { preview: null, error: ladderErrorCopy(failure) }
     }
   }, [mid, start, end, amount, sigmaDaily, params, width])
 
@@ -653,7 +698,7 @@ function NowMarker({ leftPct }: { leftPct: number }) {
   return (
     <div className="relative h-3 shrink-0" style={{ width: STRIP_WIDTH }}>
       <span
-        className="absolute top-0 -translate-x-1/2"
+        className="absolute top-0 flex h-3 -translate-x-1/2 items-center"
         style={{ left: `${leftPct}%` }}
       >
         <PixelText role="micro" tone="dim">

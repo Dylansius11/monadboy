@@ -7,7 +7,7 @@ import { mainnetMarkets, planLadder } from '@monadboy/sdk'
 import { ladderPlanner } from '../../lib/range/ladder-planner'
 import { FIXTURE_MARKETS } from '../fixtures'
 import { planForOffsets, planForWidth } from '../../lib/range/plan'
-import { price, usd } from '../../lib/format'
+import { pct, price, usd } from '../../lib/format'
 import { SetRange } from './SetRange'
 import type { SetRangeProps } from './SetRange'
 import type { ManualRange, RangeWidth } from '../../state/session'
@@ -18,6 +18,7 @@ const STABLE_POOL: Pool = FIXTURE_MARKETS[2].pool
 const MID = (FIXTURE_MARKETS[0].book.bid! + FIXTURE_MARKETS[0].book.ask!) / 2
 const PARAMS = mainnetMarkets.find((market) => market.symbol === 'MON_USDC')!.params
 const INPUTS = { budgetQuote: 100, sigmaDaily: POOL.realizedVol24h!, params: PARAMS }
+const RAW_CODES = /[A-Z]+_[A-Z_]+/
 
 function renderSetRange(
   overrides: Partial<Omit<SetRangeProps, 'onConfirm' | 'onBack'>> & {
@@ -221,17 +222,54 @@ describe('the funding preview and clamp disclosure', () => {
 })
 
 describe('autopilot', () => {
-  it('toggles, and its fee copy names a percentage of earnings', () => {
+  it('toggles, and its line says orders re-arm while re-centering stays manual and costs a swap', () => {
     const { getByText, getByRole, onToggleAutopilot } = renderSetRange({
       autopilot: true,
     })
 
     expect(getByRole('switch')).toHaveAttribute('aria-checked', 'true')
-    expect(getByText(/10% of earnings/i)).toBeInTheDocument()
+    const line = getByText(/re-arm/i).textContent
+    expect(line).toMatch(/after (every|each) fill/i)
+    expect(line).toMatch(/re-centering is manual/i)
+    expect(line).toMatch(/costs a swap/i)
+    expect(line).not.toMatch(/\d|%|fee|keeps you in range|flip/i)
 
     press('DOWN', 'DOWN', 'RIGHT')
 
     expect(onToggleAutopilot).toHaveBeenCalledWith(false)
+  })
+})
+
+describe('the inputs view, START', () => {
+  it('opens the sources behind vol, width, funding and swap cost, formatted, and closes without confirming', () => {
+    const { getByText, queryByText, container, onConfirm, onBack } = renderSetRange()
+    const funding = planLadder({ ...INPUTS, mid: MID, mode: 'WIDE' })
+    const planned = planForWidth(MID, 'wide', ladderPlanner, INPUTS)
+
+    expect(queryByText(/FIXTURE inputs/i)).not.toBeInTheDocument()
+    press('START')
+    expect(getByText(/FIXTURE inputs/i)).toBeInTheDocument()
+    expect(getByText(`24h vol ${pct(POOL.realizedVol24h! * 100, 0)}; width +/-${pct(planned.requestedWidthPct, 1)} around mid ${price(MID)}`))
+      .toBeInTheDocument()
+    expect(getByText(`Holdings ${usd(funding.quoteNeeded)} USDC + ${usd(funding.baseNeeded * MID)} MON at mid ${price(MID)}`))
+      .toBeInTheDocument()
+    expect(getByText(`Swap ${usd(funding.zapQuote)} USDC; swap cost ~${usd(funding.zapQuote * 0.003)} est. at a 0.3% testnet taker fee, before slippage and gas.`))
+      .toBeInTheDocument()
+    expect(container.textContent).not.toMatch(/\d\.\d{8,}/)
+
+    press('A')
+    expect(onConfirm).not.toHaveBeenCalled()
+    press('B')
+    expect(queryByText(/FIXTURE inputs/i)).not.toBeInTheDocument()
+    expect(onBack).not.toHaveBeenCalled()
+    press('START', 'START')
+    expect(queryByText(/FIXTURE inputs/i)).not.toBeInTheDocument()
+  })
+
+  it('says why there is nothing to size when the range cannot be built', () => {
+    const { getByText } = renderSetRange({ amount: 10 })
+    press('START')
+    expect(getByText('AMOUNT TOO SMALL FOR THIS RANGE')).toBeInTheDocument()
   })
 })
 
@@ -491,21 +529,27 @@ describe('manual precedence and failed funding', () => {
     expect(getByRole('img').getAttribute('aria-label')).not.toBe(tightPicture)
   })
 
-  it('shows AMOUNT_TOO_SMALL and blocks confirm until amount funds a ladder', () => {
-    const { getByText, queryByText, getByRole, onConfirm } = renderSetRange({ amount: 10 })
-    expect(getByText('AMOUNT_TOO_SMALL')).toBeInTheDocument()
+  it('says AMOUNT TOO SMALL FOR THIS RANGE and blocks confirm until amount funds a ladder', () => {
+    const { getByText, queryByText, getByRole, onConfirm, container } = renderSetRange({ amount: 10 })
+    expect(getByText('AMOUNT TOO SMALL FOR THIS RANGE')).toBeInTheDocument()
+    expect(container.textContent).not.toMatch(RAW_CODES)
     press('A')
     expect(onConfirm).not.toHaveBeenCalled()
     press('RIGHT', 'RIGHT')
-    expect(queryByText('AMOUNT_TOO_SMALL')).not.toBeInTheDocument()
+    expect(queryByText('AMOUNT TOO SMALL FOR THIS RANGE')).not.toBeInTheDocument()
     expect(getByRole('img')).toBeInTheDocument()
     press('A')
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 
-  it('does not invent a mid for the fixture without a book', () => {
-    const { getByText, onConfirm, onBack } = renderSetRange({ pool: FIXTURE_MARKETS[1].pool })
-    expect(getByText('NO_PRICE')).toBeInTheDocument()
+  it.each([
+    ['a fixture without a book', { pool: FIXTURE_MARKETS[1].pool }, 'NO PRICE FOR THIS POOL YET'],
+    ['an edit that does not straddle the price', { manualRange: { lowerPct: 5, upperPct: 9 } }, 'YOUR RANGE MUST SIT AROUND THE CURRENT PRICE'],
+    ['a pair with no market rules', { pool: { ...POOL, tokenX: { ...POOL.tokenX, symbol: 'XYZ' } } }, 'NO MARKET RULES FOR THIS POOL YET'],
+  ])('shows player copy, never a raw code, for %s, and blocks confirm', (_name, overrides, copy) => {
+    const { getByText, container, onConfirm, onBack } = renderSetRange(overrides)
+    expect(getByText(copy)).toBeInTheDocument()
+    expect(container.textContent).not.toMatch(RAW_CODES)
     press('A', 'B')
     expect(onConfirm).not.toHaveBeenCalled()
     expect(onBack).toHaveBeenCalledTimes(1)
