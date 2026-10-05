@@ -8,7 +8,16 @@ import tailwindcss from '@tailwindcss/vite'
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
-  plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact()],
+  plugins: [
+    // Console piping wraps console on both the client and the dev server and
+    // rebroadcasts each side's output to the other, so a single warning
+    // echoes back as a new warning and floods the browser console. Browser
+    // and terminal logs stay where they were emitted.
+    devtools({ consolePiping: { enabled: false } }),
+    tailwindcss(),
+    tanstackStart(),
+    viteReact(),
+  ],
   server: {
     // Any host. This looks lax and is the correct setting for THIS project on
     // THIS day: the console is demoed through a tunnel, `cloudflared` mints a
