@@ -1,0 +1,186 @@
+// @vitest-environment jsdom
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent } from '@testing-library/react'
+import { press, renderScreen } from '../../test/harness'
+import { FIXTURE_CARD_ADDRESS, MAX_DISKS, saveDisks } from '../fixtures'
+import { useSession } from '../../state/session'
+import { DiskSelect } from './DiskSelect'
+import type { DiskSelectProps } from './DiskSelect'
+
+const DISKS = saveDisks()
+
+function renderDiskSelect(overrides: Partial<DiskSelectProps> = {}) {
+  const onOpen = vi.fn()
+  const onBack = vi.fn()
+
+  const utils = renderScreen(
+    <DiskSelect
+      cardAddress={
+        'cardAddress' in overrides
+          ? (overrides.cardAddress ?? null)
+          : FIXTURE_CARD_ADDRESS
+      }
+      disks={overrides.disks ?? DISKS}
+      maxDisks={overrides.maxDisks ?? MAX_DISKS}
+      onOpen={overrides.onOpen ?? onOpen}
+      onBack={overrides.onBack ?? onBack}
+    />,
+  )
+
+  return { ...utils, onOpen, onBack }
+}
+
+describe('the shelf', () => {
+  it('renders three fixture disks with their names and their bound characters', () => {
+    const { getByText } = renderDiskSelect()
+
+    expect(getByText('safe money')).toBeInTheDocument()
+    expect(getByText('degen box')).toBeInTheDocument()
+    expect(getByText('new game')).toBeInTheDocument()
+
+    expect(getByText(/molandak/i)).toBeInTheDocument()
+    expect(getByText(/mouch/i)).toBeInTheDocument()
+    expect(getByText(/moyaki/i)).toBeInTheDocument()
+  })
+
+  it('draws an absent slot without turning it into a dead control', () => {
+    const { getByText } = renderDiskSelect({ disks: DISKS.slice(0, 2) })
+
+    expect(getByText(/empty slot/i)).toBeInTheDocument()
+    expect(getByText(/new disks arrive with the registry/i)).toBeInTheDocument()
+  })
+
+  it('shows the card, truncated in the middle', () => {
+    const { getByText } = renderDiskSelect()
+
+    expect(getByText(/0x00\.\.ca/i)).toBeInTheDocument()
+  })
+
+  it('marks fixture statistics and never presents an unplayed disk as a gain', () => {
+    const { getByText } = renderDiskSelect()
+    expect(getByText(/^fixture$/i)).toBeInTheDocument()
+    const row = getByText('new game').closest('button')
+    expect(row).toHaveTextContent('--')
+    expect(row).toHaveTextContent(/never played/i)
+    expect(row).not.toHaveTextContent(/\+\$/)
+  })
+})
+
+describe('never hide a loss', () => {
+  it('renders the losing disk with a minus glyph and a loss tone', () => {
+    const { container } = renderDiskSelect()
+
+    const values = [...container.querySelectorAll('[class*="text-"]')]
+      .map((el) => ({ text: el.textContent, cls: el.className }))
+      .filter((v) => /^[+-]\$/.test(v.text))
+
+    expect(values).toHaveLength(2)
+
+    const gain = values.find((v) => v.text === '+$12.40')
+    const loss = values.find((v) => v.text === '-$3.10')
+
+    expect(gain).toBeDefined()
+    expect(loss).toBeDefined()
+
+    expect(gain?.cls).toMatch(/text-gain/)
+    expect(loss?.cls).toMatch(/text-loss/)
+  })
+
+  it('marks the GOD MODE disk permanently, and only that one', () => {
+    const { container, getByText } = renderDiskSelect()
+
+    expect(getByText(/god mode/i)).toBeInTheDocument()
+    expect(container.textContent).toContain('†')
+    expect(container.textContent.match(/god mode/gi)).toHaveLength(1)
+  })
+})
+
+describe('the cursor', () => {
+  it('DOWN moves it and does not wrap past the last disk', () => {
+    const { onOpen } = renderDiskSelect()
+
+    press('DOWN', 'DOWN', 'DOWN')
+    press('A')
+
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith(3)
+  })
+
+  it('UP does not wrap past the first disk', () => {
+    const { onOpen } = renderDiskSelect()
+
+    press('UP', 'UP')
+    press('A')
+
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith(1)
+  })
+
+  it('never lands on the empty slot', () => {
+    const { onOpen } = renderDiskSelect({ disks: DISKS.slice(0, 2) })
+
+    for (let i = 0; i < 20; i += 1) press('DOWN')
+    press('A')
+
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith(2)
+  })
+})
+
+describe('opening and going back', () => {
+  it.each([1, 2, 3])('keyboard OPEN chooses isolated fixture disk %i in the session', (diskId) => {
+    const { getByText } = renderDiskSelect({
+      onOpen: useSession.getState().openDisk,
+    })
+    for (let i = 1; i < diskId; i += 1) press('DOWN')
+    const row = getByText(DISKS[diskId - 1].name).closest('button')
+    expect(row).toHaveAttribute('aria-current', 'true')
+    press('A')
+    expect(useSession.getState().diskId).toBe(diskId)
+    expect(saveDisks().map(({ runs }) => runs)).toEqual([7, 2, 0])
+  })
+
+  it('B goes back', () => {
+    const { onBack } = renderDiskSelect()
+
+    press('B')
+
+    expect(onBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('a mouse click opens a disk, because a phone has no A button', () => {
+    const { getByText, onOpen } = renderDiskSelect()
+
+    const button = getByText('degen box').closest('button')
+    if (!button) throw new Error('a disk row is not inside a button')
+    fireEvent.click(button)
+
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith(2)
+  })
+})
+
+describe('missing data, Gate 2.4', () => {
+  it('renders with no card, and says so rather than redirecting', () => {
+    const { getByText, queryByRole, onBack } = renderDiskSelect({
+      cardAddress: null,
+    })
+
+    expect(getByText(/no memory card/i)).toBeInTheDocument()
+    expect(queryByRole('progressbar')).not.toBeInTheDocument()
+
+    press('B')
+    expect(onBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders a card with no disks as a real screen with a way out', () => {
+    const { getByText, queryByRole, onOpen, onBack } = renderDiskSelect({
+      disks: [],
+    })
+
+    expect(getByText(/has no disks yet/i)).toBeInTheDocument()
+    expect(queryByRole('progressbar')).not.toBeInTheDocument()
+
+    press('A')
+    expect(onOpen).not.toHaveBeenCalled()
+
+    press('B')
+    expect(onBack).toHaveBeenCalledTimes(1)
+  })
+})
