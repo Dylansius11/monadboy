@@ -15,7 +15,7 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 | 0 — Repo bootstrap | DONE | 2/2 | Maintain guard and commit discipline | None |
 | 1 — Docs first | DONE | 4/4 | Keep docs aligned with implementation | None |
 | 2 — Frontend shell and screens | DOING | 22/23 | Assembled verify walk (2.10) | None |
-| 2b — Experience pass | DOING | 0/5 | Boot at /play and landing at / | Portrait shell waits on the user's mockup decision |
+| 2b — Experience pass | DOING | 1/5 | Landing at / | Portrait shell waits on the user's mockup decision |
 | 3 — Pure SDK | DOING | 7/9 | Record measured gas and a real-order encoding fixture after S2 | B1 / S2 for deferred items |
 | 4 — Funded spikes | BLOCKED | 0/6 | Fund DEPLOYER, then broadcast S1/S2; prepare device spike independently | B1; S4 user devices |
 | 5 — DiskRegistry v2 | BLOCKED | 5/6 | Broadcast registry and record code/address | B1 |
@@ -99,7 +99,7 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 
 **Goal** Make the first minute feel like switching on a handheld: a front door at `/`, a boot at `/play`, readable phones, help on demand and sound.
 
-- [ ] **2b.1** Boot screen at `/play`; START or A goes to `/card`, any other key skips, the sequence plays once per browser session and never under reduced motion — proof required: Boot tests, routed test, screenshots.
+- [x] **2b.1** Boot screen at `/play`; START or A goes to `/card`, any other key skips, the sequence plays once per browser session and never under reduced motion — proof: `0283592` (Boot, 6 tests), this commit (route, `sessionStorage` flag, B from `/card` returns to `/play`; routed test 9/9); headless Edge at 412x915: Enter on the ready frame lands on `/card`, flag `monadboy.booted=1`; `screens/phase2b/boot-logo-412x915.png`, `boot-ready-412x915.png`.
 - [ ] **2b.2** Landing page at `/`: generated night city, the held console booting itself, scroll-pinned real screens, product truths, cast, PRESS START with a view transition into `/play` — proof required: screenshots at 1440x900, 1536x730 (dpr 1.25) and 412x915; skyline generator tests.
 - [ ] **2b.3** Portrait shell on portrait phones (screen top, controls in the thumb zone, larger type) — proof required: user approval of `mockups/portrait/board.png`, then before/after text and touch-target sizes at 360x640..412x915.
 - [ ] **2b.4** Rule book: a `?` control and `?`/H key open per-screen help and the key map; the desk-key legend moves into it — proof required: keyboard and touch screenshots.

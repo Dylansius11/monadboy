@@ -26,6 +26,8 @@ class FakeResizeObserver {
 }
 vi.stubGlobal('ResizeObserver', FakeResizeObserver)
 Object.defineProperty(document, 'fonts', { value: { ready: Promise.resolve() }, configurable: true })
+// nor matchMedia, which the boot reads for reduced motion
+vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query }))
 
 const TESTNET_ID = FIXTURE_MARKETS.find(({ network }) => network === 'testnet')?.pool.pairAddress ?? ''
 const MAINNET_ID = FIXTURE_MARKETS.find(({ network }) => network === 'mainnet')?.pool.pairAddress ?? ''
@@ -56,6 +58,18 @@ async function mount(path: string) {
 }
 
 describe('the loop, walked with console presses', () => {
+  it('powers on at /play and START reaches the memory card; B from the card returns to it', async () => {
+    const router = await mount('/play')
+    const at = (path: string | RegExp) =>
+      waitFor(() => expect(router.state.location.pathname).toMatch(path))
+
+    press('START')
+    await at('/card')
+    await screen.findByText(/insert memory card/i)
+    press('B')
+    await at(/^\/play\/?$/)
+  })
+
   it('goes card, disks, cartridges, difficulty, tracker, range, live, results and back to disks', async () => {
     const router = await mount('/card')
     const at = (path: string | RegExp) =>

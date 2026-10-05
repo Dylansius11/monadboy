@@ -15,6 +15,7 @@ import { Route as ConsoleCardRouteImport } from './routes/_console/card'
 import { Route as ConsoleCartridgesRouteImport } from './routes/_console/cartridges'
 import { Route as ConsoleDisksRouteImport } from './routes/_console/disks'
 import { Route as ConsoleGalleryRouteImport } from './routes/_console/gallery'
+import { Route as ConsolePlayIndexRouteImport } from './routes/_console/play/index'
 import { Route as ConsolePlayDifficultyRouteImport } from './routes/_console/play/difficulty'
 import { Route as ConsolePlayTrackerRouteImport } from './routes/_console/play/tracker'
 import { Route as ConsolePlayLiveIdRouteImport } from './routes/_console/play/live.$id'
@@ -48,6 +49,11 @@ const ConsoleDisksRoute = ConsoleDisksRouteImport.update({
 const ConsoleGalleryRoute = ConsoleGalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsolePlayIndexRoute = ConsolePlayIndexRouteImport.update({
+  id: '/play/',
+  path: '/play/',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsolePlayDifficultyRoute = ConsolePlayDifficultyRouteImport.update({
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/gallery': typeof ConsoleGalleryRoute
   '/play/difficulty': typeof ConsolePlayDifficultyRoute
   '/play/tracker': typeof ConsolePlayTrackerRoute
+  '/play/': typeof ConsolePlayIndexRoute
   '/play/live/$id': typeof ConsolePlayLiveIdRoute
   '/play/range/$id': typeof ConsolePlayRangeIdRoute
   '/play/results/$id': typeof ConsolePlayResultsIdRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/gallery': typeof ConsoleGalleryRoute
   '/play/difficulty': typeof ConsolePlayDifficultyRoute
   '/play/tracker': typeof ConsolePlayTrackerRoute
+  '/play': typeof ConsolePlayIndexRoute
   '/play/live/$id': typeof ConsolePlayLiveIdRoute
   '/play/range/$id': typeof ConsolePlayRangeIdRoute
   '/play/results/$id': typeof ConsolePlayResultsIdRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/_console/gallery': typeof ConsoleGalleryRoute
   '/_console/play/difficulty': typeof ConsolePlayDifficultyRoute
   '/_console/play/tracker': typeof ConsolePlayTrackerRoute
+  '/_console/play/': typeof ConsolePlayIndexRoute
   '/_console/play/live/$id': typeof ConsolePlayLiveIdRoute
   '/_console/play/range/$id': typeof ConsolePlayRangeIdRoute
   '/_console/play/results/$id': typeof ConsolePlayResultsIdRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/play/difficulty'
     | '/play/tracker'
+    | '/play/'
     | '/play/live/$id'
     | '/play/range/$id'
     | '/play/results/$id'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/play/difficulty'
     | '/play/tracker'
+    | '/play'
     | '/play/live/$id'
     | '/play/range/$id'
     | '/play/results/$id'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/_console/gallery'
     | '/_console/play/difficulty'
     | '/_console/play/tracker'
+    | '/_console/play/'
     | '/_console/play/live/$id'
     | '/_console/play/range/$id'
     | '/_console/play/results/$id'
@@ -203,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleGalleryRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/play/': {
+      id: '/_console/play/'
+      path: '/play'
+      fullPath: '/play/'
+      preLoaderRoute: typeof ConsolePlayIndexRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/play/difficulty': {
       id: '/_console/play/difficulty'
       path: '/play/difficulty'
@@ -248,6 +267,7 @@ interface ConsoleRouteChildren {
   ConsoleGalleryRoute: typeof ConsoleGalleryRoute
   ConsolePlayDifficultyRoute: typeof ConsolePlayDifficultyRoute
   ConsolePlayTrackerRoute: typeof ConsolePlayTrackerRoute
+  ConsolePlayIndexRoute: typeof ConsolePlayIndexRoute
   ConsolePlayLiveIdRoute: typeof ConsolePlayLiveIdRoute
   ConsolePlayRangeIdRoute: typeof ConsolePlayRangeIdRoute
   ConsolePlayResultsIdRoute: typeof ConsolePlayResultsIdRoute
@@ -260,6 +280,7 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleGalleryRoute: ConsoleGalleryRoute,
   ConsolePlayDifficultyRoute: ConsolePlayDifficultyRoute,
   ConsolePlayTrackerRoute: ConsolePlayTrackerRoute,
+  ConsolePlayIndexRoute: ConsolePlayIndexRoute,
   ConsolePlayLiveIdRoute: ConsolePlayLiveIdRoute,
   ConsolePlayRangeIdRoute: ConsolePlayRangeIdRoute,
   ConsolePlayResultsIdRoute: ConsolePlayResultsIdRoute,

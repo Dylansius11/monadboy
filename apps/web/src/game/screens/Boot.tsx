@@ -33,13 +33,21 @@ const AT_MS: Record<Exclude<Stage, 'dark'>, number> = {
 }
 export const BOOT_MS = AT_MS.ready
 
+/** sessionStorage flag: the boot has played once in this browser session. */
+export const BOOTED_KEY = 'monadboy.booted'
+
 const CAST: ReadonlyArray<CharacterId> = ['molandak', 'moyaki', 'mouch']
 
 export function Boot({ instant, onStart }: BootProps) {
   const [stage, setStage] = useState<Stage>(instant ? 'ready' : 'dark')
 
   useEffect(() => {
-    if (instant) return
+    // instant can arrive after hydration: the route only learns about a
+    // return visit once sessionStorage is readable on the client
+    if (instant) {
+      setStage('ready')
+      return
+    }
     const timers = (Object.keys(AT_MS) as Array<keyof typeof AT_MS>).map((s) =>
       window.setTimeout(() => setStage(s), AT_MS[s]),
     )
@@ -66,7 +74,12 @@ export function Boot({ instant, onStart }: BootProps) {
         >
           {brand.CONSOLE_NAME}
         </PixelText>
-        <PixelText role="micro" tone="dim" upper className="tracking-[0.3em]">
+        <PixelText
+          role="micro"
+          tone="dim"
+          upper
+          className={`tracking-[0.3em] ${reached('flash') ? '' : 'invisible'}`}
+        >
           {brand.CARTRIDGE_01}
         </PixelText>
       </div>

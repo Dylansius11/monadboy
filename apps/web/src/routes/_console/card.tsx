@@ -19,7 +19,7 @@ function MemoryCardRoute() {
         insertCard(FIXTURE_CARD_ADDRESS)
         navigate({ to: '/disks' })
       }}
-      onBack={() => navigate({ to: '/' })}
+      onBack={() => navigate({ to: '/play' })}
     />
   )
 }
