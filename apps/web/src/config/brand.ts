@@ -30,3 +30,13 @@ export const characters = {
 } as const
 
 export type CharacterId = keyof typeof characters
+
+/**
+ * Each Monanimal's one line about the markets it likes. Canned: nothing that
+ * shows these waits on a model.
+ */
+export const characterQuotes: Record<CharacterId, string> = {
+  molandak: 'deep, old, boring. boring is good.',
+  moyaki: 'it moves. so do I. we get along.',
+  mouch: 'if it is not shaking, why bother.',
+}
