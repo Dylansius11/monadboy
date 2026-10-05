@@ -14,7 +14,7 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 |---|---|---|---|---|
 | 0 — Repo bootstrap | DONE | 2/2 | Maintain guard and commit discipline | None |
 | 1 — Docs first | DONE | 4/4 | Keep docs aligned with implementation | None |
-| 2 — Frontend shell and screens | DOING | 11/21 | Build S1..S8, routes and phone smoke | None |
+| 2 — Frontend shell and screens | DOING | 20/22 | Phone touch targets (2.11); then Phase 2 review | None |
 | 3 — Pure SDK | DOING | 7/9 | Record measured gas and a real-order encoding fixture after S2 | B1 / S2 for deferred items |
 | 4 — Funded spikes | BLOCKED | 0/6 | Fund DEPLOYER, then broadcast S1/S2; prepare device spike independently | B1; S4 user devices |
 | 5 — DiskRegistry v2 | BLOCKED | 5/6 | Broadcast registry and record code/address | B1 |
@@ -65,25 +65,31 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 - [x] **2.6** Add difficulty thresholds and market gates — proof: `4a33687`; measured Kuru calibration remains Phase 6 work.
 - [x] **2.7** Add scoring, source/freshness envelopes, formatters and SDK-backed range planner — proof: `d521fdb`, `de3147d`, `08ead36`, `35d86e1`, `92e7aac`.
 - [x] **2.8** Add game domain, marked fixtures, simulation, map, stepped chart and GOD MODE confirmation — proof: `5dcbb3a`, `d63415e`, `4048c17`, `ec17799`, `e5699f5`, `2dd9f76`, `80ab394`, `8e968b7`, `f70bd98`.
-- [ ] **2.9a** S1 MemoryCard screen, INSERT / NEW CARD fixture actions — proof required: keyboard screenshot at 412x915 with reachable selection and visible FIXTURE marker.
-- [ ] **2.9b** S2 DiskSelect screen — proof required: 412x915 screenshot and keyboard selection of all three isolated fixture slots.
-- [ ] **2.9c** S3 CartridgeSelect screen — proof required: 412x915 screenshot; keyboard opens STAY IN RANGE and preserves locked cartridge state.
-- [ ] **2.9d** S4 Difficulty screen — proof required: 412x915 screenshot; difficulty binds mascot and GOD MODE requires typed confirmation.
-- [ ] **2.9e** S5 PoolTracker screen — proof required: 412x915 screenshot; gates, selection and fixture source labels remain visible.
-- [ ] **2.9f** S6 SetRange screen — proof required: 412x915 screenshot; manual range overrides WIDE/TIGHT and cursor differs from applied state.
-- [ ] **2.9g** S7 InRange screen — proof required: 412x915 screenshot; stepped chart, SCORE/DAMAGE, NAD-SENSE and contextual key labels render.
-- [ ] **2.9h** S8 Results screen — proof required: 412x915 screenshot; fixture results and return navigation are reachable.
+- [x] **2.9a** S1 MemoryCard screen, INSERT / NEW CARD fixture actions — proof: `7c20428`, `eea3bad`; screenshot `screens/phase2/S1-memory-card.png` (412x915, FIXTURE marker, passkey copy only).
+- [x] **2.9b** S2 DiskSelect screen — proof: `188e760` (third isolated fixture disk), `fecbc08`, `34d8629`; keyboard opens disks 1, 2 and 3 through `session.openDisk`; `S2-disk-select.png`.
+- [x] **2.9c** S3 CartridgeSelect screen — proof: `a2ced5e`, `189327d`; locked slots keep COMING SOON while the cursor passes; `S3-cartridge-select.png`.
+- [x] **2.9d** S4 Difficulty screen — proof: `0f0b04b`, `fa1c996`, `f03500a`; HARD -> typed confirmation -> session `{difficulty: hard, characterId: mouch, godMode: true}`; `S4-Difficulty.png`.
+- [x] **2.9e** S5 PoolTracker screen — proof: `e944dc0`, `61b4cb8`, `362bfbc`, `d574477`, `fb5188c`; PLAYABLE (TESTNET) is decided by the fixture's `network`, not its symbol; the mainnet MON/AUSD empty book reads Thin book and cannot start play; `S5-pool-tracker.png`.
+- [x] **2.9f** S6 SetRange screen — proof: `b8920ac`, `df7cc8e`, `4f73087`, `272d8b5`, `392a7d4`; WIDE 0.980065–1.020069 vs TIGHT 0.990066–1.010068 on the AUSD_USDC fixture, manual edges apply only on A, clamp notice and SDK funding split render; `S6-set-range.png`.
+- [x] **2.9g** S7 InRange screen — proof: `57b220f`, `3c4010f`, `c503d0d`; stepped chart, equal-weight SCORE/DAMAGE, NAD-SENSE, PRICE FEED PAUSED and contextual keys; `S7-in-range.png`.
+- [x] **2.9h** S8 Results screen — proof: `c96cd81`, `a360707`; SELECT opens the inputs, A/B return to the shelf; `S8-results.png`.
 - [x] **2.9i** Session state preserves choices and binds mascot to difficulty — proof: `a62a8d4`.
-- [ ] **2.9j** Assemble routes, root and router without absent imports — proof required: `bun run generate-routes`, tracked routeTree.gen.ts and a successful `bun run dev` page load.
+- [x] **2.9j** Assemble routes, root and router without absent imports — proof: `2264eb0`, `54ef7d3`, `91a7cbc`; `bun run generate-routes` output is byte-identical to the tree the dev server writes (shared Start footer in tsr.config.json); `bun run dev` serves /card with HTTP 200.
 - [x] **2.9k** Add console screen-input test harness — proof: `1a74224`; harness existence does not prove screens exist.
 - [ ] **2.10** Verify assembled web and walk S1..S8 on phone viewport — proof required: `bun run verify`; `bun run dev`, keyboard walkthrough at 412x915, eight screenshots and observed console output.
+- [ ] **2.11** Meet the touch minimum after the fit scale on phones — proof required: getBoundingClientRect at 360x640, 375x667, 390x844 and 412x915 with A/B >= 48 px, D-pad arm and START/SELECT hit areas >= 44 px, the screen no smaller than before and desktop unchanged. [V] Before: at 412x915 the console scales 0.777, so A/B render 35.7 px, D-pad arms 21.8 px and START/SELECT 36.9x18.8 px while the console uses 475 of 915 px of height.
 
 **Acceptance**
 - Node-runtime verify and guard pass; no imports of absent modules.
 - All eight screens render with sprites and unchanged visual constants; fixtures are visibly marked.
 - Keyboard / touch selections, no silent 320px clipping, screenshots compared to the earlier version; record any known dev warnings rather than hiding errors.
 
-**Proof to record** Per-area commits and verify output in external PROGRESS; phone screenshots in external handoff `screens/phase2/`. [V] Git lists game/session/planner/style/harness work, but no screen or route files; Phase 2 is DOING, not complete.
+**Proof to record** Per-area commits and verify output in external PROGRESS; phone screenshots in external handoff `screens/phase2/` and the earlier version's in `screens/phase2/earlier/`.
+
+**Findings for later phases**
+- [V] Under the 8-level x 2% cap the SDK ladder clamps volatile pairs: with the MON_USDC fixture's daily volatility of 0.6, WIDE and TIGHT plan the same range (the clamp notice says so). [U, S2] Re-check with measured testnet volatility before tuning the cap.
+- [V] `RunSummary` does not keep the deposited amount, so S8 labels the amount as the current session's. Phase 7 sealed runs must record it per run.
+- [V] Fixture markets carry `network`; Phase 7 replaces it with registry-backed deployment eligibility.
 
 ## Phase 3 — Pure SDK
 
