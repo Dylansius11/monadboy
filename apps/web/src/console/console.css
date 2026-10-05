@@ -451,12 +451,24 @@
 /*
   PORTRAIT PHONE CHROME.
 
-  The console does not change shape here, it loses padding. On a 412px phone
-  the fit scale is decided entirely by width, so every pixel of moulded plastic
-  around the screen is a pixel the 480x320 screen does not get. Trimming the
-  shell from 568 to 520 wide buys the screen roughly 9% more of the device for
-  nothing but less bezel, and the D-pad and A/B buttons stay above the 44px
-  touch minimum, which is where the trimming stops.
+  The shell loses padding, not shape. On a 412px phone the fit scale is decided
+  entirely by width, so every pixel of moulded plastic around the screen is a
+  pixel the 480x320 screen does not get. Trimming the shell from 568 to 520
+  wide buys the screen roughly 9% more of the device for nothing but less
+  bezel, and 520 is where the trimming stops.
+
+  THE 44px TOUCH MINIMUM IS A POST-SCALE RULE. A finger meets the pixels the
+  fit transform produces, not the pixels written here. At the narrowest phone
+  the console supports, 360px, the scale is (360 - 8) / 520 = 0.677, so a
+  target written as N px reaches the thumb as 0.677 N. The deck is sized from
+  that worst case: 44 / 0.677 = 65 px for D-pad arms, START and SELECT, and
+  48 / 0.677 = 71 px for A and B. Every size below clears its minimum with
+  a few px of margin, and wider phones only scale it up.
+
+  Width is the screen's budget and height is free, so the deck grows taller
+  rather than wider: the cross takes the full deck height and A/B, START /
+  SELECT and the speaker stack in the column beside it. The hit areas are the
+  buttons themselves, so what measures 44px is what actually fires.
 */
 @media (max-width: 640px) {
   .console {
@@ -492,44 +504,103 @@
     width: 26px;
     height: 26px;
   }
+
+  /* The cross takes the full height of the deck; the column beside it holds
+     A/B above START / SELECT. */
   .deck {
-    gap: 8px;
+    grid-template-columns: auto 1fr;
+    gap: 0 8px;
   }
   .dpad-well {
-    width: 112px;
-    height: 112px;
-    border-radius: 18px;
+    grid-row: 1 / 3;
+  }
+  .ab-well,
+  .mid {
+    grid-column: 2;
+  }
+
+  /* The well is the cross plus an 8px collar. The hit grid below is 3 x 68px,
+     and the drawn arms (58px) sit inside their 68px cells. */
+  .dpad-well {
+    width: 220px;
+    height: 220px;
+    border-radius: 28px;
   }
   .dpad {
-    width: 88px;
-    height: 88px;
+    width: 204px;
+    height: 204px;
   }
   .dpad i.v {
-    left: 30px;
-    width: 28px;
-    height: 88px;
+    top: 16px;
+    left: 73px;
+    width: 58px;
+    height: 172px;
   }
   .dpad i.h {
-    top: 30px;
-    width: 88px;
-    height: 28px;
+    top: 73px;
+    left: 16px;
+    width: 172px;
+    height: 58px;
   }
   .dpad i.c {
-    top: 33px;
-    left: 33px;
-    width: 22px;
-    height: 22px;
+    top: 82px;
+    left: 82px;
+    width: 40px;
+    height: 40px;
   }
-  .mid {
-    gap: 11px;
-  }
+
+  /* The A/B well is rotated, so its drawing overhangs the layout box by about
+     11px a side; the margin keeps that overhang inside the base. */
   .ab-well {
-    gap: 12px;
-    padding: 12px 16px;
+    gap: 14px;
+    padding: 14px 16px;
+    margin-right: 10px;
+    justify-self: center;
   }
   .ab-well button {
-    width: 46px;
-    height: 46px;
+    width: 74px;
+    height: 74px;
+    font-size: 16px;
+  }
+
+  /* START / SELECT and the speaker share the lower half of the column beside
+     the cross. */
+  .mid {
+    flex-direction: row;
+    justify-content: center;
+    gap: 14px;
+  }
+  .speaker {
+    order: 1;
+  }
+
+  /* The button is the hit area: an upright, undrawn 70 x 68 box. The slanted
+     pill is its pseudo-element, so the measured and the tapped rectangle are
+     the same one and the pill keeps its tilt. */
+  .startsel {
+    gap: 8px;
+  }
+  .startsel button {
+    position: relative;
+    width: 70px;
+    height: 68px;
+    border-radius: 0;
+    transform: none;
+    background: none;
+    box-shadow: none;
+  }
+  .startsel button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 56px;
+    height: 14px;
+    margin: -7px 0 0 -28px;
+    border-radius: 8px;
+    transform: rotate(-16deg);
+    background: linear-gradient(180deg, var(--btn), var(--btn-d));
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.22);
   }
 }
 

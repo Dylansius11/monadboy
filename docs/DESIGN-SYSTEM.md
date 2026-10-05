@@ -171,6 +171,7 @@ Applied values remain identifiable when the cursor moves away.
 Context-dependent key labels update when their action changes.
 No essential information is hover-only: D-pad, touch, and keyboard are first-class.
 The key legend belongs to the console shell, not each screen's height budget.
+Console touch targets are measured after the fit transform, not in the console's own pixels. At 360px wide the console renders at 0.677x, so A and B must measure 48px or more on screen, and each D-pad arm, START and SELECT 44px or more, with the button element itself carrying the hit area.
 
 ## 6. Motion contract
 

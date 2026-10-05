@@ -14,7 +14,7 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 |---|---|---|---|---|
 | 0 — Repo bootstrap | DONE | 2/2 | Maintain guard and commit discipline | None |
 | 1 — Docs first | DONE | 4/4 | Keep docs aligned with implementation | None |
-| 2 — Frontend shell and screens | DOING | 20/22 | Phone touch targets (2.11); then Phase 2 review | None |
+| 2 — Frontend shell and screens | DOING | 21/22 | Assembled verify walk (2.10); then Phase 2 review | None |
 | 3 — Pure SDK | DOING | 7/9 | Record measured gas and a real-order encoding fixture after S2 | B1 / S2 for deferred items |
 | 4 — Funded spikes | BLOCKED | 0/6 | Fund DEPLOYER, then broadcast S1/S2; prepare device spike independently | B1; S4 user devices |
 | 5 — DiskRegistry v2 | BLOCKED | 5/6 | Broadcast registry and record code/address | B1 |
@@ -77,7 +77,7 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 - [x] **2.9j** Assemble routes, root and router without absent imports — proof: `2264eb0`, `54ef7d3`, `91a7cbc`; `bun run generate-routes` output is byte-identical to the tree the dev server writes (shared Start footer in tsr.config.json); `bun run dev` serves /card with HTTP 200.
 - [x] **2.9k** Add console screen-input test harness — proof: `1a74224`; harness existence does not prove screens exist.
 - [ ] **2.10** Verify assembled web and walk S1..S8 on phone viewport — proof required: `bun run verify`; `bun run dev`, keyboard walkthrough at 412x915, eight screenshots and observed console output.
-- [ ] **2.11** Meet the touch minimum after the fit scale on phones — proof required: getBoundingClientRect at 360x640, 375x667, 390x844 and 412x915 with A/B >= 48 px, D-pad arm and START/SELECT hit areas >= 44 px, the screen no smaller than before and desktop unchanged. [V] Before: at 412x915 the console scales 0.777, so A/B render 35.7 px, D-pad arms 21.8 px and START/SELECT 36.9x18.8 px while the console uses 475 of 915 px of height.
+- [x] **2.11** Meet the touch minimum after the fit scale on phones — proof: getBoundingClientRect after the change: A/B 50.1 / 52.2 / 54.4 / 57.5 px, D-pad arm hit 46 / 48 / 50 / 52.8 px, START/SELECT 47.4x46 / 49.4x48 / 51.4x50 / 54.4x52.8 px at 360x640 / 375x667 / 390x844 / 412x915; the screen keeps 324.9 / 338.8 / 352.6 / 372.9 px width; desktop screenshots hash-identical at 1280x720, 641x900, 800x1000 and 1920x1080; edge taps fire every control. [V] Before: at 412x915 the console scaled 0.777, so A/B rendered 35.7 px, D-pad arms 22.8 px and START/SELECT 36.9x18.8 px while the console used 475 of 915 px of height.
 
 **Acceptance**
 - Node-runtime verify and guard pass; no imports of absent modules.
