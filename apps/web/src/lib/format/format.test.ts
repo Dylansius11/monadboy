@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ageInDays, compactUsd, duration, pct, price, usd } from './index'
+import { ageInDays, compactUsd, duration, pct, price, usd, usdFine } from './index'
 
 describe('money', () => {
   it('always shows cents on an amount a user holds', () => {
@@ -10,6 +10,13 @@ describe('money', () => {
   it('drops the cents on pool-sized numbers', () => {
     expect(compactUsd(412_000)).toBe('$412K')
     expect(compactUsd(5_000_000)).toBe('$5M')
+  })
+
+  it('keeps sub-cent accruals readable without printing a float tail', () => {
+    expect(usdFine(0.020547945205479447)).toBe('$0.0205')
+    expect(usdFine(1.42)).toBe('$1.42')
+    expect(usdFine(0)).toBe('$0.00')
+    expect(usdFine(-0.38)).toBe('-$0.38')
   })
 })
 

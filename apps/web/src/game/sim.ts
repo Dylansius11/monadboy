@@ -31,7 +31,7 @@ function lcgNext(seed: number): number {
 }
 
 /** Fixture estimate: half the deposit changes hands at a 0.3% swap cost. */
-const REBALANCE_COST_FRACTION = 0.0015
+export const REBALANCE_COST_FRACTION = 0.0015
 
 /** The display clock advances one hour per 500ms screen tick. */
 export const STEP_SECONDS = 3_600
@@ -39,8 +39,8 @@ const SECONDS_PER_YEAR = 365 * 86_400
 export const FALLBACK_REALIZED_VOL = 0.6
 /** Noise pacing is separate from the display clock to keep terrain legible. */
 const NOISE_HORIZON_SECONDS = 900
-const FEE_APR = 0.18
-const DAMAGE_APR = 0.35
+export const FEE_APR = 0.18
+export const DAMAGE_APR = 0.35
 const HISTORY_CAP = 30
 
 function seedFromAddress(address: string): number {

@@ -26,9 +26,21 @@ const USD_COMPACT = new Intl.NumberFormat(LOCALE, {
   maximumFractionDigits: 0,
 })
 
+const USD_FINE = new Intl.NumberFormat(LOCALE, {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
+})
+
 /** `$412.00`. For amounts a user typed or will hold. */
 export function usd(amount: number): string {
   return USD.format(amount)
+}
+
+/** `$0.0205`. Cents, plus up to two more places for a per-tick accrual. */
+export function usdFine(amount: number): string {
+  return USD_FINE.format(amount)
 }
 
 /** `$412K`. For pool-sized numbers, which never need the cents. */
