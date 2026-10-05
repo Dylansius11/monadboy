@@ -432,3 +432,65 @@ function START_STEP_DOWN(current: number): number {
   if (idx > 0) return presets[idx - 1]
   return Math.max(current - 1, -90)
 }
+
+describe('missing data, Gate 2.4', () => {
+  it('renders the not-found panel, not a throw, and B still goes back', () => {
+    const { getByText, onBack, queryByRole } = renderSetRange({
+      pool: undefined,
+    })
+
+    expect(getByText(/pool not found/i)).toBeInTheDocument()
+    expect(queryByRole('progressbar')).not.toBeInTheDocument()
+
+    press('B')
+    expect(onBack).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('manual precedence and failed funding', () => {
+  it('manual edges override either width until the suggestion is restored', () => {
+    const manualRange = { lowerPct: -12, upperPct: 9 }
+    const wide = renderSetRange({ width: 'wide', manualRange })
+    const manualPicture = wide.getByRole('img').getAttribute('aria-label')
+    wide.unmount()
+    const tight = renderSetRange({ width: 'tight', manualRange })
+    expect(tight.getByRole('img')).toHaveAttribute('aria-label', manualPicture)
+    press('SELECT', 'SELECT')
+    expect(tight.getByRole('img').getAttribute('aria-label')).not.toBe(manualPicture)
+    expect(tight.getByRole('button', { name: 'tight' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('keeps the cursor separate from the applied TIGHT range until A applies an edit', () => {
+    const { getByRole } = renderSetRange()
+    press('DOWN', 'RIGHT')
+    const tightPicture = getByRole('img').getAttribute('aria-label')
+    press('RIGHT')
+    expect(getByRole('button', { name: 'manual' })).toHaveAttribute('aria-pressed', 'false')
+    expect(getByRole('button', { name: 'tight' })).toHaveAttribute('aria-pressed', 'true')
+    expect(getByRole('img')).toHaveAttribute('aria-label', tightPicture)
+    press('A', 'LEFT', 'A')
+    expect(getByRole('button', { name: 'manual' })).toHaveAttribute('aria-pressed', 'true')
+    expect(getByRole('button', { name: 'tight' })).toHaveAttribute('aria-pressed', 'false')
+    expect(getByRole('img').getAttribute('aria-label')).not.toBe(tightPicture)
+  })
+
+  it('shows AMOUNT_TOO_SMALL and blocks confirm until amount funds a ladder', () => {
+    const { getByText, queryByText, getByRole, onConfirm } = renderSetRange({ amount: 10 })
+    expect(getByText('AMOUNT_TOO_SMALL')).toBeInTheDocument()
+    press('A')
+    expect(onConfirm).not.toHaveBeenCalled()
+    press('RIGHT', 'RIGHT')
+    expect(queryByText('AMOUNT_TOO_SMALL')).not.toBeInTheDocument()
+    expect(getByRole('img')).toBeInTheDocument()
+    press('A')
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not invent a mid for the fixture without a book', () => {
+    const { getByText, onConfirm, onBack } = renderSetRange({ pool: FIXTURE_MARKETS[1].pool })
+    expect(getByText('NO_PRICE')).toBeInTheDocument()
+    press('A', 'B')
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect(onBack).toHaveBeenCalledTimes(1)
+  })
+})
