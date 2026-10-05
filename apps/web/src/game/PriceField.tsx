@@ -1,16 +1,33 @@
-/** Stepped prices with visible ladder edges. The wrapper positions; its child jumps. */
 import { PixelText, Sprite } from '../ui'
 import { price as fmt } from '../lib/format'
 import { yDomain } from './domain'
 import type { SpriteAnimation } from '../ui'
 
+/**
+ * The screen. Everything else on S7 is a label around this.
+ *
+ * A stepped price line, the two edges of your range drawn across it, and your
+ * Monanimal standing on the price. The whole product in one picture: the
+ * character is where the price is, the lines are where you are still earning,
+ * and the job is to stay between them.
+ *
+ * It is a line and two edges rather than a strip of identical tiles. Tiles
+ * say "there is liquidity here" but cannot say "you are here and the edge is
+ * there", which is the only question the player has. The ladder underneath
+ * still produces the range, and it is exactly what the two lines are drawn
+ * from.
+ *
+ * SVG for the geometry, DOM for the text. The bitmap font renders crisply as
+ * DOM and resamples as SVG <text>, so the labels are positioned absolutely
+ * over the plot rather than drawn into it.
+ */
 
-
-
+/** Room on the right for the two edge prices, so the line never runs under
+ *  them. A multiple of 4, like everything else. */
 const LABEL_GUTTER = 56
 
 export interface PriceFieldProps {
-  
+  /** Oldest to newest. The last sample is where the character stands. */
   series: ReadonlyArray<number>
   lowerPrice: number
   upperPrice: number
@@ -19,7 +36,7 @@ export interface PriceFieldProps {
   character: string
   animation: SpriteAnimation
   jumping: boolean
-  
+  /** Drives the greyed treatment. Nothing is earning while price is outside. */
   earning: boolean
 }
 
@@ -74,7 +91,8 @@ export function PriceField({
         aria-label="Price against your range"
         className="absolute inset-0"
       >
-        
+        {/* The band you are earning in. Filled, so "inside" is a place rather
+            than a gap between two lines. */}
         {upperVisible || lowerVisible ? (
           <rect
             x={0}
@@ -118,7 +136,8 @@ export function PriceField({
         />
       </svg>
 
-      
+      {/* The two edge prices, stated. A dashed line tells you an edge exists;
+          only the number tells you how far away it is. */}
       {upperVisible ? (
         <EdgeLabel top={y(upperPrice)} value={upperPrice} label="Up" />
       ) : null}
@@ -126,7 +145,7 @@ export function PriceField({
         <EdgeLabel top={y(lowerPrice)} value={lowerPrice} label="Low" />
       ) : null}
 
-      
+      {/* The character stands ON the price, so its feet are the reading. */}
       <div
         className="absolute"
         style={{
@@ -135,7 +154,20 @@ export function PriceField({
           transform: 'translate(-50%, -100%)',
         }}
       >
-        
+        {/*
+          TWO ELEMENTS, TWO TRANSFORMS, AND THAT IS THE WHOLE JUMP FIX.
+
+          `transform` is one property. `sprite-jump` animates it to
+          `translateY(-16px)`, which REPLACES whatever the element already had
+          rather than adding to it. With both classes on the wrapper above,
+          pressing A would drop the `translate(-50%, -100%)` that puts the
+          character's feet on the price line: it would snap half a sprite right
+          and a whole sprite down, hop, and snap back. That reads as the
+          character leaping off the chart, because it is.
+
+          The wrapper positions. The child jumps. Neither one can clobber the
+          other, and it stays that way no matter what the animation does next.
+        */}
         <div className={jumping ? 'sprite-jump' : undefined}>
           <Sprite character={character} animation={animation} size={32} />
         </div>

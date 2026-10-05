@@ -20,34 +20,85 @@ import type { RunSummary } from '../sim'
 import type { Pool } from '../../types/domain'
 import type { Envelope } from '../../lib/envelope'
 
+/** SELECT walks this many ladder levels per press toward the nearer edge.
+ * Enough presses to feel deliberate on stage, not so many that a presenter is
+ * still mashing the button when the pitch clock is running. */
 const NUDGE_LEVELS_PER_PRESS = 4
+
+/** A tap of A that visibly leaves the ground and comes back. A fixed-length
+ * swap is the whole mini-game and costs four lines instead of a hold-timer
+ * and a physics curve. */
 const JUMP_MS = 300
+
+/** The sim ticks twice a second. setInterval, not requestAnimationFrame,
+ * because the runner is CSS on the compositor and a per-frame JS loop would
+ * burn battery to redraw nothing. */
 const TICK_MS = 500
+
+/**
+ * Above this proximity (0 at an edge, 1 at the centre) the Monanimal is
+ * visibly pleased.
+ *
+ * The gap below 1 matters: if happiness covered the whole in-range band, the
+ * character would smile right up to the moment NAD-SENSE fires, and the face
+ * would be reassuring at exactly the wrong time. Happy means the middle, not
+ * merely "not yet warned".
+ */
 const CONTENT_PROXIMITY = 0.7
+
+/**
+ * The price field, in pixels.
+ *
+ * 464 is the 480 screen less 8px of page padding on each side. 200 is what is
+ * left after the header (20), the range row (12), the bottom cluster (52), and
+ * the gaps, and it is deliberately the largest number that fits: every pixel
+ * not spent on a label belongs to the thing the player is actually watching.
+ */
 const FIELD_WIDTH = 464
 const FIELD_HEIGHT = 200
 
 export interface InRangeProps {
+  /** Undefined is a render state, never a throw. findPool returns exactly this
+   * when the id in the URL matches nothing on this save disk. */
   pool: Pool | undefined
   amount: number
   width: RangeWidth
+  /** S6's hand moved edges, if any. planForSession treats this as an edit ON
+   * TOP of width, never a parallel mode: null plays the WIDE/TIGHT suggestion,
+   * present plays exactly what S6 drew. plan.ts owns the precedence. */
   manualRange: ManualRange | null
   autopilot: boolean
   characterId: CharacterId
   /** Freshness gates the development walk; live wiring belongs to Phase 7. */
   priceFeed?: Envelope<number>
+  /** Hands the finished run out, so S8 can report on it without replaying
+   * the seeded walk (a re-run at a different tick count produces different
+   * numbers from the ones the player just watched). */
   onWithdraw: (run: RunSummary) => void
   onRebalance: () => void
   onBack: () => void
 }
 
-/** S7 runs a visibly marked development fixture, never a live position. */
+/**
+ * S7 runs a visibly marked development fixture, never a live position.
+ *
+ * A component, not a route: it takes callbacks, never imports useNavigate,
+ * and knows nothing about `$id`. That is what lets this file be tested with
+ * `renderScreen` and a keypress instead of a router.
+ */
 export function InRange({
   pool, amount, width, manualRange, autopilot, characterId, priceFeed,
   onWithdraw, onRebalance, onBack,
 }: InRangeProps) {
   const book = FIXTURE_MARKETS.find(({ pool: fixture }) => fixture.pairAddress === pool?.pairAddress)?.book
   const openingMid = book?.bid != null && book.ask != null ? (book.bid + book.ask) / 2 : 0
+  // The player's range SHAPE. planForSession is the one entry point plan.ts
+  // documents: it reads the width or the manual edit, whichever wins, and
+  // answers with a step and a level count either way. That shape is what was
+  // funded at deposit time and a rebalance must never change it, only where
+  // it sits (see anchorMid below). Width and step are one coupled control,
+  // never two raw ones; this is the one place that coupling gets computed. A
+  // planner failure becomes player copy, never a raw code.
   const planned = useMemo(() => {
     if (!pool) return { range: null, error: null }
     const market = mainnetMarkets.find(({ baseSymbol, quoteSymbol }) =>
@@ -67,14 +118,24 @@ export function InRange({
   }, [pool, openingMid, amount, width, manualRange])
   const range = planned.range
   // Range and price have separate anchors: re-centering moves liquidity only.
+  // Not derived from `sim`, on purpose: sim.mid is where PRICE is, and the
+  // anchor is where the player's LIQUIDITY is. Conflating them is what would
+  // let a rebalance move nothing while still counting as one.
   const [anchorMid, setAnchorMid] = useState(openingMid)
+  // The live edges: the plan's shape, scaled to this render's anchor.
+  // range.low/high are anchored at DEPOSIT time and must not be read here, or
+  // a rebalance recomputes the shape but not where it sits.
   const edges = useMemo(() => range && openingMid > 0 ? {
     ...range, low: range.low * anchorMid / openingMid, high: range.high * anchorMid / openingMid,
   } : null, [range, anchorMid, openingMid])
+  // The hooks are never conditional (pool can be undefined, the not-found path
+  // below still has to render), only their initial values are.
   const [sim, setSim] = useState(() => pool && range ? createSim(pool, openingMid) : null)
   const [jumping, setJumping] = useState(false)
   const [inspecting, setInspecting] = useState(false)
   const jumpTimeout = useRef<number>(undefined)
+  // A feed that is not live freezes the walk: no ticks, no SCORE, no clock,
+  // and A and SELECT go inert. B still withdraws.
   const paused = priceFeed !== undefined && priceFeed.freshness !== 'live'
 
   useEffect(() => {
@@ -91,6 +152,8 @@ export function InRange({
     : 'IN_RANGE'
 
   useConsoleIntent((intent) => {
+    // The inputs view is a full-screen read-only page: B or START closes it,
+    // and it never withdraws.
     if (inspecting) {
       if (intent === 'B' || intent === 'START') setInspecting(false)
       return
@@ -104,17 +167,27 @@ export function InRange({
     if (paused) return
     if (intent === 'A') {
       if (state === 'OUT_OF_RANGE') {
+        // recordRebalance is the count S8 prints, and it means what it says:
+        // the range moves to the current price in the same press, so the NEXT
+        // render is back in range. A counter that went up while the range
+        // never moved would imply an action that did not occur. Same shape,
+        // new anchor: this crystallises the position around the current
+        // price, and the cost is charged.
         setSim((current) => current ? recordRebalance(current, amount) : current)
         setAnchorMid(sim.mid)
         onRebalance()
         return
       }
+      // The entire mini-game input: a fixed-length swap, see JUMP_MS above.
       setJumping(true)
       clearTimeout(jumpTimeout.current)
       jumpTimeout.current = window.setTimeout(() => setJumping(false), JUMP_MS)
       return
     }
     if (intent === 'SELECT') {
+      // Walk toward whichever edge is nearer, so repeated presses are always
+      // making progress instead of oscillating around the centre. The moved
+      // price is appended to the history so the chart shows it on this frame.
       const towardLower = sim.mid - edges.low <= edges.high - sim.mid
       setSim((current) => {
         if (!current) return current
@@ -124,6 +197,8 @@ export function InRange({
     }
   })
 
+  // Not a throw, not a spinner: a real panel with a real way out. A failed
+  // plan names its reason in player words and says no funds moved.
   if (!pool || !sim || !range || !edges) {
     return (
       <div className="bg-screen flex h-full w-full flex-col items-center justify-center gap-3 p-4">
@@ -141,6 +216,15 @@ export function InRange({
   const summary = summarize(sim)
   const damage = Math.max(0, sim.feesEarnedUsd - summary.netUsd)
 
+  /**
+   * The character's face is the fastest readout on the screen, so it has to
+   * say the same thing the numbers do.
+   *
+   * `happy` is reserved for the safe middle. A motion preference must never
+   * change what a screen is saying: the CSS handles reduced motion by parking
+   * the loop, so the frame here is purely a function of where price is (and
+   * of the feed being paused).
+   */
   const spriteAnimation: SpriteAnimation =
     paused || state === 'OUT_OF_RANGE'
       ? 'sit'
@@ -179,16 +263,25 @@ export function InRange({
   }
 
   return (
+    /* nad-pulse on the OUTER frame, so the whole screen flinches rather than
+       one widget inside it. The warning has to be felt, and a border you
+       notice from four metres is the cheapest way to say it. Gated behind
+       prefers-reduced-motion in styles.css. */
     <div
       className={`bg-screen flex h-full w-full flex-col gap-1 p-2 ${
         warning ? 'nad-pulse' : ''
       }`}
     >
+      {/* Header, on a three column grid so SCORE is genuinely centred rather
+          than merely between two things of unequal width.
+          Never hide a loss: DAMAGE sits at the same visual weight as SCORE. */}
       <div className="grid grid-cols-3 items-baseline">
         <div className="flex items-baseline gap-1">
           <PixelText role="body" upper>
             {pool.tokenX.symbol}/{pool.tokenY.symbol}
           </PixelText>
+          {/* Every number here is a simulation over a committed fixture.
+              Eight pixels of honesty. */}
           <PixelText role="micro" tone="dim" upper>
             Fixture
           </PixelText>
@@ -199,6 +292,11 @@ export function InRange({
             Score
           </PixelText>
           <Value amount={sim.feesEarnedUsd} prefix="$" decimals={2} signed />
+          {/* A word, not a pause glyph. The pixel face has pragmatic coverage,
+              and a missing glyph renders as a tofu box next to the headline
+              number on the one screen that has to survive a photograph. A word
+              also reads from four metres. Shown whenever SCORE is frozen: out
+              of range, or the feed is not live. */}
           {paused || state === 'OUT_OF_RANGE' ? (
             <PixelText role="micro" tone="loss" upper>
               Paused
@@ -210,10 +308,20 @@ export function InRange({
           <PixelText role="micro" tone="dim" upper>
             Damage
           </PixelText>
+          {/* Not `signed`, because damage is stored positive and is never a
+              gain: the tone Value derives from amount<0 would render a green
+              +$0.00 at the start of every session. The minus and the loss tone
+              are both stated instead. Dropping the tone with the sign would
+              leave DAMAGE the same size as SCORE but the same colour as a
+              neutral label, which is the rule half-kept. */}
           <Value amount={damage} prefix="-$" decimals={2} tone="loss" />
         </div>
       </div>
 
+      {/* The range as numbers, tight under the header. The field draws the
+          same two edges as lines; this row is what makes them readable as
+          prices rather than as decoration. The middle label marks the money
+          as testnet and names the key behind the inputs view. */}
       <div className="flex items-baseline justify-between">
         <div className="flex items-baseline gap-1">
           <PixelText role="micro" tone="dim" upper>
@@ -244,6 +352,7 @@ export function InRange({
         </div>
       </div>
 
+      {/* The screen. Everything above and below is a label on this. */}
       <PriceField
         series={sim.history}
         lowerPrice={lowPrice}
@@ -256,13 +365,30 @@ export function InRange({
         earning={!paused && state !== 'OUT_OF_RANGE'}
       />
 
+      {/* The bottom cluster: warning, then instruments, then controls.
+          Grouped in its own wrapper with a tighter gap than the screen above
+          it, so the three text rows read as one block of chrome and the field
+          keeps the space instead of the gaps taking it. */}
       <div className="flex flex-col gap-1">
+        {/* ONE banner slot, always in the same place, directly above the
+            readings it is warning you about. Paused feed, OUT OF RANGE and
+            NAD-SENSE all use it, so the most important messages on the screen
+            teach the player one place to look. The slot is reserved whether or
+            not anything is in it: a strip that appeared and disappeared would
+            shove the field by its own height at the exact moment price moves. */}
         <div className="h-5 shrink-0">
           {paused ? (
             <div className="border-edge bg-alarm flex h-full items-center justify-center overflow-hidden border px-1">
               <PixelText role="body" className="text-center">PRICE FEED PAUSED</PixelText>
             </div>
           ) : state === 'OUT_OF_RANGE' ? (
+            /* STATIC, not a marquee. A scrolling line is one line and it is
+               the wrong one here: on stage the words OUT OF RANGE would spend
+               most of their time off the left edge, and that phrase is the one
+               thing the room has to read. Short enough to sit still across
+               464px. AUTOPILOT only re-arms orders after fills, and no fills
+               are possible out of range, so the line says what the player
+               lost and what getting it back costs. */
             <div className="border-edge bg-alarm flex h-full items-center justify-center overflow-hidden border px-1">
               <PixelText role="body" className="text-center">
                 {autopilot
@@ -279,6 +405,13 @@ export function InRange({
           ) : null}
         </div>
 
+        {/* Instruments. Always on, in every state: the moment a player most
+            needs to know whether autopilot is even on is the moment they are
+            out of range, so this row is never replaced by the alarm.
+            Three columns, like the header, so AUTOPILOT is genuinely centred
+            rather than parked against whatever the meter's width happens to
+            be. Two rows that centre on the same axis read as one instrument
+            panel; two rows that merely balance do not. */}
         <div className="grid grid-cols-3 items-center">
           <div className="flex items-center gap-2">
             <PixelText
@@ -304,6 +437,14 @@ export function InRange({
           </PixelText>
         </div>
 
+        {/* Controls, pinned to the corners. A is jump in range, recentre out
+            of range. SELECT nudges price toward the nearer edge, so the
+            out-of-range moment can be demonstrated on demand. B always
+            withdraws. A real rebalance costs a swap and gas, so the out of
+            range label says so in the same line rather than offering a free
+            action. No dollar figure: there is no swap quote path yet, and a
+            number this screen made up would be exactly the kind of claim the
+            product rules forbid. */}
         <div className="flex items-center justify-between">
           <PixelText role="micro" upper>
             A {paused ? 'Paused' : state === 'OUT_OF_RANGE' ? 'Recentre, costs a swap' : 'Jump'}

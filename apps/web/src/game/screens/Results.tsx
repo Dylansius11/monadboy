@@ -9,7 +9,24 @@ import type { CharacterId } from '../../config/brand'
 import type { RunSummary } from '../sim'
 import type { Pool } from '../../types/domain'
 
+/**
+ * Above this `timeInRangePct`, a run reads as genuinely well flown rather
+ * than merely lucky. Set closer to the top than the middle on purpose: 50
+ * is a coin flip, and a coin flip is exactly the run this screen has to be
+ * honest is not the same thing as skill (the "scrappy" line below exists
+ * for that run).
+ */
 const STRONG_TIME_IN_RANGE_PCT = 60
+
+/**
+ * One outcome bucket drives both the sprite's face and the line it says.
+ *
+ * S7's lesson was that a motion preference could make the Monanimal smile
+ * while the player was losing, and the fix there was making the face a pure
+ * function of the numbers. Here the face and the WORDS are a pure function of
+ * the SAME three-way value, so a future edit to one cannot drift from the
+ * other the way two separate ternaries could.
+ */
 type Outcome = 'strong' | 'scrappy' | 'negative'
 
 function outcomeFor(run: RunSummary): Outcome {
@@ -20,6 +37,12 @@ function outcomeFor(run: RunSummary): Outcome {
 const ANIMATION_BY_OUTCOME: Record<Outcome, SpriteAnimation> = {
   strong: 'happy', scrappy: 'idle', negative: 'sit',
 }
+
+/**
+ * Never scolding, never congratulating luck as if it were skill. The
+ * "scrappy" line says the quiet part out loud instead of pretending net
+ * positive always means the player did something right.
+ */
 const LINE_BY_OUTCOME: Record<Outcome, string> = {
   strong: 'you stayed on your feet. that is the whole job.',
   scrappy: 'you came out ahead. you were also lucky. those are different things.',
@@ -27,26 +50,46 @@ const LINE_BY_OUTCOME: Record<Outcome, string> = {
 }
 
 export interface ResultsProps {
+  /** Undefined is a render state, never a throw. */
   pool: Pool | undefined
-  /** The route supplies session.lastRun, never a replay of its walk. */
+  /** The route supplies session.lastRun, never a replay of its walk. Null when
+   * there is no finished run to report, which is also a render state. */
   run: RunSummary | null
   /** Current session amount; RunSummary does not carry historical deposits. */
   amount: number
   characterId: CharacterId
-  /** A setting is not evidence of who re-centered the range. */
+  /**
+   * A setting is not evidence of who re-centered the range. Accepted and
+   * deliberately NOT rendered: see the rebalance line below, which reports
+   * the count of presses the player actually made. Kept on the props so the
+   * route and the tests do not churn when autopilot becomes real and earns
+   * its own counter.
+   */
   autopilot: boolean
   onBackToDisks: () => void
 }
 
-/** S8 reports marked fixture results; sealed saves are wired in Phase 7. */
+/**
+ * S8, the results screen. It reports marked fixture results; sealed saves are
+ * wired in Phase 7.
+ *
+ * A component, not a route: same shape as InRange, testable with
+ * `renderScreen` and a keypress instead of a router.
+ */
 export function Results({ pool, run, amount, characterId, onBackToDisks }: ResultsProps) {
   const [inspecting, setInspecting] = useState(false)
   useConsoleIntent((intent) => {
+    // The inputs view is read-only: B or START closes it, and it never leaves
+    // the screen.
     if (inspecting) {
       if (intent === 'B' || intent === 'START') setInspecting(false)
       return
     }
+    // B repeats A on purpose. A back button that does nothing on the last
+    // screen of a flow is a dead end, and S8 is the last screen of the flow.
     if (intent === 'A' || intent === 'B') { onBackToDisks(); return }
+    // START, the same key that opens the inputs view on S6 and S7. Nothing to
+    // inspect without a run and a pool to attribute it to.
     if (intent === 'START' && run && pool) setInspecting(true)
   })
 
@@ -112,6 +155,10 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
 
   return (
     <div className="bg-screen flex h-full w-full flex-col gap-1 p-2">
+      {/* Title band. One row, not two: stacking SESSION OVER over the pair
+          tag costs a whole extra title-role line height (24px) this screen
+          does not have to spare, and reading them left to right loses
+          nothing a beginner needs. */}
       <div className="flex items-baseline justify-center gap-2">
         <PixelText role="title" upper>
           Session over
@@ -124,6 +171,12 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
         </PixelText>
       </div>
 
+      {/* The Monanimal and the money block share a row. Stacked, a 64px
+          sprite plus its name, the three-row money panel, the instrument
+          block, and the Dialog line do not all fit full width inside a 320px
+          height budget without something getting clipped by the viewport's
+          overflow:hidden. Side by side is what buys the room for the block
+          that actually carries the never-hide-a-loss rule. */}
       <div className="grid grid-cols-[96px_1fr] items-start gap-2">
         <div className="flex flex-col items-center gap-1">
           <Sprite
@@ -153,6 +206,12 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
             <PixelText role="body" upper>
               Damage taken
             </PixelText>
+            {/* Not `signed`, same reasoning as InRange.tsx: damageUsd is
+                stored positive and is never a gain, so `signed` would render
+                a green +$0.00 the moment a session ends without a loss. The
+                minus and the loss tone are stated explicitly instead, which
+                is the only way DAMAGE keeps SCORE's size without also losing
+                the loss colour. This row is the whole reason S8 exists. */}
             <Value
               amount={run.damageUsd}
               prefix="-$"
@@ -165,6 +224,12 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
             <PixelText role="body" upper>
               Net
             </PixelText>
+            {/* The one row on this screen allowed to be `signed`: NET can
+                actually land on either side, so its glyph has to be derived
+                from the amount rather than asserted by a hardcoded prefix
+                like the two rows above it. `role="hero"` because
+                tokens.css marks --text-hero for exactly this: "boot,
+                results, score". Largest thing on the screen, on purpose. */}
             <Value
               amount={run.netUsd}
               prefix="$"
@@ -176,6 +241,10 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
         </Panel>
       </div>
 
+      {/* Instrument block. Time in range gets a body-weight row and its own
+          Meter, both bigger than the two rows under them: it is the only
+          number here that measures a skill rather than a deposit size, and a
+          profit-ranked leaderboard would just reward whoever put in most. */}
       <div className="flex flex-col gap-1">
         <div className="flex items-baseline justify-between">
           <PixelText role="body" upper>
@@ -191,8 +260,21 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
         </PixelText>
         <div className="grid grid-cols-2">
           <PixelText role="micro" upper>
+            {/* Always "Rebalanced", never the autopilot name.
+                `run.rebalances` is written by one function, `recordRebalance`
+                in sim.ts, and that function has exactly one caller: the A
+                keypress branch in InRange.tsx. Nothing fires autopilot, so
+                keying the label off the autopilot SETTING would credit a
+                machine for presses the player made with their own thumb.
+                When autopilot is real it gets its own counter in RunSummary,
+                and this line branches on that counter, not on a checkbox. */}
             Rebalanced {run.rebalances}x
           </PixelText>
+          {/* There is no distance anywhere in sim.ts, only elapsed seconds and
+              streak length: a metres figure belongs to a runner mini-game, not
+              this one, and printing one would be inventing a number on the one
+              screen whose entire job is refusing to do that. So this prints
+              the longest unbroken in-range streak as a time instead. */}
           <PixelText
             role="micro"
             tone="dim"
@@ -204,11 +286,19 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
         </div>
       </div>
 
-      
+      {/* The line, keyed on the same `outcome` the sprite animation reads
+          above, so the face and the words can never tell two different
+          stories about one run. No portrait: Dialog's portrait well is a
+          fixed 64px square, and the same character is already on screen at
+          64px twenty pixels above it. A second copy of one Monanimal is
+          redundancy, not richness, and it costs a fifth of the remaining
+          height budget to say nothing new. */}
       <Dialog speaker={characters[characterId].label}>
         {LINE_BY_OUTCOME[outcome]}
       </Dialog>
 
+      {/* Footer, pinned to the bottom whatever the block above it needed.
+          START opens the inputs view behind the numbers on this screen. */}
       <div className="mt-auto flex items-center justify-between">
         <PixelText role="micro" upper>
           A back to disks
