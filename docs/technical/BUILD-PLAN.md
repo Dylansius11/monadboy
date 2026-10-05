@@ -14,7 +14,8 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 |---|---|---|---|---|
 | 0 — Repo bootstrap | DONE | 2/2 | Maintain guard and commit discipline | None |
 | 1 — Docs first | DONE | 4/4 | Keep docs aligned with implementation | None |
-| 2 — Frontend shell and screens | DOING | 21/22 | Assembled verify walk (2.10); then Phase 2 review | None |
+| 2 — Frontend shell and screens | DOING | 22/23 | Assembled verify walk (2.10) | None |
+| 2b — Experience pass | DOING | 0/5 | Boot at /play and landing at / | Portrait shell waits on the user's mockup decision |
 | 3 — Pure SDK | DOING | 7/9 | Record measured gas and a real-order encoding fixture after S2 | B1 / S2 for deferred items |
 | 4 — Funded spikes | BLOCKED | 0/6 | Fund DEPLOYER, then broadcast S1/S2; prepare device spike independently | B1; S4 user devices |
 | 5 — DiskRegistry v2 | BLOCKED | 5/6 | Broadcast registry and record code/address | B1 |
@@ -70,14 +71,15 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 - [x] **2.9c** S3 CartridgeSelect screen — proof: `a2ced5e`, `189327d`; locked slots keep COMING SOON while the cursor passes; `S3-cartridge-select.png`.
 - [x] **2.9d** S4 Difficulty screen — proof: `0f0b04b`, `fa1c996`, `f03500a`; HARD -> typed confirmation -> session `{difficulty: hard, characterId: mouch, godMode: true}`; `S4-Difficulty.png`.
 - [x] **2.9e** S5 PoolTracker screen — proof: `e944dc0`, `61b4cb8`, `362bfbc`, `d574477`, `fb5188c`; PLAYABLE (TESTNET) is decided by the fixture's `network`, not its symbol; the mainnet MON/AUSD empty book reads Thin book and cannot start play; `S5-pool-tracker.png`.
-- [x] **2.9f** S6 SetRange screen — proof: `b8920ac`, `df7cc8e`, `4f73087`, `272d8b5`, `392a7d4`; WIDE 0.980065–1.020069 vs TIGHT 0.990066–1.010068 on the AUSD_USDC fixture, manual edges apply only on A, clamp notice and SDK funding split render; `S6-set-range.png`.
-- [x] **2.9g** S7 InRange screen — proof: `57b220f`, `3c4010f`, `c503d0d`; stepped chart, equal-weight SCORE/DAMAGE, NAD-SENSE, PRICE FEED PAUSED and contextual keys; `S7-in-range.png`.
-- [x] **2.9h** S8 Results screen — proof: `c96cd81`, `a360707`; SELECT opens the inputs, A/B return to the shelf; `S8-results.png`.
+- [x] **2.9f** S6 SetRange screen — proof: `b8920ac`, `df7cc8e`, `4f73087`, `272d8b5`, `392a7d4`; WIDE 0.980065–1.020069 vs TIGHT 0.990066–1.010068 on the AUSD_USDC fixture (numbers in `S6-wide.png`), manual edges apply only on A, clamp notice and SDK funding split render; `S6-set-range.png`, `S6-error.png`.
+- [x] **2.9g** S7 InRange screen — proof: `57b220f`, `3c4010f`, `c503d0d`; stepped chart, equal-weight SCORE/DAMAGE, NAD-SENSE and contextual keys; PRICE FEED PAUSED is driven by the `priceFeed` prop until Phase 7 wires the feed; `S7-in-range.png`.
+- [x] **2.9h** S8 Results screen — proof: `c96cd81`, `a360707`, `abd6c88`; START opens the inputs (the same key as S6 and S7), A/B return to the shelf; `S8-results.png`.
 - [x] **2.9i** Session state preserves choices and binds mascot to difficulty — proof: `a62a8d4`.
 - [x] **2.9j** Assemble routes, root and router without absent imports — proof: `2264eb0`, `54ef7d3`, `91a7cbc`; `bun run generate-routes` output is byte-identical to the tree the dev server writes (shared Start footer in tsr.config.json); `bun run dev` serves /card with HTTP 200.
 - [x] **2.9k** Add console screen-input test harness — proof: `1a74224`; harness existence does not prove screens exist.
 - [ ] **2.10** Verify assembled web and walk S1..S8 on phone viewport — proof required: `bun run verify`; `bun run dev`, keyboard walkthrough at 412x915, eight screenshots and observed console output.
 - [x] **2.11** Meet the touch minimum after the fit scale on phones — proof: getBoundingClientRect after the change: A/B 50.1 / 52.2 / 54.4 / 57.5 px, D-pad arm hit 46 / 48 / 50 / 52.8 px, START/SELECT 47.4x46 / 49.4x48 / 51.4x50 / 54.4x52.8 px at 360x640 / 375x667 / 390x844 / 412x915; the screen keeps 324.9 / 338.8 / 352.6 / 372.9 px width; desktop screenshots hash-identical at 1280x720, 641x900, 800x1000 and 1920x1080; edge taps fire every control. [V] Before: at 412x915 the console scaled 0.777, so A/B rendered 35.7 px, D-pad arms 22.8 px and START/SELECT 36.9x18.8 px while the console used 475 of 915 px of height.
+- [x] **2.12** Close the Phase 2 review — proof: M1 URL eligibility `0e4f1ac` (one rule in `game/eligibility.ts` for the tracker and the range/live/results routes; `/play/range/0x…ab` renders Pool not found); M5 single session writer `0e4f1ac`; routed walk and S2 TESTNET labels `29f74cd`; ladder error copy and fine dollars `e1b9665`; M2 AUTOPILOT copy without the unsourced fee, S6 inputs view, now-marker clearance `5e7f2e5`; S7/S8 inputs on START, sim constants, out-of-range copy `abd6c88`; M4 rationale comments `662282c`, `a6a8266`, `913bd96`, `36d4eb8`, `e5e7914`. Phone screenshots are 515x1144 px: 412x915 CSS at device scale 1.25.
 
 **Acceptance**
 - Node-runtime verify and guard pass; no imports of absent modules.
@@ -86,10 +88,24 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 
 **Proof to record** Per-area commits and verify output in external PROGRESS; phone screenshots in external handoff `screens/phase2/` and the earlier version's in `screens/phase2/earlier/`.
 
+**Accepted deviations (review M3, m1)** The screen, test and fix commits through `313b886` did not update this file in the same commit; `14e88be` recorded their status in one docs commit. `2bf5a63` (34 lines) and `14e88be` (28 lines) are under 50 lines, and `54ef7d3` (+206/-8) is over 250 because the typed route graph is one cycle. History is not rewritten for these.
+
 **Findings for later phases**
 - [V] Under the 8-level x 2% cap the SDK ladder clamps volatile pairs: with the MON_USDC fixture's daily volatility of 0.6, WIDE and TIGHT plan the same range (the clamp notice says so). [U, S2] Re-check with measured testnet volatility before tuning the cap.
 - [V] `RunSummary` does not keep the deposited amount, so S8 labels the amount as the current session's. Phase 7 sealed runs must record it per run.
 - [V] Fixture markets carry `network`; Phase 7 replaces it with registry-backed deployment eligibility.
+
+## Phase 2b — Experience pass
+
+**Goal** Make the first minute feel like switching on a handheld: a front door at `/`, a boot at `/play`, readable phones, help on demand and sound.
+
+- [ ] **2b.1** Boot screen at `/play`; START or A goes to `/card`, any other key skips, the sequence plays once per browser session and never under reduced motion — proof required: Boot tests, routed test, screenshots.
+- [ ] **2b.2** Landing page at `/`: generated night city, the held console booting itself, scroll-pinned real screens, product truths, cast, PRESS START with a view transition into `/play` — proof required: screenshots at 1440x900, 1536x730 (dpr 1.25) and 412x915; skyline generator tests.
+- [ ] **2b.3** Portrait shell on portrait phones (screen top, controls in the thumb zone, larger type) — proof required: user approval of `mockups/portrait/board.png`, then before/after text and touch-target sizes at 360x640..412x915.
+- [ ] **2b.4** Rule book: a `?` control and `?`/H key open per-screen help and the key map; the desk-key legend moves into it — proof required: keyboard and touch screenshots.
+- [ ] **2b.5** Sound: chip-style SFX synthesized with WebAudio, a licensed background loop, wired to the VOL slider and an M mute, silent until the first input — proof required: license record and a recorded walk.
+
+**Acceptance** Every new surface keeps TESTNET visible, passes the forbidden-term guard, respects reduced motion, and leaves the eight game screens unchanged in behaviour.
 
 ## Phase 3 — Pure SDK
 
@@ -282,6 +298,7 @@ Cut in this exact order, recording the decision and affected phase status in the
 2. AUSD-USDC second market.
 3. Leaderboard windows beyond 24h.
 4. GOD MODE polish.
+5. Phase 2b sound (2b.5), then the portrait shell (2b.3). The landing page and boot stay.
 
 **Never cut:** a real flip fill on camera, the stateless memory-card restore. Cutting GOD MODE polish never disables the honeypot/unsellable gate. Cutting the second market leaves EASY on MON-AUSD with WIDE default. No cut substitutes fixtures for real fills or creates a server-dependent memory card.
 
