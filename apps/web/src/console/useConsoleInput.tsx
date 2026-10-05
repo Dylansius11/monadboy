@@ -13,9 +13,20 @@ import type { InputStore } from './input-store'
 
 const InputContext = createContext<InputStore | null>(null)
 
-export function ConsoleInputProvider({ children }: { children: ReactNode }) {
+/**
+ * `keyboard={false}` leaves the page's own keys alone: a console shown on a
+ * scrolling page must not swallow Space and the arrows. Touch and clicks on
+ * the controls still work.
+ */
+export function ConsoleInputProvider({
+  children,
+  keyboard = true,
+}: {
+  children: ReactNode
+  keyboard?: boolean
+}) {
   const store = useMemo(() => createInputStore(), [])
-  useEffect(() => store.attach(), [store])
+  useEffect(() => (keyboard ? store.attach() : undefined), [store, keyboard])
   return <InputContext value={store}>{children}</InputContext>
 }
 

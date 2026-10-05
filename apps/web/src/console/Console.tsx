@@ -101,6 +101,102 @@ function useNeedsRotate(): boolean {
   return needs
 }
 
+/**
+ * The moulded shell: lid, screen, hinge and controls, with no stage or fit.
+ *
+ * `Console` places it on the full-viewport desk; the landing page holds one
+ * in its hero. One body, so the console a visitor meets is the console they
+ * play on.
+ */
+export function ConsoleBody({
+  children,
+  wordmark,
+  viewportRef,
+  powered = true,
+  keyHints = true,
+}: {
+  /** The 480x320 screen contents. */
+  children: ReactNode
+  wordmark: string
+  viewportRef?: RefObject<HTMLDivElement | null>
+  /** Power LED. Off only before a boot. */
+  powered?: boolean
+  /** The desk-key legend under the controls. */
+  keyHints?: boolean
+}) {
+  const [volume, setVolume] = useState(0.6)
+  return (
+    <>
+      <div className="lid">
+        <i className="screw tl" />
+        <i className="screw tr" />
+        <i className="screw bl" />
+        <i className="screw br" />
+        <div className="bezel">
+          {/* The ref is what makes useOverflowWarning able to fire at all.
+              Without it the hook bailed on `!el` and the 320px guard was
+              dead from the day it was written. */}
+          <div className="viewport" ref={viewportRef}>
+            {children}
+          </div>
+        </div>
+        <div className="wordmark">{wordmark}</div>
+      </div>
+
+      <div className="hinge">
+        <i className="cap" />
+        <i className="bar" />
+        <i className="cap" />
+      </div>
+
+      <div className="base">
+        <i className="screw bl" />
+        <i className="screw br" />
+
+        <div className="toprow">
+          <VolumeSlider value={volume} onChange={setVolume} />
+          <MonadMark />
+          <i className={powered ? 'led' : 'led is-off'} aria-hidden="true" />
+        </div>
+
+        <div className="deck">
+          <DPad />
+          <div className="mid">
+            <Speaker />
+            <StartSelect />
+          </div>
+          <ActionButtons />
+        </div>
+
+        {/* Which desk key is which console button. See console.css.
+            SELECT and START were missing here, which is the exact bug
+            console.css's own comment warns about: a screen says "SELECT
+            MANUAL", the player has no idea SELECT is Shift, and presses
+            nothing. Four keys now, not two. */}
+        {keyHints && (
+          <p className="keyhint">
+            <span>
+              <b>Z</b> a button
+            </span>
+            <span>
+              <b>X</b> b button
+            </span>
+            <span>
+              <b>Shift</b> select
+            </span>
+            <span>
+              <b>Enter</b> start
+            </span>
+            <span>
+              <b>Arrows</b> d-pad
+            </span>
+          </p>
+        )}
+      </div>
+    </>
+  )
+}
+
 export function Console({
   children,
   wordmark,
@@ -113,7 +209,6 @@ export function Console({
   const box = useRef<HTMLDivElement>(null)
   const viewport = useRef<HTMLDivElement>(null)
   const scale = useFitScale(stage, box)
-  const [volume, setVolume] = useState(0.6)
   const needsRotate = useNeedsRotate()
   useOverflowWarning(viewport)
 
@@ -132,70 +227,9 @@ export function Console({
           ref={box}
           style={{ transform: `translate(-50%, -50%) scale(${scale})` }}
         >
-          <div className="lid">
-            <i className="screw tl" />
-            <i className="screw tr" />
-            <i className="screw bl" />
-            <i className="screw br" />
-            <div className="bezel">
-              {/* The ref is what makes useOverflowWarning able to fire at all.
-                  Without it the hook bailed on `!el` and the 320px guard was
-                  dead from the day it was written. */}
-              <div className="viewport" ref={viewport}>
-                {children}
-              </div>
-            </div>
-            <div className="wordmark">{wordmark}</div>
-          </div>
-
-          <div className="hinge">
-            <i className="cap" />
-            <i className="bar" />
-            <i className="cap" />
-          </div>
-
-          <div className="base">
-            <i className="screw bl" />
-            <i className="screw br" />
-
-            <div className="toprow">
-              <VolumeSlider value={volume} onChange={setVolume} />
-              <MonadMark />
-              <i className="led" aria-hidden="true" />
-            </div>
-
-            <div className="deck">
-              <DPad />
-              <div className="mid">
-                <Speaker />
-                <StartSelect />
-              </div>
-              <ActionButtons />
-            </div>
-
-            {/* Which desk key is which console button. See console.css.
-                SELECT and START were missing here, which is the exact bug
-                console.css's own comment warns about: a screen says "SELECT
-                MANUAL", the player has no idea SELECT is Shift, and presses
-                nothing. Four keys now, not two. */}
-            <p className="keyhint">
-              <span>
-                <b>Z</b> a button
-              </span>
-              <span>
-                <b>X</b> b button
-              </span>
-              <span>
-                <b>Shift</b> select
-              </span>
-              <span>
-                <b>Enter</b> start
-              </span>
-              <span>
-                <b>Arrows</b> d-pad
-              </span>
-            </p>
-          </div>
+          <ConsoleBody wordmark={wordmark} viewportRef={viewport}>
+            {children}
+          </ConsoleBody>
         </div>
       </div>
     </ConsoleInputProvider>
