@@ -6,8 +6,11 @@ import { fireEvent } from '@testing-library/react'
 import { press, renderScreen } from '../../test/harness'
 import { PoolTracker } from './PoolTracker'
 
-import { fixtureGates } from '../fixtures'
+import { FIXTURE_NOW, fixtureGates, scoredPools } from '../fixtures'
 import { useSession } from '../../state/session'
+import { evaluateGates, GATE_COPY } from '../../lib/scoring/gates'
+import { scorePool } from '../../lib/scoring/score'
+import { mainnetProfile } from '../../config/thresholds'
 import type { ScoredPool } from '../fixtures'
 import type { GateFailure } from '../../lib/scoring/gates'
 import type { Pool, PoolScore } from '../../types/domain'
@@ -407,5 +410,79 @@ describe('the inspect panel says who is talking', () => {
     expect(getByText(/deep, old, boring/)).toBeInTheDocument()
 
     expect(container.querySelector('.sprite-pair')).not.toBeNull()
+  })
+})
+
+describe('fixture source and deployment boundaries', () => {
+  const playable = (): ScoredPool => scoredPool({
+    pool: {
+      tokenX: { address: '0xaaaa', symbol: 'MON', decimals: 18 },
+      tokenY: { address: '0xbbbb', symbol: 'AUSD', decimals: 6 },
+    },
+  })
+
+  it('selects a passing TESTNET pool in session only after inspecting it', () => {
+    const entry = playable()
+    const { getByText, onPlayPool } = renderTracker({ pools: [entry] })
+    expect(getByText(/FIXTURE source.*fallback.*Not live/)).toBeInTheDocument()
+    press('A')
+    expect(useSession.getState().pairAddress).toBeNull()
+    expect(getByText(/PLAYABLE \(TESTNET\)/)).toBeInTheDocument()
+    press('A')
+    expect(useSession.getState().pairAddress).toBe(entry.pool.pairAddress)
+    expect(onPlayPool).toHaveBeenCalledExactlyOnceWith(entry.pool.pairAddress)
+  })
+
+  it('keeps passing mainnet pools inspectable but never starts a run there', () => {
+    const { getAllByText, onPlayPool } = renderTracker()
+    press('A')
+    expect(getAllByText(/MAINNET ONLY/)).toHaveLength(2)
+    press('A')
+    expect(useSession.getState().pairAddress).toBeNull()
+    expect(onPlayPool).not.toHaveBeenCalled()
+  })
+
+  it('renders the MON/AUSD null book as thin and refuses play even in GOD MODE', () => {
+    const pools = scoredPools('hard', true)
+    const empty = pools.find((entry) => entry.pool.tokenY.symbol === 'AUSD')
+    if (!empty) throw new Error('missing MON/AUSD fixture')
+    const { getByText, onPlayPool } = renderTracker({
+      pools: [empty, ...pools.filter((entry) => entry !== empty)],
+      characterId: 'mouch',
+      gates: fixtureGates('hard'),
+    })
+    press('A')
+    expect(getByText(/Thin book.*PLAYABLE \(TESTNET\)/)).toBeInTheDocument()
+    expect(getByText(GATE_COPY.honeypot)).toBeInTheDocument()
+    press('A')
+    expect(useSession.getState().pairAddress).toBeNull()
+    expect(onPlayPool).not.toHaveBeenCalled()
+  })
+
+  it('does not treat a missing side of a passing book as executable liquidity', () => {
+    const entry = { ...playable(), book: { bid: null, ask: 1 } }
+    const { onPlayPool } = renderTracker({ pools: [entry] })
+    press('A', 'A')
+    expect(useSession.getState().pairAddress).toBeNull()
+    expect(onPlayPool).not.toHaveBeenCalled()
+  })
+
+  it('shows the scoring library SAFETY and HEAT failures and neutral offline momentum', () => {
+    const market = pool({ tvlUsd: 0, realizedVol24h: 4 })
+    const computed = scorePool({
+      pool: market, momentumAgeSeconds: 86_400, honeypotClean: true,
+      nowSeconds: FIXTURE_NOW,
+    }, mainnetProfile)
+    const gates = { ...fixtureGates('easy'), maxHeat: 1 }
+    const result = evaluateGates(market, computed, gates, FIXTURE_NOW)
+    const entry: ScoredPool = {
+      FIXTURE: true, pool: market, book: { bid: 1, ask: 1.001 },
+      score: computed, gates: result, passes: result.passed,
+    }
+    const { getByText } = renderTracker({ pools: [entry, PASSING_LOW], gates })
+    press('A')
+    expect(getByText(GATE_COPY['safety-too-low'])).toBeInTheDocument()
+    expect(getByText(GATE_COPY['heat-too-high'])).toBeInTheDocument()
+    expect(getByText(/buzz 50 \(offline\)/)).toBeInTheDocument()
   })
 })
