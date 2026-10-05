@@ -17,6 +17,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@monadboy/sdk": "workspace:*",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-devtools": "0.10.9",
     "@tanstack/react-query": "5.101.4",
