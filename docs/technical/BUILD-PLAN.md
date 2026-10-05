@@ -37,11 +37,11 @@ Each gate is currently [U]. A pass requires actual evidence, not an SDK declarat
 |---|---|---|---|---|
 | S1 | AUSD testnet supply | Faucet `requestFunds` succeeds from our wallets at some cadence, or we hold >=1,000 AUSD | Ask Monad/Agora in Discord; else official MON-USDC testnet market with testnet USDC | Supply, drip, MON-AUSD execution; second market only if USDC source usable |
 | S2 | Flip ladder on Kuru testnet | Deploy our MON-AUSD market, deposit, `batchProvisionLiquidity` 2+2 levels; bot taker fill emits `Trade` + `FlippedOrderCreated`; encodings and `provisionOrRevert` documented | Single `addFlipBuyOrder` / `addFlipSellOrder` per level | Trusted encodings, explicit gas limits, playable market, real flip proof |
-| S3 | Testnet MON budget | Deployer + bot + drip wallets hold enough MON for bot inventory, target 500+ MON, and 20 player drips | Shrink level sizes via `minSize`; ask Monad for testnet MON | Live mirror and fresh-disk onboarding |
+| S3 | Testnet MON budget | Deployer + bot + drip wallets hold the lean budget: DEPLOYER 50 MON, BOT 80 MON of inventory, DRIP 20 MON for 20 player drips (about 150 MON total) | Shrink level sizes via `minSize` and ladder depth until the +/-3% move fits the inventory; ask Monad for a top-up only if the measured need is higher | Live mirror and fresh-disk onboarding |
 | S4 | Mera on real devices | iPhone Safari + Android Chrome create and restore on the dev tunnel hostname | Document supported authenticators; desktop must use GPM/iCloud/1Password | Passkey onboarding and stateless restore |
 | S5 | Envio on testnet | HyperIndex syncs our market events within 10 s | Self-host; else `getLogs` fallback only | S7 indexed fills, S8 history, Envio-driven leaderboard |
 
-**S3 MON budget: filled after spike S3.** [U, S3] Include deployment allowance, bot inventory needed for +/-3% moves in the deployed book, explicit-limit transaction costs and twenty player drips. Do not treat the 500+ MON target as a measured sufficient budget.
+**S3 MON budget: filled after spike S3.** The faucet is rate-limited behind a human check, so the 150 MON above is a deliberate cap, not a measured result. [U, S3] Spike S3 measures deployment allowance, bot inventory needed for +/-3% moves in the deployed book, explicit-limit transaction costs and twenty player drips; if the book needs more than the cap, shrink level sizes via `minSize` before asking for more MON.
 
 S2 additionally records `isMargin`, minimum-output units, zap funding semantics, max-size/spread choices and gas limits. S4 tunnel cards are disposable: [V] Mera passkeys bind to the hostname ([guide](https://docs.monad.xyz/guides/mera)); fix production `VITE_RP_ID` before any real card.
 
