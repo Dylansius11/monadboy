@@ -21,11 +21,26 @@
   },
   "devDependencies": {
     "@tanstack/eslint-config": "0.4.0",
+    "@tanstack/intent": "0.5.4",
     "eslint": "10.8.0",
     "prettier": "3.9.6",
     "typescript": "6.0.3"
   },
   "trustedDependencies": ["esbuild", "lightningcss", "unrs-resolver"],
+  "intent": {
+    "skills": [
+      "@tanstack/router-core",
+      "@tanstack/router-plugin",
+      "@tanstack/react-start",
+      "@tanstack/start-client-core",
+      "@tanstack/devtools-vite"
+    ],
+    "exclude": [
+      "@tanstack/react-start#lifecycle/migrate-from-nextjs",
+      "@tanstack/react-start#react-start/server-components",
+      "@tanstack/start-client-core#start-core/auth-server-primitives"
+    ]
+  },
   "engines": {
     "node": ">=22"
   }

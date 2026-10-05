@@ -14,7 +14,7 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 |---|---|---|---|---|
 | 0 — Repo bootstrap | DONE | 2/2 | Maintain guard and commit discipline | None |
 | 1 — Docs first | DONE | 4/4 | Keep docs aligned with implementation | None |
-| 2 — Frontend shell and screens | DOING | 10/21 | Build S1..S8, routes and phone smoke | None |
+| 2 — Frontend shell and screens | DOING | 11/21 | Build S1..S8, routes and phone smoke | None |
 | 3 — Pure SDK | DOING | 7/9 | Record measured gas and a real-order encoding fixture after S2 | B1 / S2 for deferred items |
 | 4 — Funded spikes | BLOCKED | 0/6 | Fund DEPLOYER, then broadcast S1/S2; prepare device spike independently | B1; S4 user devices |
 | 5 — DiskRegistry v2 | BLOCKED | 5/6 | Broadcast registry and record code/address | B1 |
@@ -57,7 +57,7 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 **Goal** Preserve the handheld look and feel with marked development fixtures; live wiring belongs to Phase 7.
 
 - [x] **2.1a** Pin web toolchain, Node test guard, CI and Bun lockfile — proof: `5132dfb`, `e25ef50`; tracked root/web packages define verify and Node >=22.
-- [ ] **2.1b** Generate TanStack Intent package guidance after install — proof required: `bunx @tanstack/intent@latest install`; record generated mapping for installed packages in AGENTS.md.
+- [x] **2.1b** Generate TanStack Intent package guidance after install — proof: pinned `@tanstack/intent` 0.5.4 with a curated `intent.skills` allowlist (router, router plugin, Start client/React, devtools-vite; Next.js migration, RSC and server-auth skills excluded); `intent install` wrote the AGENTS.md block and `intent list` reports 5 packages, 19 skills.
 - [x] **2.2** Add palette, tokens, font/license, brand and venue-neutral types — proof: `e25ef50`, `814e87d`, `3f3a96a`, `9d3e9e7`.
 - [x] **2.3** Add console intents, input store, controls, volume, fit scale and shell — proof: `6f3c1b1`, `02e9494`, `10690c9`, `c73e4d5`, `b25e087`, `e2979de`.
 - [x] **2.4** Add pixel UI primitives, motion, selection/data states and grid / money-boundary checks — proof: `2d621d0`, `cb40837`, `a68f5c0`, `fe3a861`, `a7e107c`, `d4c887f`.
