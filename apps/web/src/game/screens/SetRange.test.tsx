@@ -3,7 +3,11 @@
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { press, renderScreen } from '../../test/harness'
+import { mainnetMarkets } from '@monadboy/sdk'
+import { ladderPlanner } from '../../lib/range/ladder-planner'
 import { FIXTURE_MARKETS } from '../fixtures'
+import { planForOffsets, planForWidth } from '../../lib/range/plan'
+import { price } from '../../lib/format'
 import { SetRange } from './SetRange'
 import type { SetRangeProps } from './SetRange'
 import type { ManualRange, RangeWidth } from '../../state/session'
@@ -11,6 +15,9 @@ import type { Pool } from '../../types/domain'
 
 const POOL: Pool = FIXTURE_MARKETS[0].pool
 const STABLE_POOL: Pool = FIXTURE_MARKETS[2].pool
+const MID = (FIXTURE_MARKETS[0].book.bid! + FIXTURE_MARKETS[0].book.ask!) / 2
+const PARAMS = mainnetMarkets.find((market) => market.symbol === 'MON_USDC')!.params
+const INPUTS = { budgetQuote: 100, sigmaDaily: POOL.realizedVol24h!, params: PARAMS }
 
 function renderSetRange(
   overrides: Partial<Omit<SetRangeProps, 'onConfirm' | 'onBack'>> & {
@@ -222,3 +229,206 @@ describe('confirm and back', () => {
     expect(onBack).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('the width row is three positions, not two', () => {
+  it('RIGHT walks WIDE to TIGHT to MANUAL, and MANUAL applies nothing', () => {
+    const { onChangeWidth, onChangeManualRange } = renderSetRange({
+      width: 'wide',
+    })
+
+    press('DOWN') 
+    press('RIGHT')
+    expect(onChangeWidth).toHaveBeenCalledWith('tight')
+
+    press('RIGHT') 
+
+    expect(onChangeWidth).toHaveBeenCalledTimes(1)
+    expect(onChangeManualRange).not.toHaveBeenCalled()
+  })
+
+  it('does not wrap past MANUAL, and does not wrap past WIDE', () => {
+    const { onChangeWidth } = renderSetRange({ width: 'wide' })
+
+    press('DOWN')
+    press('RIGHT', 'RIGHT', 'RIGHT', 'RIGHT') 
+    expect(onChangeWidth).toHaveBeenCalledTimes(1)
+
+    press('LEFT', 'LEFT') 
+    expect(onChangeWidth).toHaveBeenLastCalledWith('wide')
+    press('LEFT') 
+    expect(onChangeWidth).toHaveBeenCalledTimes(3)
+  })
+
+  it('A on MANUAL opens the editor instead of confirming', () => {
+    const { getByText, queryByText, onConfirm } = renderSetRange()
+
+    press('DOWN', 'RIGHT', 'RIGHT') 
+    expect(queryByText(/manual range/i)).not.toBeInTheDocument()
+
+    press('A')
+
+    expect(getByText(/manual range/i)).toBeInTheDocument()
+
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  it('A still confirms from every other position on the width row', () => {
+    const { onConfirm } = renderSetRange()
+
+    press('DOWN', 'RIGHT') 
+    press('A')
+
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancelling out of the editor leaves MANUAL cursored but not applied', () => {
+    const { getByText, queryByText, onChangeManualRange } = renderSetRange()
+
+    press('DOWN', 'RIGHT', 'RIGHT', 'A') 
+    press('B') 
+
+    expect(onChangeManualRange).not.toHaveBeenCalled()
+    expect(queryByText(/manual range/i)).not.toBeInTheDocument()
+
+    expect(getByText(/A edit range/i)).toBeInTheDocument()
+    
+    expect(getByText(/vol 60% ->/)).toBeInTheDocument()
+  })
+})
+
+describe('the manual range editor', () => {
+  const basePlan = planForWidth(MID, 'wide', ladderPlanner, INPUTS)
+  const seededLowerPct = Math.round((basePlan.plan.low / MID - 1) * 100)
+  const seededUpperPct = Math.round((basePlan.plan.high / MID - 1) * 100)
+
+  it('SELECT opens the editor', () => {
+    const { getByText, queryByText } = renderSetRange()
+
+    expect(queryByText(/manual range/i)).not.toBeInTheDocument()
+    press('SELECT')
+    expect(getByText(/manual range/i)).toBeInTheDocument()
+  })
+
+  it("opens seeded at the current WIDE plan's edges", () => {
+    const { container } = renderSetRange()
+
+    const beforeLow = price(basePlan.plan.low)
+    const beforeHigh = price(basePlan.plan.high)
+    expect(container.textContent).toContain(beforeLow)
+    expect(container.textContent).toContain(beforeHigh)
+
+    press('SELECT')
+
+    const seededPlan = planForOffsets(MID, {
+      lowerPct: seededLowerPct,
+      upperPct: seededUpperPct,
+    }, ladderPlanner, INPUTS)
+    const afterLow = price(seededPlan.plan.low)
+    const afterHigh = price(seededPlan.plan.high)
+    expect(container.textContent).toContain(afterLow)
+    expect(container.textContent).toContain(afterHigh)
+  })
+
+  it('LEFT on the seeded START row widens the low price and the strip', () => {
+    const { container, getAllByRole } = renderSetRange()
+    press('SELECT')
+
+    const beforePlan = planForOffsets(MID, {
+      lowerPct: seededLowerPct,
+      upperPct: seededUpperPct,
+    }, ladderPlanner, INPUTS)
+    const beforeLow = price(beforePlan.plan.low)
+
+    const beforePicture = getAllByRole('img').at(-1)!.getAttribute('aria-label')
+
+    press('LEFT') 
+
+    const afterPlan = planForOffsets(MID, {
+      lowerPct: START_STEP_DOWN(seededLowerPct),
+      upperPct: seededUpperPct,
+    }, ladderPlanner, INPUTS)
+    const afterLow = price(afterPlan.plan.low)
+    const afterPicture = getAllByRole('img').at(-1)!.getAttribute('aria-label')
+
+    expect(afterLow).not.toBe(beforeLow)
+    expect(container.textContent).toContain(afterLow)
+    expect(afterPlan.plan.low).toBeLessThan(beforePlan.plan.low)
+    expect(afterPicture).not.toBe(beforePicture)
+  })
+
+  it('A applies the walked range and closes the overlay', () => {
+    const { container, queryByText, onChangeManualRange } = renderSetRange()
+    press('SELECT')
+    press('LEFT') 
+
+    press('A')
+
+    expect(onChangeManualRange).toHaveBeenCalledTimes(1)
+    const applied = onChangeManualRange.mock.calls[0][0] as ManualRange
+    expect(applied.lowerPct).toBeLessThan(seededLowerPct)
+    expect(applied.upperPct).toBe(seededUpperPct)
+    expect(queryByText(/manual range/i)).not.toBeInTheDocument()
+
+    expect(container.textContent).toContain(
+      `manual  ${applied.lowerPct}% / +${applied.upperPct}%`,
+    )
+  })
+
+  it('B cancels without calling onChangeManualRange', () => {
+    const { queryByText, onChangeManualRange } = renderSetRange()
+    press('SELECT')
+    press('LEFT')
+
+    press('B')
+
+    expect(onChangeManualRange).not.toHaveBeenCalled()
+    expect(queryByText(/manual range/i)).not.toBeInTheDocument()
+  })
+
+  it('SELECT inside the editor resets to the suggestion, with null', () => {
+    const { onChangeManualRange } = renderSetRange({
+      manualRange: { lowerPct: -12, upperPct: 9 },
+    })
+    press('SELECT')
+
+    press('SELECT')
+
+    expect(onChangeManualRange).toHaveBeenCalledWith(null)
+  })
+
+  it('A while the overlay is open does not reach onConfirm underneath it', () => {
+    const { onConfirm } = renderSetRange()
+    press('SELECT')
+
+    press('A')
+
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  it('clamps both editable edges and applies their bounded values', () => {
+    const { onChangeManualRange } = renderSetRange()
+    press('SELECT')
+    for (let i = 0; i < 100; i += 1) press('LEFT')
+    press('A')
+    expect(onChangeManualRange).toHaveBeenLastCalledWith({ lowerPct: -90, upperPct: seededUpperPct })
+    press('SELECT')
+    for (let i = 0; i < 200; i += 1) press('RIGHT')
+    press('DOWN')
+    for (let i = 0; i < 200; i += 1) press('LEFT')
+    press('A')
+    expect(onChangeManualRange).toHaveBeenLastCalledWith({ lowerPct: -1, upperPct: 1 })
+    press('SELECT', 'DOWN')
+    for (let i = 0; i < 500; i += 1) press('RIGHT')
+    press('A')
+    expect(onChangeManualRange).toHaveBeenLastCalledWith({ lowerPct: -1, upperPct: 400 })
+  })
+
+})
+
+
+function START_STEP_DOWN(current: number): number {
+  const presets = [-25, -15, -10, -5]
+  const idx = presets.indexOf(current)
+  if (idx > 0) return presets[idx - 1]
+  return Math.max(current - 1, -90)
+}
