@@ -16,42 +16,86 @@ import type { ScoredPool } from '../fixtures'
 import type { CursorDirection } from '../map'
 import type { GateSet } from '../../types/domain'
 
+/**
+ * S5, the pool tracker.
+ *
+ * A component, not a route, exactly like `InRange`: it takes the already
+ * scored, already gated pools and two callbacks, and knows nothing about
+ * `useSession` or `useNavigate`. The route decides difficulty and GOD MODE by
+ * calling `scoredPools()`; this file only decides how to look at the result.
+ */
 export interface PoolTrackerProps {
-  
+  /** Every pool at the caller's difficulty, filtered-out ones INCLUDED.
+   * fixtures.ts returns them on purpose so this screen can draw them dim. */
   pools: Array<ScoredPool>
-  
+  /** The player's Monanimal, which is also the tier: brand.ts's `characters`
+   * map answers both `label` and `tier` from this one id. */
   characterId: CharacterId
-  
+  /** The same gate set `pools` was scored against. Drawn as the shaded region
+   * on the map, so the box and the pins can never tell different stories. */
   gates: GateSet
   onPlayPool: (pairAddress: string) => void
   onBack: () => void
 }
 
+/**
+ * The plot, in pixels.
+ *
+ * 480 less 16px of page padding (8 each side, matching InRange's p-2) leaves
+ * 464. The Y-axis label column is a fixed 16 (four letters, one per row, at
+ * text-micro), so the plot itself gets whatever is left. Height is fixed
+ * because pins are positioned by percentage of THIS box, not of the screen:
+ * a flexible height would mean a pin's percentage position meant a different
+ * pixel every time the surrounding text wrapped.
+ */
 const PLOT_HEIGHT = 200
 const RADAR_SIZE = 32
 
+/**
+ * Zoom levels, cycled by SELECT.
+ *
+ * Three, not a continuous range. The map is 100 units across and the pins sit
+ * on real scores, so at 2x two pools four points apart finally separate, and
+ * past 3x a player is navigating a map they can no longer see the shape of. A
+ * continuous zoom would also need its own control; SELECT was free.
+ */
 const ZOOM_LEVELS = [1, 2, 3] as const
 
+/** Plain words for a 0 to 100 term, so the panel never prints a bare number
+ * next to a bar and calls that an explanation. No jargon, the same copy rule
+ * as the difficulty screen. */
 function bucket(score: number, low: string, mid: string, high: string): string {
   if (score >= 75) return high
   if (score >= 40) return mid
   return low
 }
 
+/** Names where the pools came from and how fresh they are, so the screen
+ * never reads as live market data. */
 const FIXTURE_SOURCE = fallback(
   'Development market fixtures',
   FIXTURE_NOW * 1000,
   'Not live. Snapshot 2026-10-05.',
 )
 
+/**
+ * Fee income is not a PoolScore field: HEAT's `turnover` term is a normalised
+ * 0-100 SCORE, not a percentage a beginner can read. This is a separate,
+ * openly heuristic estimate: a pool does not carry a real per-swap fee
+ * parameter yet, so 30bps stands in as a representative fee until a live rate
+ * replaces it. The label next to the number is what keeps this honest either
+ * way.
+ */
 const ASSUMED_FEE_RATE = 0.003
 
+/** Null when volume is unread, so the caller renders "not read" and not a 0%. */
 function feeIncomePct(pool: ScoredPool['pool']): number | null {
   if (pool.volume24hUsd === null) return null
   if (pool.tvlUsd <= 0) return 0
   return (pool.volume24hUsd / pool.tvlUsd) * ASSUMED_FEE_RATE * 365 * 100
 }
 
+/** Canned: nothing on this screen waits on a model. */
 const QUOTES: Record<CharacterId, string> = {
   molandak: 'deep, old, boring. boring is good.',
   moyaki: 'it moves. so do I. we get along.',
@@ -82,7 +126,9 @@ export function PoolTracker({
   const selected = pools[cursorIndex]
 
   useConsoleIntent((intent) => {
-
+    // The empty state only has one control. Handled first so the map and
+    // inspect branches below never have to think about an undefined
+    // `selected`.
     if (passing.length === 0) {
       if (intent === 'B') onBack()
       return
@@ -94,6 +140,10 @@ export function PoolTracker({
         return
       }
       if (intent === 'A' && isExecutable(selected)) {
+        // A pool that is not executable has no PLAY action to fire: it failed
+        // a gate, it is mainnet-only, or its book is too thin. The gates
+        // exist to stop exactly this, and GOD MODE still routes through
+        // `passes`, which by then means only "the honeypot check cleared."
         onPlayPool(selected.pool.pairAddress)
       }
       return
@@ -107,7 +157,9 @@ export function PoolTracker({
       setView('inspect')
       return
     }
-
+    // Cycles rather than paired zoom-in and zoom-out buttons: the console has
+    // one spare control on this screen, not two, and three levels wrap in one
+    // press from the far end.
     if (intent === 'SELECT') {
       setZoomStep((step) => (step + 1) % ZOOM_LEVELS.length)
       return
@@ -123,6 +175,9 @@ export function PoolTracker({
     }
   })
 
+  // No spinner is a terminal state, and "the filter removed every pool" is
+  // exactly as real a state as "here is the map." Not a blank plot: a map
+  // with zero live pins looks like a bug, this looks like a sentence.
   if (passing.length === 0) {
     return (
       <div className="bg-screen flex h-full w-full flex-col items-center justify-center gap-3 p-4">
@@ -147,13 +202,20 @@ export function PoolTracker({
 
   return (
     <div className="bg-screen flex h-full w-full flex-col gap-1 p-2">
-      
+      {/* Three columns, not justify-between, for the same reason S7's header
+          is a grid: with three items of unequal width, "spread them apart"
+          puts the middle one wherever the other two leave room, and it drifts
+          every time the count changes from one digit to two. */}
       <div className="grid grid-cols-3 items-baseline">
         <div className="flex items-baseline gap-1">
           <PixelText role="body" upper>
             Pool tracker
           </PixelText>
-          
+          {/* The densest screen in the product and the one that reads most
+              like live market instrumentation: LIQUIDITY, 24H VOLUME, FEE
+              INCOME %/yr, AGE, SAFETY, HEAT. Every one of those is a committed
+              fixture, and the pair addresses are placeholders. Eight pixels of
+              honesty. */}
           <PixelText role="micro" tone="dim" upper>
             Fixture
           </PixelText>
@@ -210,14 +272,18 @@ function MapView({
   onZoom: (delta: number) => void
 }) {
   const cursor = scoreToPosition(pools[cursorIndex].score)
-
+  // The map slides under a fixed window rather than the window moving over a
+  // fixed map, so the plot box, the pins, and the minimap all keep working in
+  // the same 0-100 space at every zoom level.
   const panX = panFor(cursor.leftPct, zoom)
   const panY = panFor(cursor.topPct, zoom)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1">
       <div className="flex gap-1">
-        
+        {/* HEAT, one letter per row rather than a rotated string: a bitmap
+            font rotated with CSS resamples, and four short lines cost nothing
+            a transform would have saved. */}
         <div className="flex w-4 shrink-0 flex-col items-center justify-center">
           {['H', 'E', 'A', 'T'].map((letter) => (
             <PixelText key={letter} role="micro" tone="dim">
@@ -230,7 +296,9 @@ function MapView({
           className="border-edge relative flex-1 overflow-hidden border"
           style={{ height: PLOT_HEIGHT }}
         >
-          
+          {/* Everything that lives in score space moves together. The minimap
+              and the zoom badge sit OUTSIDE this, which is what keeps them
+              readable while the map is panned. */}
           <div
             className="absolute inset-0"
             style={{
@@ -250,7 +318,12 @@ function MapView({
                   style={{
                     left: `${leftPct}%`,
                     top: `${topPct}%`,
-
+                    // The pin rides in score space with the map, so the zoom
+                    // would double its size too and turn the map into
+                    // fourteen discs touching each other. Cancelling the zoom
+                    // here keeps the glyph one size at every level and lets
+                    // the zoom do the only job it exists for, which is
+                    // separating pins that overlap.
                     transform: `translate(-50%, -50%) scale(${1 / zoom})`,
                   }}
                 >
@@ -260,7 +333,8 @@ function MapView({
                     selected={selected}
                     size={selected ? PIN_SIZE_SELECTED : PIN_SIZE}
                   />
-                  
+                  {/* Only the selected pool names itself. Fourteen labels is
+                      not a map, it is a list with coordinates. */}
                   {selected ? (
                     <div className="absolute top-full left-1/2 -translate-x-1/2 pt-1 whitespace-nowrap">
                       <PixelText role="micro" upper>
@@ -273,6 +347,9 @@ function MapView({
             })}
           </div>
 
+          {/* The coastline, named. The axes are still readable off the line
+              below the plot; these are the same two facts in the map's own
+              words. */}
           <div className="pointer-events-none absolute inset-0 flex items-end justify-between p-1">
             <PixelText role="micro" tone="dim" upper>
               Deep water
@@ -290,7 +367,19 @@ function MapView({
         <PixelText role="micro" tone="dim" upper>
           Safety, increasing right. Heat, increasing up.
         </PixelText>
-        
+        {/*
+          TAPPABLE ZOOM, AND SELECT STILL DOES IT TOO.
+
+          Below the plot rather than floating on it: the map is the one thing
+          on this screen with nothing to spare, and a control parked on the
+          corner of a map covers data at exactly the zoom level where data got
+          dense. Down here the targets are also big enough for a thumb.
+
+          The keyboard path is not a fallback for these. SELECT cycles and
+          these step, so every input the console has can reach the feature and
+          neither one is the "real" control: a screen never grows an action the
+          D-pad cannot perform.
+        */}
         <div className="flex items-center gap-1">
           <ZoomButton
             label="-"
@@ -317,6 +406,10 @@ function MapView({
         </div>
       </div>
 
+      {/* Colour is the SAFETY band and it means the same thing on every screen
+          a pool can be reached from. Whether THIS tier's filter accepted it is
+          a different question, so it gets its own entry rather than a fourth
+          colour that would collide with the first three. */}
       <div className="flex items-center gap-3 pl-5">
         {(
           [
@@ -340,6 +433,8 @@ function MapView({
         </div>
       </div>
 
+      {/* `mt-auto` pins the controls to the bottom EDGE of the screen rather
+          than to the bottom of the content above them. */}
       <div className="mt-auto flex items-center justify-between">
         <PixelText role="micro" upper>
           Move cursor
@@ -355,6 +450,9 @@ function MapView({
   )
 }
 
+/** A pressable on the pixel grid: 1px down and right on :active via
+ * `.pressable`, never a scale, because scaling a pixel panel resamples its
+ * border. */
 function ZoomButton({
   label,
   title,
@@ -380,6 +478,14 @@ function ZoomButton({
   )
 }
 
+/**
+ * The radar, which is a minimap and therefore has something in it.
+ *
+ * A bare sweeping hand over an empty circle is motion that states nothing. A
+ * minimap gives the same "this is scanning" read and answers the question the
+ * zoom creates, which is where the window sits on the whole map. The sweep
+ * stays, behind the dots, because it is what makes it look alive.
+ */
 function Minimap({
   pools,
   cursorIndex,
@@ -434,6 +540,18 @@ function Minimap({
   )
 }
 
+/**
+ * S5's inspect panel, in four banded sections.
+ *
+ * Eleven rows of `text-micro` at one weight leave everything present and
+ * nothing findable: a reader has to scan the whole panel to locate the pair
+ * name, because the pair name looks exactly like the fee estimate.
+ *
+ * So: rules between sections, one job each, and the vertical budget spent on
+ * the two things a player actually decides from. WHICH POOL is a title, and
+ * the score breakdown gets a column of its own rather than trailing off the
+ * end of a sentence.
+ */
 function InspectPanel({
   entry,
   quote,
@@ -446,18 +564,40 @@ function InspectPanel({
   characterId: CharacterId
 }) {
   const { pool, score, gates, passes } = entry
-
+  // The proven minimum, so a pool whose exact birthday is unreadable reads as
+  // "at least this old" rather than borrowing a number it does not have.
   const ageSeconds = Math.max(0, FIXTURE_NOW - pool.createdAt)
   const ageIsExact = pool.createdAtIsExact
   const feeIncome = feeIncomePct(pool)
 
+  /**
+   * THE WORST POOL IN THE SET IS THE ONE THAT BREAKS THE LAYOUT.
+   *
+   * A pool can fail five gates at once, and `evaluateGates` collects all of
+   * them on purpose. Five sentences is 70px this panel does not budget for,
+   * so the footer, which is the Monanimal and both button labels, would be
+   * pushed off the bottom of a screen that cannot scroll. The controls must
+   * not vanish on the exact pool that most needs explaining.
+   *
+   * Two mechanisms, because one is not enough. The section padding tightens
+   * in three tiers as the failure count grows (a single boolean shared by 3, 4
+   * AND 5 failures gives all three the same allocation, and the fifth reason
+   * lays out below the `overflow-hidden` edge of the box with no seam and no
+   * scrollbar). And the failure list is the FLEXIBLE region below, so anything
+   * left over is absorbed there instead of shoving the footer.
+   *
+   * Cutting the list short is never an option: every reason shows. That is
+   * this file's own rule, and a pool this bad is exactly the one a judge will
+   * click.
+   */
   const dense = gates.failures.length > 2
   const veryDense = gates.failures.length > 4
   const pad = veryDense ? 'py-0.5' : dense ? 'py-1' : 'py-2'
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      
+      {/* 1. WHICH POOL. The only thing on this screen at title weight, so the
+             eye lands here first and knows what the rest is about. */}
       <div
         className={`border-edge flex items-center justify-between border-b ${dense ? 'pb-1' : 'pb-2'}`}
       >
@@ -467,13 +607,16 @@ function InspectPanel({
             {pool.tokenX.symbol} / {pool.tokenY.symbol}
           </PixelText>
         </div>
-        
+        {/* A passive status label, never a control: whether the order book can
+            host a ladder, and whether the pool can be played on testnet. */}
         <PixelText role="body" tone="dim" upper>
           {isBookThin(entry) ? 'Thin book' : 'Book ready'}
           {' · '}{isTestnet(entry) ? 'PLAYABLE (TESTNET)' : 'MAINNET ONLY'}
         </PixelText>
       </div>
 
+      {/* 2. WHAT IT IS. Four facts, one per row, label left and value right so
+             the numbers form a column the eye can run down. */}
       <div className={`border-edge flex flex-col gap-1 border-b ${pad}`}>
         <Fact label="Liquidity" value={compactUsd(pool.tvlUsd)}>
           <div className="w-16">
@@ -499,7 +642,10 @@ function InspectPanel({
             feeIncome === null ? 'not read' : `${feeIncome.toFixed(1)}% / yr`
           }
         >
-          
+          {/* The caveat is permanent, never conditional on the number. The
+              second line is only true when there IS an estimate; with volume
+              unread there is nothing to caveat, and printing the caveat anyway
+              would imply a number is hiding behind it. */}
           <PixelText role="micro" tone="dim">
             {feeIncome === null
               ? 'needs 24h volume, which this rpc will not serve'
@@ -522,6 +668,12 @@ function InspectPanel({
         </Fact>
       </div>
 
+      {/* 3. WHY IT SCORED THAT. Every term of both scores, visible. This is
+             the whole point of the screen: the answer to "what is your AI
+             actually based on" is a sentence a judge can read, not a promise
+             to trust a black box. Score left, terms right, so the two headline
+             numbers line up under each other instead of hiding at the head of
+             two different-length sentences. */}
       <div className={`border-edge flex flex-col gap-1 border-b ${pad}`}>
         <div className="flex items-baseline justify-between gap-2">
           <PixelText role="body" upper>
@@ -544,9 +696,16 @@ function InspectPanel({
         </div>
       </div>
 
+      {/* THE FLEXIBLE REGION. Everything above is fixed height and everything
+          below is the footer, so this is where the panel absorbs a pool with
+          a lot wrong with it. `min-h-0` is what lets a flex child actually
+          shrink; without it the box keeps its content height and pushes the
+          footer off the bottom of a screen that has no scrollbar. */}
       <div className="min-h-0 flex-1 py-1">
         {!passes ? (
-
+          // GATE_COPY already holds a sentence per failure; every one of them
+          // renders, not just the first, because `evaluateGates` collected all
+          // of them for exactly this reason.
           <div
             className={`border-edge bg-sunk flex h-full flex-col overflow-hidden border ${
               veryDense ? 'gap-0 p-0.5' : 'gap-1 p-1'
@@ -559,6 +718,8 @@ function InspectPanel({
             ))}
           </div>
         ) : null}
+        {/* Checks the data could not settle are named, never silently counted
+            as passed. */}
         {gates.unverified.map((check) => (
           <PixelText key={check} role="micro" tone="dim">
             {UNVERIFIED_COPY[check]}
@@ -566,6 +727,11 @@ function InspectPanel({
         ))}
       </div>
 
+      {/* 4. WHO IS TELLING YOU. The Monanimal says its line with its face
+             next to it, standing on the control row like a shopkeeper behind
+             a counter. The idle loop is the same two frame animation every
+             other screen uses and it parks on frame 0 under
+             prefers-reduced-motion. */}
       <div className="flex items-end justify-between gap-2 pt-1">
         <PixelText role="micro" className="flex-1">
           &quot;{quote}&quot; - {quoteSpeaker}
@@ -574,7 +740,11 @@ function InspectPanel({
       </div>
 
       <div className="flex items-center justify-between">
-        
+        {/* A dimmed label that silently does nothing is a dead end: the player
+            presses A, gets no response, and has to guess why. When the pool
+            cannot be played the button says why: it failed a gate (the
+            reasons are listed directly above), it is mainnet-only, or its
+            book is too thin. */}
         <PixelText role="micro" tone={passes ? 'ink' : 'dim'} upper>
           {!passes
             ? 'Locked by the checks above'
@@ -592,6 +762,11 @@ function InspectPanel({
   )
 }
 
+/**
+ * One row of section 2: label left, value in a fixed column, colour and words
+ * after it. The value column is fixed so four different-length numbers still
+ * line up, which is the only reason this is a component and not four divs.
+ */
 function Fact({
   label,
   value,
