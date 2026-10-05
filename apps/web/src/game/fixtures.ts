@@ -127,7 +127,7 @@ export function passingCount(difficulty: Difficulty, godMode = false): number {
 export const FIXTURE_CARD_ADDRESS = fixtureAddress(0xca)
 export const MAX_DISKS = 3
 
-/** FIXTURE disks, two occupied slots; the third is represented by absence. */
+/** Three isolated FIXTURE disks, including a normal-tier unplayed slot. */
 const DISKS: Array<SaveDisk & { FIXTURE: true }> = [
   {
     FIXTURE: true,
@@ -153,6 +153,19 @@ const DISKS: Array<SaveDisk & { FIXTURE: true }> = [
     runs: 2,
     bestScore: 4.8,
     bestDamage: 7.9,
+    attested: false,
+  },
+  {
+    FIXTURE: true,
+    diskId: 3,
+    owner: FIXTURE_CARD_ADDRESS,
+    name: 'new game',
+    difficulty: 'normal',
+    godMode: false,
+    createdAt: FIXTURE_NOW,
+    runs: 0,
+    bestScore: 0,
+    bestDamage: 0,
     attested: false,
   },
 ]

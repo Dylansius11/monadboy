@@ -78,4 +78,26 @@ describe('fixture lookup', () => {
     disks[0].name = 'changed'
     expect(findDisk(disks[0].diskId)?.name).not.toBe('changed')
   })
+
+  it('keeps three isolated fixture slots with an unplayed normal disk', () => {
+    const disks = saveDisks()
+    expect(disks.map(({ diskId }) => diskId)).toEqual([1, 2, 3])
+    expect(findDisk(3)).toMatchObject({
+      FIXTURE: true,
+      difficulty: 'normal',
+      godMode: false,
+      runs: 0,
+      bestScore: 0,
+      bestDamage: 0,
+    })
+    for (const disk of disks) {
+      disk.runs += 1
+      disk.bestDamage += 10
+    }
+    expect(saveDisks().map(({ runs, bestDamage }) => ({ runs, bestDamage }))).toEqual([
+      { runs: 7, bestDamage: 0 },
+      { runs: 2, bestDamage: 7.9 },
+      { runs: 0, bestDamage: 0 },
+    ])
+  })
 })
