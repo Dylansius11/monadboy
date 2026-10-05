@@ -1,6 +1,7 @@
 # Agent guidance
 
 Read `CLAUDE.md` for repository rules and `docs/PRD.md` before product or scope decisions.
+Use `docs/technical/BUILD-PLAN.md` as the live task tracker; update its checkbox and proof in the same commit as the work.
 
 ## TanStack Intent mapping
 
