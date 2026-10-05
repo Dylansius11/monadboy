@@ -9,37 +9,153 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConsoleRouteImport } from './routes/_console'
+import { Route as ConsoleCardRouteImport } from './routes/_console/card'
+import { Route as ConsoleCartridgesRouteImport } from './routes/_console/cartridges'
+import { Route as ConsoleDisksRouteImport } from './routes/_console/disks'
+import { Route as ConsolePlayDifficultyRouteImport } from './routes/_console/play/difficulty'
+import { Route as ConsolePlayTrackerRouteImport } from './routes/_console/play/tracker'
+import { Route as ConsolePlayLiveIdRouteImport } from './routes/_console/play/live.$id'
+import { Route as ConsolePlayRangeIdRouteImport } from './routes/_console/play/range.$id'
+import { Route as ConsolePlayResultsIdRouteImport } from './routes/_console/play/results.$id'
 
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/_console',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConsoleCardRoute = ConsoleCardRouteImport.update({
+  id: '/card',
+  path: '/card',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleCartridgesRoute = ConsoleCartridgesRouteImport.update({
+  id: '/cartridges',
+  path: '/cartridges',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleDisksRoute = ConsoleDisksRouteImport.update({
+  id: '/disks',
+  path: '/disks',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsolePlayDifficultyRoute = ConsolePlayDifficultyRouteImport.update({
+  id: '/play/difficulty',
+  path: '/play/difficulty',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsolePlayTrackerRoute = ConsolePlayTrackerRouteImport.update({
+  id: '/play/tracker',
+  path: '/play/tracker',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsolePlayLiveIdRoute = ConsolePlayLiveIdRouteImport.update({
+  id: '/play/live/$id',
+  path: '/play/live/$id',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsolePlayRangeIdRoute = ConsolePlayRangeIdRouteImport.update({
+  id: '/play/range/$id',
+  path: '/play/range/$id',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsolePlayResultsIdRoute = ConsolePlayResultsIdRouteImport.update({
+  id: '/play/results/$id',
+  path: '/play/results/$id',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof ConsoleRoute
+  '/': typeof IndexRoute
+  '/card': typeof ConsoleCardRoute
+  '/cartridges': typeof ConsoleCartridgesRoute
+  '/disks': typeof ConsoleDisksRoute
+  '/play/difficulty': typeof ConsolePlayDifficultyRoute
+  '/play/tracker': typeof ConsolePlayTrackerRoute
+  '/play/live/$id': typeof ConsolePlayLiveIdRoute
+  '/play/range/$id': typeof ConsolePlayRangeIdRoute
+  '/play/results/$id': typeof ConsolePlayResultsIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof ConsoleRoute
+  '/': typeof IndexRoute
+  '/card': typeof ConsoleCardRoute
+  '/cartridges': typeof ConsoleCartridgesRoute
+  '/disks': typeof ConsoleDisksRoute
+  '/play/difficulty': typeof ConsolePlayDifficultyRoute
+  '/play/tracker': typeof ConsolePlayTrackerRoute
+  '/play/live/$id': typeof ConsolePlayLiveIdRoute
+  '/play/range/$id': typeof ConsolePlayRangeIdRoute
+  '/play/results/$id': typeof ConsolePlayResultsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_console': typeof ConsoleRoute
+  '/': typeof IndexRoute
+  '/_console': typeof ConsoleRouteWithChildren
+  '/_console/card': typeof ConsoleCardRoute
+  '/_console/cartridges': typeof ConsoleCartridgesRoute
+  '/_console/disks': typeof ConsoleDisksRoute
+  '/_console/play/difficulty': typeof ConsolePlayDifficultyRoute
+  '/_console/play/tracker': typeof ConsolePlayTrackerRoute
+  '/_console/play/live/$id': typeof ConsolePlayLiveIdRoute
+  '/_console/play/range/$id': typeof ConsolePlayRangeIdRoute
+  '/_console/play/results/$id': typeof ConsolePlayResultsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/card'
+    | '/cartridges'
+    | '/disks'
+    | '/play/difficulty'
+    | '/play/tracker'
+    | '/play/live/$id'
+    | '/play/range/$id'
+    | '/play/results/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/_console'
+  to:
+    | '/'
+    | '/card'
+    | '/cartridges'
+    | '/disks'
+    | '/play/difficulty'
+    | '/play/tracker'
+    | '/play/live/$id'
+    | '/play/range/$id'
+    | '/play/results/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/_console'
+    | '/_console/card'
+    | '/_console/cartridges'
+    | '/_console/disks'
+    | '/_console/play/difficulty'
+    | '/_console/play/tracker'
+    | '/_console/play/live/$id'
+    | '/_console/play/range/$id'
+    | '/_console/play/results/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  ConsoleRoute: typeof ConsoleRoute
+  IndexRoute: typeof IndexRoute
+  ConsoleRoute: typeof ConsoleRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_console': {
       id: '/_console'
       path: ''
@@ -47,11 +163,93 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_console/card': {
+      id: '/_console/card'
+      path: '/card'
+      fullPath: '/card'
+      preLoaderRoute: typeof ConsoleCardRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/cartridges': {
+      id: '/_console/cartridges'
+      path: '/cartridges'
+      fullPath: '/cartridges'
+      preLoaderRoute: typeof ConsoleCartridgesRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/disks': {
+      id: '/_console/disks'
+      path: '/disks'
+      fullPath: '/disks'
+      preLoaderRoute: typeof ConsoleDisksRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/play/difficulty': {
+      id: '/_console/play/difficulty'
+      path: '/play/difficulty'
+      fullPath: '/play/difficulty'
+      preLoaderRoute: typeof ConsolePlayDifficultyRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/play/tracker': {
+      id: '/_console/play/tracker'
+      path: '/play/tracker'
+      fullPath: '/play/tracker'
+      preLoaderRoute: typeof ConsolePlayTrackerRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/play/live/$id': {
+      id: '/_console/play/live/$id'
+      path: '/play/live/$id'
+      fullPath: '/play/live/$id'
+      preLoaderRoute: typeof ConsolePlayLiveIdRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/play/range/$id': {
+      id: '/_console/play/range/$id'
+      path: '/play/range/$id'
+      fullPath: '/play/range/$id'
+      preLoaderRoute: typeof ConsolePlayRangeIdRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/play/results/$id': {
+      id: '/_console/play/results/$id'
+      path: '/play/results/$id'
+      fullPath: '/play/results/$id'
+      preLoaderRoute: typeof ConsolePlayResultsIdRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
   }
 }
 
+interface ConsoleRouteChildren {
+  ConsoleCardRoute: typeof ConsoleCardRoute
+  ConsoleCartridgesRoute: typeof ConsoleCartridgesRoute
+  ConsoleDisksRoute: typeof ConsoleDisksRoute
+  ConsolePlayDifficultyRoute: typeof ConsolePlayDifficultyRoute
+  ConsolePlayTrackerRoute: typeof ConsolePlayTrackerRoute
+  ConsolePlayLiveIdRoute: typeof ConsolePlayLiveIdRoute
+  ConsolePlayRangeIdRoute: typeof ConsolePlayRangeIdRoute
+  ConsolePlayResultsIdRoute: typeof ConsolePlayResultsIdRoute
+}
+
+const ConsoleRouteChildren: ConsoleRouteChildren = {
+  ConsoleCardRoute: ConsoleCardRoute,
+  ConsoleCartridgesRoute: ConsoleCartridgesRoute,
+  ConsoleDisksRoute: ConsoleDisksRoute,
+  ConsolePlayDifficultyRoute: ConsolePlayDifficultyRoute,
+  ConsolePlayTrackerRoute: ConsolePlayTrackerRoute,
+  ConsolePlayLiveIdRoute: ConsolePlayLiveIdRoute,
+  ConsolePlayRangeIdRoute: ConsolePlayRangeIdRoute,
+  ConsolePlayResultsIdRoute: ConsolePlayResultsIdRoute,
+}
+
+const ConsoleRouteWithChildren =
+  ConsoleRoute._addFileChildren(ConsoleRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  ConsoleRoute: ConsoleRoute,
+  IndexRoute: IndexRoute,
+  ConsoleRoute: ConsoleRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
