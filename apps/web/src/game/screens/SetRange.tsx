@@ -9,7 +9,7 @@ import { FALLBACK_REALIZED_VOL } from '../sim'
 import { pct, price, usd } from '../../lib/format'
 import { Panel, PixelText, Toggle, Value } from '../../ui'
 import type { PlannedRange, RangePlan } from '../../lib/range/plan'
-import type { MarketParams } from '@monadboy/sdk'
+import type { Ladder, MarketParams } from '@monadboy/sdk'
 import type { ManualRange, RangeWidth } from '../../state/session'
 import type { Pool } from '../../types/domain'
 
@@ -200,10 +200,10 @@ export function SetRange({
   const lowPrice = range?.plan.low ?? 0
   const highPrice = range?.plan.high ?? 0
   const nowLeftPct = range ? ((mid - lowPrice) / (highPrice - lowPrice)) * 100 : 50
-  // Equal quote budget on each side of the ladder; quantities are value estimates.
-  const quoteAmount = amount / 2
-  const baseAmount = amount / 2
-  const swapCostEstimate = baseAmount * (SWAP_FEE_ESTIMATE_PCT / 100)
+  // Display SDK funding in quote-value units; any size-rounding dust stays unallocated.
+  const quoteAmount = range?.plan.quoteNeeded ?? 0
+  const baseAmount = (range?.plan.baseNeeded ?? 0) * mid
+  const swapCostEstimate = (range?.plan.zapQuote ?? 0) * (SWAP_FEE_ESTIMATE_PCT / 100)
   const vol = sigmaDaily
 
   return (
@@ -355,6 +355,11 @@ export function SetRange({
           <PixelText role="micro" tone="dim" className="tabular-nums">
             {pct(range.plan.step * 100, 2)} steps, {range.plan.levels} levels per side
           </PixelText>
+          {range.plan.clamped ? (
+            <PixelText role="micro" className="text-right">
+              wider than one transaction fits, so this is narrower.
+            </PixelText>
+          ) : null}
         </div>
       </div>
 
@@ -469,7 +474,7 @@ function ManualRangeEditor({
   amount: number
   sigmaDaily: number
   width: RangeWidth
-  range: PlannedRange
+  range: PlannedRange<Ladder>
   manualRange: ManualRange | null
   onApply: (next: ManualRange) => void
   onCancel: () => void
@@ -590,7 +595,9 @@ function ManualRangeEditor({
         </div>
         <div style={{ width: STRIP_WIDTH }}>
           <PixelText role="micro" tone="dim" className="tabular-nums">
-            {pct(preview.plan.step * 100, 2)} steps, {preview.plan.levels} levels per side
+            {preview.plan.clamped
+              ? 'wider than one transaction fits, so this is narrower.'
+              : `${pct(preview.plan.step * 100, 2)} steps, ${preview.plan.levels} levels per side`}
           </PixelText>
         </div>
       </div>

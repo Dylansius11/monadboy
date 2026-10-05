@@ -25,37 +25,37 @@ export type RangeRequest<TInputs> = TInputs & {
  * `planLadder` can implement this method: its extra order and funding fields
  * are compatible with RangePlan, and TInputs carries its budget, vol and params.
  */
-export interface RangePlanner<TInputs> {
-  plan: (input: RangeRequest<TInputs>) => RangePlan
+export interface RangePlanner<TInputs, TPlan extends RangePlan = RangePlan> {
+  plan: (input: RangeRequest<TInputs>) => TPlan
 }
 
-export interface PlannedRange {
-  plan: RangePlan
+export interface PlannedRange<TPlan extends RangePlan = RangePlan> {
+  plan: TPlan
   /** Mean half-width in percent; manual edits retain the requested width. */
   requestedWidthPct: number
 }
 
 /** Manual edits win over WIDE/TIGHT. Clearing the edit restores the mode. */
-export function planForSession<TInputs>(
+export function planForSession<TInputs, TPlan extends RangePlan = RangePlan>(
   mid: number,
   width: RangeWidth,
   manual: ManualRange | null,
-  planner: RangePlanner<TInputs>,
+  planner: RangePlanner<TInputs, TPlan>,
   inputs: TInputs,
-): PlannedRange {
+): PlannedRange<TPlan> {
   return manual
     ? planForOffsets(mid, manual, planner, inputs, width)
     : planForWidth(mid, width, planner, inputs)
 }
 
 /** A manual range's edges are percentages away from the current mid. */
-export function planForOffsets<TInputs>(
+export function planForOffsets<TInputs, TPlan extends RangePlan = RangePlan>(
   mid: number,
   manual: ManualRange,
-  planner: RangePlanner<TInputs>,
+  planner: RangePlanner<TInputs, TPlan>,
   inputs: TInputs,
   width: RangeWidth = 'wide',
-): PlannedRange {
+): PlannedRange<TPlan> {
   const plan = planner.plan({
     ...inputs,
     mid,
@@ -71,12 +71,12 @@ export function planForOffsets<TInputs>(
   }
 }
 
-export function planForWidth<TInputs>(
+export function planForWidth<TInputs, TPlan extends RangePlan = RangePlan>(
   mid: number,
   width: RangeWidth,
-  planner: RangePlanner<TInputs>,
+  planner: RangePlanner<TInputs, TPlan>,
   inputs: TInputs,
-): PlannedRange {
+): PlannedRange<TPlan> {
   const plan = planner.plan({
     ...inputs,
     mid,

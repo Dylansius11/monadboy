@@ -3,7 +3,7 @@ import { planForOffsets, planForSession, planForWidth } from './plan'
 import type { RangePlanner } from './plan'
 
 const planner: RangePlanner<{ halfWidth: number }> = {
-  plan({ mid, mode, manual, halfWidth }) {
+  plan: ({ mid, mode, manual, halfWidth }) => {
     const width = halfWidth * (mode === 'WIDE' ? 2.5 : 1)
     return {
       low: manual?.low ?? mid * (1 - width),

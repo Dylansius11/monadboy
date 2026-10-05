@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { press, renderScreen } from '../../test/harness'
-import { mainnetMarkets } from '@monadboy/sdk'
+import { mainnetMarkets, planLadder } from '@monadboy/sdk'
 import { ladderPlanner } from '../../lib/range/ladder-planner'
 import { FIXTURE_MARKETS } from '../fixtures'
 import { planForOffsets, planForWidth } from '../../lib/range/plan'
-import { price } from '../../lib/format'
+import { price, usd } from '../../lib/format'
 import { SetRange } from './SetRange'
 import type { SetRangeProps } from './SetRange'
 import type { ManualRange, RangeWidth } from '../../state/session'
@@ -187,19 +187,36 @@ describe('width drives the plan, not just the label', () => {
   })
 })
 
-describe('the split preview', () => {
-  it('sums to the amount', () => {
-    const { container } = renderSetRange({ amount: 100 })
+describe('the funding preview and clamp disclosure', () => {
+  it('shows SDK quote funding, base value and the estimated zap cost', () => {
+    const budgetQuote = 100.01
+    const { container, getByText } = renderSetRange({ amount: budgetQuote })
+    const funding = planLadder({ ...INPUTS, budgetQuote, mid: MID, mode: 'WIDE' })
+    const figures = () => [...container.querySelectorAll('[class*="shadow-hard"] [class*="text-value"]')]
+      .map((el) => el.textContent)
+    expect(figures()).toEqual([
+      usd(funding.quoteNeeded),
+      usd(funding.baseNeeded * MID),
+    ])
+    expect(getByText(`we swap part of your USDC first. swap cost ~${usd(funding.zapQuote * 0.003)} est.`))
+      .toBeInTheDocument()
+    press('LEFT')
+    const adjusted = planLadder({ ...INPUTS, budgetQuote: budgetQuote - 5, mid: MID, mode: 'WIDE' })
+    expect(figures()).toEqual([usd(adjusted.quoteNeeded), usd(adjusted.baseNeeded * MID)])
+  })
 
-    const panel = container.querySelector('[class*="shadow-hard"]')
-    expect(panel).toBeTruthy()
+  it('discloses a clamped ladder on both the setup picture and manual preview', () => {
+    const { getAllByText } = renderSetRange()
+    const notice = 'wider than one transaction fits, so this is narrower.'
+    expect(getAllByText(notice)).toHaveLength(1)
+    press('SELECT')
+    expect(getAllByText(notice)).toHaveLength(2)
+  })
 
-    const figures = [
-      ...(panel as HTMLElement).querySelectorAll('[class*="text-value"]'),
-    ].map((el) => Number(el.textContent.replace('$', '')))
-
-    expect(figures).toHaveLength(2)
-    expect(figures[0] + figures[1]).toBeCloseTo(100, 2)
+  it('does not show a clamp notice for a ladder that fits', () => {
+    const { queryByText } = renderSetRange({ pool: STABLE_POOL, amount: 250 })
+    expect(queryByText('wider than one transaction fits, so this is narrower.'))
+      .not.toBeInTheDocument()
   })
 })
 

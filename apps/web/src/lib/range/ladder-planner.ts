@@ -1,15 +1,12 @@
 import { planLadder } from '@monadboy/sdk'
-import type { MarketParams } from '@monadboy/sdk'
+import type { Ladder, MarketParams } from '@monadboy/sdk'
 import type { RangePlanner } from './plan'
 
-/** Shared Kuru planner for setup previews and the live price field. */
+/** Keep SDK funding and clamp metadata available to setup and live screens. */
 export const ladderPlanner: RangePlanner<{
   budgetQuote: number
   sigmaDaily: number
   params: MarketParams
-}> = {
-  plan: (input) => {
-    const { low, high, step, levels } = planLadder(input)
-    return { low, high, step, levels }
-  },
+}, Ladder> = {
+  plan: planLadder,
 }
