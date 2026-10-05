@@ -5,6 +5,8 @@ import { press, renderScreen, tick } from '../../test/harness'
 import { InRange } from './InRange'
 import { FIXTURE_MARKETS } from '../fixtures'
 import { cached, live } from '../../lib/envelope'
+import { duration, pct } from '../../lib/format'
+import { DAMAGE_APR, FEE_APR, REBALANCE_COST_FRACTION, STEP_SECONDS } from '../sim'
 import { ConsoleInputProvider } from '../../console/useConsoleInput'
 
 const POOL = FIXTURE_MARKETS[0].pool
@@ -157,6 +159,17 @@ describe('the out-of-range moment', () => {
     expect(getByText(/AUTOPILOT ON/i)).toBeInTheDocument()
     expect(getByText(/^B Withdraw$/i)).toBeInTheDocument()
     expect(getByText(/^A Recentre, costs a swap$/i)).toBeInTheDocument()
+  })
+
+  it.each([true, false])('says you stopped earning, in player words, with autopilot %s', (autopilot) => {
+    const { getByText } = renderInRange({ autopilot })
+    driveOutOfRange()
+    const alarm = getByText(/^OUT OF RANGE\./).textContent
+    expect(alarm).toMatch(/you stopped earning/)
+    expect(alarm).not.toMatch(/flip|re-arm/i)
+    if (autopilot) {
+      expect(alarm).toMatch(/re-centering is manual and costs a swap/)
+    }
   })
 
   it('A calls onRebalance when out of range, and does not when in range', () => {
@@ -345,23 +358,45 @@ describe('fixture freshness and inputs', () => {
     }
   })
 
-  it('opens numeric sources with START and closes without withdrawing', () => {
-    const { getByText, queryByText, onWithdraw } = renderInRange()
+  it('opens numeric sources with START, formatted, and closes without withdrawing', async () => {
+    vi.useFakeTimers()
+    try {
+      const { getByText, queryByText, container, onWithdraw } = renderInRange()
+      await tick(5000, vi)
+      press('START')
+      expect(getByText(/FIXTURE inputs/i)).toBeInTheDocument()
+      expect(getByText(/DAMAGE = max\(0, SCORE - NET\)/)).toBeInTheDocument()
+      expect(getByText(/Book bid 0.03312; ask 0.03316/)).toBeInTheDocument()
+      expect(container.textContent).not.toMatch(/\d\.\d{8,}/)
+      press('B')
+      expect(queryByText(/FIXTURE inputs/i)).not.toBeInTheDocument()
+      press('START', 'START')
+      expect(queryByText(/FIXTURE inputs/i)).not.toBeInTheDocument()
+      expect(onWithdraw).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('states the simulation rates from the simulation constants', () => {
+    const { getByText } = renderInRange()
     press('START')
-    expect(getByText(/FIXTURE inputs/i)).toBeInTheDocument()
-    expect(getByText(/DAMAGE = max\(0, SCORE - NET\)/)).toBeInTheDocument()
-    expect(getByText(/Book bid 0.03312; ask 0.03316/)).toBeInTheDocument()
-    press('B')
-    expect(queryByText(/FIXTURE inputs/i)).not.toBeInTheDocument()
-    expect(onWithdraw).not.toHaveBeenCalled()
+    expect(getByText(`FIXTURE SCORE accrues at ${pct(FEE_APR * 100, 0)} annually in range; damage at ${pct(DAMAGE_APR * 100, 0)} outside.`))
+      .toBeInTheDocument()
+    expect(getByText(`Manual re-center costs ${pct(REBALANCE_COST_FRACTION * 100, 2)} of the deposit; count 0.`))
+      .toBeInTheDocument()
+    expect(getByText(new RegExp(`each tick represents ${duration(STEP_SECONDS)}`))).toBeInTheDocument()
   })
 
   it.each([
-    { pool: FIXTURE_MARKETS[1].pool, error: 'NO_PRICE' },
-    { pool: POOL, amount: 0.01, error: 'AMOUNT_TOO_SMALL' },
-  ])('shows $error without inventing a funded range', ({ error, ...overrides }) => {
-    const { getByText, onBack } = renderInRange(overrides)
-    expect(getByText(error)).toBeInTheDocument()
+    { name: 'a fixture without a book', overrides: { pool: FIXTURE_MARKETS[1].pool }, copy: 'NO PRICE FOR THIS POOL YET' },
+    { name: 'an amount below the ladder minimum', overrides: { amount: 0.01 }, copy: 'AMOUNT TOO SMALL FOR THIS RANGE' },
+    { name: 'an edit that does not straddle the price', overrides: { manualRange: { lowerPct: 5, upperPct: 9 } }, copy: 'YOUR RANGE MUST SIT AROUND THE CURRENT PRICE' },
+    { name: 'a pair with no market rules', overrides: { pool: { ...POOL, tokenX: { ...POOL.tokenX, symbol: 'XYZ' } } }, copy: 'NO MARKET RULES FOR THIS POOL YET' },
+  ])('shows player copy, never a raw code, for $name', ({ overrides, copy }) => {
+    const { getByText, container, onBack } = renderInRange(overrides)
+    expect(getByText(copy)).toBeInTheDocument()
+    expect(container.textContent).not.toMatch(/[A-Z]+_[A-Z_]+/)
     press('B')
     expect(onBack).toHaveBeenCalledTimes(1)
   })

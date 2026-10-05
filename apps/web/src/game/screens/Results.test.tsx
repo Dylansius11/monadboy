@@ -3,6 +3,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { press, renderScreen } from '../../test/harness'
 import { Results } from './Results'
+import { duration, pct, usdFine } from '../../lib/format'
+import { DAMAGE_APR, FEE_APR, REBALANCE_COST_FRACTION, STEP_SECONDS } from '../sim'
 import type { RunSummary } from '../sim'
 import { FIXTURE_MARKETS } from '../fixtures'
 
@@ -113,17 +115,38 @@ describe('input and evidence', () => {
     expect(onBackToDisks).toHaveBeenCalledTimes(2)
   })
 
-  it('SELECT opens fixture inputs and B closes them before leaving', () => {
+  it('START opens fixture inputs and B closes them before leaving', () => {
     const { getByText, queryByText, onBackToDisks } = renderResults()
-    press('SELECT')
+    press('START')
     expect(getByText(/FIXTURE inputs/i)).toBeInTheDocument()
     expect(getByText(/DAMAGE = max\(0, SCORE - NET\)/)).toBeInTheDocument()
-    expect(getByText(/SCORE 1.42; NET 1.04; DAMAGE 0.38/)).toBeInTheDocument()
+    expect(getByText(`SCORE ${usdFine(1.42)}; NET ${usdFine(1.04)}; DAMAGE ${usdFine(0.38)}`)).toBeInTheDocument()
     press('B')
     expect(queryByText(/FIXTURE inputs/i)).not.toBeInTheDocument()
     expect(onBackToDisks).not.toHaveBeenCalled()
     press('B')
     expect(onBackToDisks).toHaveBeenCalledTimes(1)
+  })
+
+  it('SELECT opens nothing; START toggles the inputs on and off', () => {
+    const { queryByText } = renderResults()
+    press('SELECT')
+    expect(queryByText(/FIXTURE inputs/i)).not.toBeInTheDocument()
+    press('START', 'START')
+    expect(queryByText(/FIXTURE inputs/i)).not.toBeInTheDocument()
+  })
+
+  it('prints the inputs with the shared formatters and the simulation constants', () => {
+    const { getByText, container } = renderResults({
+      run: { ...RUN, feesEarnedUsd: 0.020547945205479447, netUsd: 0.020547945205479447, damageUsd: 0,
+        timeInRangePct: 66.66666666666667, bestStreakSeconds: 3_600, elapsedSeconds: 10_800 },
+    })
+    press('START')
+    expect(container.textContent).not.toMatch(/\d\.\d{8,}/)
+    expect(getByText(`FIXTURE SCORE: ${pct(FEE_APR * 100, 0)} annually while in range; outside damage: ${pct(DAMAGE_APR * 100, 0)} annually.`))
+      .toBeInTheDocument()
+    expect(getByText(`Manual re-center damage: ${pct(REBALANCE_COST_FRACTION * 100, 2)} of the deposit. A tick represents ${duration(STEP_SECONDS)}.`))
+      .toBeInTheDocument()
   })
 
   it('shows NET surplus without forcing SCORE minus DAMAGE identity', () => {

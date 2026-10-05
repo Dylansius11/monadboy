@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { characters } from '../../config/brand'
-import { duration, pct } from '../../lib/format'
+import { duration, pct, usd, usdFine } from '../../lib/format'
+import { DAMAGE_APR, FEE_APR, REBALANCE_COST_FRACTION, STEP_SECONDS } from '../sim'
 import { Dialog, Meter, Panel, PixelText, Sprite, Value } from '../../ui'
 import type { SpriteAnimation } from '../../ui'
 import type { CharacterId } from '../../config/brand'
@@ -42,11 +43,11 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
   const [inspecting, setInspecting] = useState(false)
   useConsoleIntent((intent) => {
     if (inspecting) {
-      if (intent === 'B' || intent === 'SELECT') setInspecting(false)
+      if (intent === 'B' || intent === 'START') setInspecting(false)
       return
     }
     if (intent === 'A' || intent === 'B') { onBackToDisks(); return }
-    if (intent === 'SELECT' && run && pool) setInspecting(true)
+    if (intent === 'START' && run && pool) setInspecting(true)
   })
 
   if (!run) {
@@ -92,16 +93,16 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
         <PixelText role="title" upper>FIXTURE inputs</PixelText>
         <Panel className="flex flex-col gap-1">
           <PixelText role="micro">TESTNET simulation summary from the finished session, not chain fills.</PixelText>
-          <PixelText role="micro">Session amount {amount} TESTNET quote units; quote valued at $1.</PixelText>
-          <PixelText role="micro">SCORE {run.feesEarnedUsd}; NET {run.netUsd}; DAMAGE {run.damageUsd}</PixelText>
+          <PixelText role="micro">Session amount {usd(amount)} TESTNET quote units; quote valued at $1.</PixelText>
+          <PixelText role="micro">SCORE {usdFine(run.feesEarnedUsd)}; NET {usdFine(run.netUsd)}; DAMAGE {usdFine(run.damageUsd)}</PixelText>
           <PixelText role="micro">DAMAGE = max(0, SCORE - NET)</PixelText>
           <PixelText role="micro">NET is supplied independently; surplus above SCORE is preserved.</PixelText>
-          <PixelText role="micro">Time in range {run.timeInRangePct}%; elapsed {run.elapsedSeconds}s</PixelText>
-          <PixelText role="micro">Best streak {run.bestStreakSeconds}s; re-centers {run.rebalances}</PixelText>
-          <PixelText role="micro">FIXTURE SCORE: 18% annually while in range; outside damage: 35% annually.</PixelText>
-          <PixelText role="micro">Manual re-center damage: deposit x 0.0015. A tick represents 3600 seconds.</PixelText>
+          <PixelText role="micro">Time in range {pct(run.timeInRangePct, 1)}; elapsed {duration(run.elapsedSeconds)}</PixelText>
+          <PixelText role="micro">Best streak {duration(run.bestStreakSeconds)}; re-centers {run.rebalances}</PixelText>
+          <PixelText role="micro">{`FIXTURE SCORE: ${pct(FEE_APR * 100, 0)} annually while in range; outside damage: ${pct(DAMAGE_APR * 100, 0)} annually.`}</PixelText>
+          <PixelText role="micro">{`Manual re-center damage: ${pct(REBALANCE_COST_FRACTION * 100, 2)} of the deposit. A tick represents ${duration(STEP_SECONDS)}.`}</PixelText>
         </Panel>
-        <PixelText role="micro" upper>B or Select close inputs</PixelText>
+        <PixelText role="micro" upper>B or Start close inputs</PixelText>
       </div>
     )
   }
@@ -212,7 +213,7 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
         <PixelText role="micro" upper>
           A back to disks
         </PixelText>
-        <PixelText role="micro" upper>Select inputs</PixelText>
+        <PixelText role="micro" upper>Start inputs</PixelText>
       </div>
     </div>
   )

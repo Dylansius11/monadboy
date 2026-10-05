@@ -4,8 +4,12 @@ import { useConsoleIntent } from '../../console/useConsoleInput'
 import { brand } from '../../config/brand'
 import { planForSession } from '../../lib/range/plan'
 import { ladderPlanner } from '../../lib/range/ladder-planner'
-import { duration, price } from '../../lib/format'
-import { createSim, nudge, recordRebalance, step, summarize } from '../sim'
+import { duration, pct, price, usd, usdFine } from '../../lib/format'
+import { ladderErrorCopy, NO_MARKET_RULES_COPY } from '../../lib/range/ladder-copy'
+import {
+  createSim, DAMAGE_APR, FALLBACK_REALIZED_VOL, FEE_APR, nudge, REBALANCE_COST_FRACTION,
+  recordRebalance, step, STEP_SECONDS, summarize,
+} from '../sim'
 import { FIXTURE_MARKETS } from '../fixtures'
 import { PriceField } from '../PriceField'
 import { Meter, Panel, PixelText, Value } from '../../ui'
@@ -48,17 +52,17 @@ export function InRange({
     if (!pool) return { range: null, error: null }
     const market = mainnetMarkets.find(({ baseSymbol, quoteSymbol }) =>
       baseSymbol === pool.tokenX.symbol && quoteSymbol === pool.tokenY.symbol)
-    if (!market) return { range: null, error: 'Market parameters unavailable' }
+    if (!market) return { range: null, error: NO_MARKET_RULES_COPY }
     try {
       return {
         range: planForSession(openingMid, width, manualRange, ladderPlanner, {
-          budgetQuote: amount, sigmaDaily: pool.realizedVol24h ?? 0.6, params: market.params,
+          budgetQuote: amount, sigmaDaily: pool.realizedVol24h ?? FALLBACK_REALIZED_VOL, params: market.params,
         }).plan,
         error: null,
       }
     } catch (error) {
       if (!(error instanceof LadderError)) throw error
-      return { range: null, error: error.message }
+      return { range: null, error: ladderErrorCopy(error) }
     }
   }, [pool, openingMid, amount, width, manualRange])
   const range = planned.range
@@ -158,15 +162,15 @@ export function InRange({
         <PixelText role="title" upper>FIXTURE inputs</PixelText>
         <Panel className="flex flex-col gap-1">
           <PixelText role="micro">TESTNET simulation, not chain fills. Quote token valued at $1.</PixelText>
-          <PixelText role="micro">Deposit {amount}; {width.toUpperCase()}; {manualRange ? 'manual edges' : 'width suggestion'}</PixelText>
-          <PixelText role="micro">Book bid {book?.bid}; ask {book?.ask}; opening mid {openingMid}</PixelText>
-          <PixelText role="micro">Current mid {nowPrice}; low {lowPrice}; high {highPrice}</PixelText>
-          <PixelText role="micro">SCORE {summary.feesEarnedUsd}; NET {summary.netUsd}; DAMAGE {damage}</PixelText>
+          <PixelText role="micro">Deposit {usd(amount)}; {width.toUpperCase()}; {manualRange ? 'manual edges' : 'width suggestion'}</PixelText>
+          <PixelText role="micro">Book bid {price(book?.bid ?? 0)}; ask {price(book?.ask ?? 0)}; opening mid {price(openingMid)}</PixelText>
+          <PixelText role="micro">Current mid {price(nowPrice)}; low {price(lowPrice)}; high {price(highPrice)}</PixelText>
+          <PixelText role="micro">SCORE {usdFine(summary.feesEarnedUsd)}; NET {usdFine(summary.netUsd)}; DAMAGE {usdFine(damage)}</PixelText>
           <PixelText role="micro">DAMAGE = max(0, SCORE - NET)</PixelText>
-          <PixelText role="micro">FIXTURE SCORE accrues at 18% annually in range; damage at 35% outside.</PixelText>
-          <PixelText role="micro">{sim.ticksInRange}/{sim.totalTicks} ticks in range; each tick represents 3600 seconds.</PixelText>
-          <PixelText role="micro">Manual re-center costs deposit x 0.0015; count {sim.rebalances}.</PixelText>
-          <PixelText role="micro">Best streak {sim.bestStreakSeconds}s; elapsed {sim.elapsedSeconds}s.</PixelText>
+          <PixelText role="micro">{`FIXTURE SCORE accrues at ${pct(FEE_APR * 100, 0)} annually in range; damage at ${pct(DAMAGE_APR * 100, 0)} outside.`}</PixelText>
+          <PixelText role="micro">{sim.ticksInRange}/{sim.totalTicks} ticks in range; each tick represents {duration(STEP_SECONDS)}.</PixelText>
+          <PixelText role="micro">{`Manual re-center costs ${pct(REBALANCE_COST_FRACTION * 100, 2)} of the deposit; count ${sim.rebalances}.`}</PixelText>
+          <PixelText role="micro">Best streak {duration(sim.bestStreakSeconds)}; elapsed {duration(sim.elapsedSeconds)}.</PixelText>
           <PixelText role="micro">Feed {priceFeed?.freshness ?? 'fixture'}{priceFeed?.note ? ': ' + priceFeed.note : ''}</PixelText>
         </Panel>
         <PixelText role="micro" upper>B or Start close inputs</PixelText>
@@ -262,7 +266,7 @@ export function InRange({
             <div className="border-edge bg-alarm flex h-full items-center justify-center overflow-hidden border px-1">
               <PixelText role="body" className="text-center">
                 {autopilot
-                  ? 'OUT OF RANGE. flip orders re-arm, but re-centering is manual and costs a swap.'
+                  ? 'OUT OF RANGE. you stopped earning. re-centering is manual and costs a swap.'
                   : 'OUT OF RANGE. you stopped earning. price walked off your ground.'}
               </PixelText>
             </div>
