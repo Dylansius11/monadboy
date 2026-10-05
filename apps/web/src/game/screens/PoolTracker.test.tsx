@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { fireEvent } from '@testing-library/react'
 import { press, renderScreen } from '../../test/harness'
 import { PoolTracker } from './PoolTracker'
 
@@ -222,5 +223,189 @@ describe('missing data, Gate 2.4', () => {
 
     press('B')
     expect(onBack).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('the field states the rule it is judging pools by', () => {
+  it('draws the passing region from the gate set, not from a hard-coded box', () => {
+    const gates = fixtureGates('easy')
+    const { container } = renderTracker({ gates })
+
+    const region = container.querySelector(
+      `rect[x="${gates.minSafety}"][height="${gates.maxHeat}"]`,
+    )
+    expect(region).not.toBeNull()
+    expect(region?.getAttribute('y')).toBe(String(100 - gates.maxHeat))
+    expect(region?.getAttribute('width')).toBe(String(100 - gates.minSafety))
+  })
+
+  it('colours each pin by its safety band, and never by the tier it is on', () => {
+
+    const { container } = renderTracker()
+    const labels = Array.from(container.querySelectorAll('[role="img"]')).map(
+      (el) => el.getAttribute('aria-label'),
+    )
+
+    expect(labels).toContain('amber')
+    expect(labels).toContain('green filtered')
+    expect(labels).toContain('red')
+  })
+
+  it('moves the region when the tier does', () => {
+    const easy = fixtureGates('easy')
+    const hard = fixtureGates('hard')
+
+    expect(easy.minSafety).not.toBe(hard.minSafety)
+
+    const { container } = renderTracker({ gates: hard })
+    expect(container.querySelector(`rect[x="${easy.minSafety}"]`)).toBeNull()
+    expect(
+      container.querySelector(`rect[x="${hard.minSafety}"]`),
+    ).not.toBeNull()
+  })
+})
+
+const selectedRings = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll('circle')).filter(
+    (c) => c.getAttribute('stroke-width') === '3',
+  )
+
+describe('the cursor is a state of the pin', () => {
+  it('marks exactly one pin, and moving the cursor moves the mark', () => {
+    const { container } = renderTracker()
+
+    expect(selectedRings(container).length).toBe(1)
+    const before = selectedRings(container)[0].closest('div')
+
+    press('LEFT')
+    expect(selectedRings(container).length).toBe(1)
+    expect(selectedRings(container)[0].closest('div')).not.toBe(before)
+  })
+
+  it('names only the selected pool, because fourteen labels is a list', () => {
+    const { getAllByText } = renderTracker()
+    expect(getAllByText('AAA').length).toBe(1)
+    press('LEFT')
+    expect(getAllByText('CCC').length).toBe(1)
+  })
+})
+
+describe('the radar has something in it', () => {
+  it('plots every pool as a minimap dot, not an empty sweeping circle', () => {
+    const { container } = renderTracker()
+    const minimap = container.querySelector('.radar-sweep-hand')?.parentElement
+
+    expect(minimap?.querySelectorAll('span').length).toBe(
+      THREE_POOLS.length + 1,
+    )
+  })
+
+  it('shows the viewport rectangle only once there is a viewport to show', () => {
+    const { container } = renderTracker()
+    const box = () =>
+      container
+        .querySelector('.radar-sweep-hand')
+        ?.parentElement?.querySelector('.border-ink')
+
+    expect(box()).toBeNull()
+    press('SELECT')
+    expect(box()).not.toBeNull()
+  })
+})
+
+describe('zoom', () => {
+  it('SELECT cycles the levels and wraps back to 1x', () => {
+    const { getByText, queryByText } = renderTracker()
+
+    expect(getByText('1x')).toBeInTheDocument()
+    press('SELECT')
+    expect(getByText('2x')).toBeInTheDocument()
+    press('SELECT')
+    expect(getByText('3x')).toBeInTheDocument()
+    press('SELECT')
+    expect(getByText('1x')).toBeInTheDocument()
+    expect(queryByText('3x')).not.toBeInTheDocument()
+  })
+
+  it('cancels itself on the pins, so zooming separates them without fattening them', () => {
+    const { container } = renderTracker()
+    const pinBox = () => container.querySelector('[role="img"]')?.parentElement
+
+    expect(pinBox()?.getAttribute('style')).toContain('scale(1)')
+    press('SELECT')
+    expect(pinBox()?.getAttribute('style')).toContain('scale(0.5)')
+  })
+})
+
+describe('the worst pool still shows its controls', () => {
+  it('keeps the footer on screen when a pool fails every gate', () => {
+
+    const { getByText } = renderTracker({
+      pools: [
+        scoredPool({
+          score: { safety: 7, heat: 95 },
+          failures: [
+            'tvl-too-low',
+            'too-new',
+            'quote-not-allowed',
+            'safety-too-low',
+            'heat-too-high',
+          ],
+        }),
+        PASSING_LOW,
+      ],
+    })
+    press('A')
+
+    expect(getByText(/Too hot for this difficulty/)).toBeInTheDocument()
+    expect(getByText(/Locked by the checks above/i)).toBeInTheDocument()
+    expect(getByText(/B Back to map/i)).toBeInTheDocument()
+  })
+
+  it('absorbs the overflow in the failure list, not in the footer', () => {
+    const { container } = renderTracker({
+      pools: [
+        scoredPool({ failures: ['tvl-too-low', 'too-new', 'honeypot'] }),
+        PASSING_LOW,
+      ],
+    })
+    press('A')
+
+    const region = container.querySelector('.min-h-0.flex-1')
+    expect(region).not.toBeNull()
+    expect(region?.querySelector('.bg-sunk')).not.toBeNull()
+  })
+})
+
+describe('zoom is reachable by tap as well as by button', () => {
+  it('the on-screen controls step the same zoom SELECT cycles', () => {
+    const { getByLabelText, getByText } = renderTracker()
+
+    expect(getByText('1x')).toBeInTheDocument()
+    fireEvent.click(getByLabelText('Zoom in'))
+    expect(getByText('2x')).toBeInTheDocument()
+    fireEvent.click(getByLabelText('Zoom out'))
+    expect(getByText('1x')).toBeInTheDocument()
+  })
+
+  it('clamps at both ends rather than wrapping, unlike SELECT', () => {
+    const { getByLabelText, getByText } = renderTracker()
+
+    expect(getByLabelText('Zoom out')).toBeDisabled()
+    fireEvent.click(getByLabelText('Zoom in'))
+    fireEvent.click(getByLabelText('Zoom in'))
+    expect(getByText('3x')).toBeInTheDocument()
+    expect(getByLabelText('Zoom in')).toBeDisabled()
+  })
+})
+
+describe('the inspect panel says who is talking', () => {
+  it('puts the Monanimal next to its own line', () => {
+    const { getByText, container } = renderTracker()
+    press('A')
+
+    expect(getByText(/deep, old, boring/)).toBeInTheDocument()
+
+    expect(container.querySelector('.sprite-pair')).not.toBeNull()
   })
 })
