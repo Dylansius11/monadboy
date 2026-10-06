@@ -1,0 +1,102 @@
+/* S9, the leaderboard. Landscape is a table of one-line rows; a native
+   portrait viewport turns each row into a card with its own labels. Both come
+   from the same markup: only this file decides which one is drawn. */
+
+.lb-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-dim) var(--color-sunk);
+}
+
+.lb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1.2fr) repeat(3, minmax(0, 1fr)) 32px 44px 40px;
+  grid-template-areas: 'rank who score damage net fills range tx';
+  align-items: center;
+  column-gap: 4px;
+  min-height: 24px;
+  padding: 2px 4px;
+  border: 1px solid var(--color-edge-soft);
+  background: var(--color-panel);
+  cursor: pointer;
+}
+
+.lb-row.lb-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  min-height: 16px;
+  border-color: transparent;
+  background: var(--color-screen);
+  cursor: default;
+}
+
+.lb-row.lb-selected {
+  background: var(--color-sunk);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.lb-rank { grid-area: rank; }
+.lb-who { grid-area: who; }
+.lb-score { grid-area: score; }
+.lb-damage { grid-area: damage; }
+.lb-net { grid-area: net; }
+.lb-fills { grid-area: fills; }
+.lb-range { grid-area: range; }
+.lb-tx { grid-area: tx; }
+
+.lb-who, .lb-cell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.lb-figure { white-space: nowrap; }
+
+/* The per-cell labels exist for the portrait card; the landscape table has a header row. */
+.lb-label { display: none; }
+
+.lb-tx a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: var(--color-ink-dim);
+}
+.lb-tx a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+
+@container game-screen (max-width: 440px) and (min-height: 340px) {
+  .screen-leaderboard { padding: 12px; gap: 8px; }
+
+  .lb-header { flex-wrap: wrap; gap: 4px; }
+  .lb-tabs button { min-height: 44px; flex: 1; }
+  .lb-scroll { padding-right: 4px; }
+  .lb-list { gap: 8px; }
+
+  .lb-row.lb-head { display: none; }
+  .lb-row {
+    grid-template-columns: 36px repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      'rank who who who'
+      '. score damage net'
+      '. fills range range'
+      '. tx tx tx';
+    row-gap: 8px;
+    padding: 12px;
+  }
+  .lb-label { display: block; }
+  /* One size for SCORE, DAMAGE and NET at every width, so none outweighs another. */
+  .lb-figure { font-size: 16px; line-height: 20px; }
+  .lb-tx a, .lb-tx > span { display: flex; min-height: 44px; align-items: center; }
+}
