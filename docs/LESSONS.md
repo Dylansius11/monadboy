@@ -4,6 +4,21 @@ Newest on top. Each entry: root cause, then the durable rule.
 
 ## Technical
 
+### 2026/10/07 — Recheck card ownership after every await
+
+- **Cause:** Eject during post-receipt refresh allowed a stale operation to return the previous card's saved disk.
+- **Rule:** Assert the session lease and generation after every asynchronous boundary before publishing a card result, including confirmed-receipt refresh.
+
+### 2026/10/07 — Bound mathematically normalized producer values
+
+- **Cause:** Different floating-point addition orders produced maker concentration slightly above 1 and rejected two otherwise valid worker markets.
+- **Rule:** Bound the producer's normalized ratio to its mathematical domain; keep strict consumer validation and regression coverage.
+
+### 2026/10/07 — Reconcile native dialog cancellation
+
+- **Cause:** Escape closed the native help dialog while React retained its input lock.
+- **Rule:** Reconcile controlled state on native cancel before closing; exercise the next console action after Escape.
+
 ### 2026/10/05 — Check price-source liveness, not listing existence
 
 - **Cause:** A listed book can be empty. The approved MON_AUSD finding is not a live price guarantee [U: S2 / Phase 6 source validation].
@@ -42,7 +57,7 @@ Newest on top. Each entry: root cause, then the durable rule.
 ### 2026/10/05 — Keep the key legend on the shell
 
 - **Cause:** Repeating a legend inside screens consumes scarce vertical space and lets labels drift.
-- **Rule:** The shell owns the persistent key legend; screens provide current intents and context-specific labels.
+- **Rule:** The shell owns contextual help and its shared key legend; screens provide current intents and context-specific labels. Avoid a persistent legend that consumes the phone viewport.
 
 ### 2026/10/05 — Measure a fixed inset fit box
 

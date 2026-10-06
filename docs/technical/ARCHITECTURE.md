@@ -155,6 +155,8 @@ Each app has its own `.env.example` containing names and harmless defaults, neve
 | Web | `VITE_WORKER_URL` | Worker REST base URL |
 | Web | `VITE_ENVIO_GRAPHQL_URL` | Fill and history read model |
 | Web | `VITE_TESTNET_RPC_URL` | Optional QuickNode or public testnet RPC |
+| Web | `VITE_REGISTRY_ADDRESS` | DiskRegistry v2 checked for code on chain 10143 |
+| Web | `VITE_USE_FIXTURES` | Explicit development opt-in only; ignored by production builds |
 | Worker | `WORKER_PORT` | Hono listener |
 | Worker | `APP_ORIGIN` | Only allowed CORS origin |
 | Worker | `TESTNET_RPC_URL` | Bot, drip and testnet reads |
@@ -185,7 +187,7 @@ Generate ops keys with `cast wallet new`; keep them only in VPS/local `.env` fil
 | S1 INSERT MEMORY CARD | Mera discoverable passkey or optional local credential metadata; derive index-0 serial | NEW CARD calls `createPasskeyWithPrfOutput`; INSERT CARD calls `getPasskeyPrfOutput`; hold sessions; persist only credential ID/transports. No worker, Envio or Kuru call |
 | S2 SAVE DISK | `diskAddresses()` derives slots 1..3; `DiskRegistry.diskOf` for each; `openDisk` decrypts locally; direct testnet balances when displayed | New disk requests `POST /v1/drip {address}` for fresh-account funding; `deriveSealKey` + `sealDisk` then `DiskRegistry.save`; edits save ciphertext; erase calls `erase`. OPEN exposes ciphertext hash and explorer proof. No Envio required for restore |
 | S3 CARTRIDGE | Selected decrypted disk and session state | Select STAY IN RANGE or open leaderboard; locked COMING SOON remains locked. No boundary writes |
-| S4 DIFFICULTY | Decrypted disk preferences and gate configuration | Set difficulty / GOD MODE in local disk state; seal and `save` when persisted. No worker, Envio or Kuru transaction |
+| S4 DIFFICULTY | Decrypted disk preferences, shared SDK gates and validated worker counts | Re-read/decrypt latest disk, preserve name/notes/history, seal and save selected profile; proceed after a matching confirmed DiskSaved event. No Envio or Kuru transaction |
 | S5 POOL TRACKER | `GET /v1/tracker`, including mainnet SAFETY/HEAT inputs, timestamp and testnet playable mapping | Select only a PLAYABLE (TESTNET) market; MAINNET ONLY is read-only. Worker reads Kuru mainnet books/logs for snapshots; web performs no mainnet writes |
 | S6 SET RANGE | `GET /v1/mid?market=`, tracker volatility, testnet Kuru params, balances, allowance; `planLadder` and `batchProvisionArgs` | Explicit-gas approval if needed, market-buy zap, MarginAccount deposit, `batchProvisionLiquidity`, receipt IDs; `DiskRegistry.save` appends sealed run without blocking play |
 | S7 IN RANGE | Poll `/v1/mid` every 5 s; `/v1/health`; Envio fills or last 200 blocks of `Trade` via viem; direct Kuru balances/resting orders for `scoreCard`; `rangeState` | Manual RE-CENTER cancels, withdraws, replans and provisions only after cost confirmation; WITHDRAW starts exit. Native flips re-arm onchain, not through worker signing |
@@ -193,6 +195,10 @@ Generate ops keys with `cast wallet new`; keep them only in VPS/local `.env` fil
 | LEADERBOARD | `GET /v1/leaderboard?window=24h|7d|all`; worker combines Envio fills through `FillSource` with `mid_samples` | No player write; worker refreshes its cache every 60 s. Never accept a self-reported SCORE |
 
 Restore is passkey -> three derived addresses -> registry reads -> local decrypt, with **no server or localStorage requirement**. A worker outage must not break it.
+
+[V, 2026-10-06 local proof] Native browser WebAuthn with a virtual PRF-capable authenticator created/restored the same three addresses. An isolated Anvil registry accepted three sealed disk saves and profile updates; clearing local/session storage, reloading and discoverable INSERT restored three disks and the NORMAL preference. Only credential metadata reappeared in localStorage. This is browser/contract logic proof, not supported-phone or funded Monad-testnet evidence (B1/B2/B8 remain open).
+
+Production routes never use a fixture response after missing configuration, failed reads or unavailable deployment. S6/S7/S8 explicitly show deployment/encoding prerequisites until funded S2 evidence exists. `/dev/passkey` is Vite-development middleware, outside the application route graph; it sends no transaction and creates disposable hostname-bound cards.
 
 ## 7. Worker and transaction flow
 

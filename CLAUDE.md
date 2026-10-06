@@ -28,7 +28,7 @@ Monad testnet 10143 and mainnet 143 [V: current facts](https://docs.monad.xyz/ai
 7. No em-dashes in player-visible copy.
 8. Names are tokens in `apps/web/src/config/brand.ts`, not scattered literals.
 9. Verify every onchain address with eth_getCode before committing it.
-10. Fixed 480x320 grid, 4px snap, 8px bitmap font, integer sprites, DOM/CSS, no canvas.
+10. Landscape 480x320 grid; native portrait phone layout; 4px snap, integer sprites, DOM/CSS and stepped SVG. Canvas is decorative scenery outside the game screen only.
 11. Every visible number has a source the player can open.
 12. Label testnet wherever balances appear; never imply real money.
 
@@ -42,9 +42,9 @@ Network facts carry [V] with evidence, [I] for inference, or [U] with the settli
 Keep secrets, PRF output, and plaintext disk data out of server storage and tracked files.
 The SCORE / DAMAGE identity boundary is explained in PRD section 7; do not hide surplus NET.
 
-## 5. Fixed grid
+## 5. Screen grid
 
-The logical screen is 480x320 with 4px snap and an 8px bitmap font. Sprites use 16/32px logical frames, integer scale, and pixelated rendering. Use DOM/CSS and a stepped SVG chart, not canvas. One flex region absorbs remaining height. Type and motion constants come from `docs/DESIGN-SYSTEM.md`; implementation truth is `apps/web/src/styles/tokens.css` in Phase 2.
+Landscape and held consoles retain the 480x320 logical grid. Portrait phones use native viewport dimensions and reflowed screens, with 11px body/micro, 16px title, 22px value and 33px hero Departure Mono type. Keep 4px snap and integer, pixelated sprites. Use DOM/CSS and stepped SVG for the game; canvas is allowed only for scenery outside the screen. One flex region absorbs remaining height; dense settings scroll inside the screen with a pinned footer on short phones. The owning contracts are `docs/DESIGN-SYSTEM.md`, `styles/tokens.css`, `console/portrait.css` and `game/portrait.css`.
 
 ## 6. Repo map
 

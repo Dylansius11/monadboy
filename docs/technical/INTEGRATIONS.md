@@ -110,6 +110,8 @@ The 200-block fallback is bounded. It cannot prove older history is empty; show 
 
 [V] `bestBidAsk` uses 1e18 scaling and the approved empty-book sentinel is `(2^256-1, 0)` (live evidence in [Kuru research](../research/kuru.md)). Reject invalid/empty source reads before averaging; do not use an unrelated market as an undocumented price fallback.
 
+[I, user-approved source policy] Reject empty/crossed source books and relative spread greater than 2% immediately. Keep the prior target only as an aged observation, never an executable fresh replacement. Transport failures retain the three-failure rule. The 2% maximum is an operator limit, not a calibration result; last trade is not substituted for the midpoint.
+
 ## 9. Participant resources
 
 Use resources for evidence and reliability, not as new critical dependencies or substitutes for Kuru/Envio. The participant entitlement durations are not asserted here. [U] Claims, quotas, API keys and exact chain coverage must be verified before operational use, at the named spike below; linked provider pages are discovery sources, not proof that our account has access.
@@ -128,3 +130,5 @@ Use resources for evidence and reliability, not as new critical dependencies or 
 [I] DiskRegistry v2 stores only public metadata and sealed bytes. Save failure shows "SAVE FAILED" and does not block an already provisioned run. A confirmed save shows "SAVED TO CARD"; OPEN displays ciphertext hash and explorer link. Testnet RPC outage shows "CARD READ UNAVAILABLE" and preserves local transient state without claiming chain confirmation.
 
 Restore must remain passkey -> derived disk addresses -> registry -> browser decrypt, even after clearing site data and with worker/Envio offline. This stateless path and a real flip fill on camera are never cut; see [BUILD-PLAN](BUILD-PLAN.md).
+
+[V, local browser/Anvil smoke 2026-10-06] Three isolated disk saves, matching DiskSaved receipts, profile update and discoverable passkey restore after clearing site data were exercised against an isolated local registry. Physical-phone and funded testnet acceptance remain B1/B8. Preference saves re-read the latest ciphertext and preserve private fields/history; the registry is last-writer-wins across devices, not a compare-and-swap store. A failed read/decryption is never an empty writable slot. Eject/expiry drops decrypted shelf state and invalidates pending operations.

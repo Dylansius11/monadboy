@@ -22,20 +22,20 @@ Purple sprites carry a strong dark outline. Check actual silhouette contrast bef
 An optional 1px light rim is a per-sprite readability treatment, not a mandatory recolouring pass.
 References inform density, not a borrowed visual identity.
 
-## 2. Fixed grid and layout
+## 2. Screen grid and layout
 
 | Property | Contract |
 | --- | --- |
-| Logical viewport | 480 x 320 px, fixed |
+| Logical viewport | Landscape / held: 480 x 320 px; portrait play: native CSS dimensions |
 | Base spacing / snap | 4px |
 | Hairline exceptions | 1px and 2px borders / offsets |
 | Safe area | 12px, `--safe` |
-| Font grid | 8px bitmap, integer size multiples |
+| Font grid | Landscape compact roles; portrait native Departure Mono roles below |
 | Sprites | 16px or 32px logical pixel frames, integer scale |
-| Rendering | DOM/CSS; stepped SVG chart; no canvas |
+| Rendering | Game: DOM/CSS and stepped SVG; decorative outer scenery: pixelated canvas |
 | Image filtering | `image-rendering: pixelated` |
 
-The viewport never becomes a responsive layout. Only the enclosing fit scale changes.
+Laptop and held consoles keep the fixed landscape composition and fit scale. At <=640px in portrait, the play shell becomes a native-sized handheld: a flexible screen above compact, unscaled controls. Container queries on `game-screen` reflow the game without changing the landing's held consoles. Short phones scroll dense settings within the screen, with action footers pinned and D-pad focus scrolling into view.
 Use integer scaling for sprite pixels and snap sprite positions to the logical grid.
 A fixed inset fit box owns screen measurement, not content height or an already transformed element.
 Re-measure after `document.fonts.ready` and `visualViewport` resize.
@@ -127,6 +127,8 @@ A system monospace fallback is metrically different; do not approve layout from 
 
 Line heights are exactly title 24, value 20, body 16, micro 12, hero 40, sprite 64.
 Do not confuse line height with font size. 12px, 20px, and 24px font sizes resample the 8px base.
+
+Portrait play uses local role overrides, not a global token change: micro/body 11px with 16px line height, title 16/24, value 22/28 and hero 33/40. Sprites retain their integer art size. D-pad arms, START/SELECT, volume and screen controls meet a 44px unscaled touch minimum; A/B are 52px.
 Changing numbers use tabular metrics and fixed character-width slots.
 A rising counter must not move neighboring labels.
 
@@ -244,16 +246,15 @@ The shell uses these illustrated-plastic constants:
 ```
 
 `apps/web/src/console` owns shell materials, input, fit scale, and the key legend, never money.
-On desktop the centered console sits on an ink-coloured desk.
-Optional ambient motifs are slow motes for Molandak, rising bubbles for Moyaki, and sparse drifting specks for Mouch.
-They are the first visual embellishment to omit if they distract from the subject.
-Ambient embellishment has a 20-minute optional work budget; it never blocks screen readability or play.
-On mobile there is no desk backdrop.
+The centered laptop console sits above a seeded pixel night city: layered facades, roof details, a crescent moon, elevated railway, harbour reflections and a foreground railing.
+The city draws once per resize; only a small train moves by compositor transform.
+Reduced motion freezes the train; hidden tabs pause it. No scenery implies a live fill or affects a game number.
+Phone chrome gives space to the game; the city remains in the margins.
 
 ## 8. Verification contract
 
 Phase 2 palette checks compare CSS and TypeScript, contrast pairs, decorative exceptions, and grid constants.
-They enforce 4px spacing, 480x320 viewport, integer bitmap sizes, grid-aligned line heights, and stepped easing tokens.
+They enforce the landscape tokens, grid-aligned spacing and stepped easing. Native portrait sizing and clipping are checked on the rendered screen, not by source-text assertions.
 A token addition updates its mirror and contrast contract or explicitly records why it is decorative.
 Tests do not prove phone readability or motion quality.
 

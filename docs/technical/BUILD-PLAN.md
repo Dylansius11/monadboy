@@ -8,21 +8,23 @@ Read a task as `box + task ID + deliverable + proof`. `[x]` means the named deli
 
 ## Status at a glance
 
-As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
+As of **2026-10-07 local / 2026-10-06 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCKERS.md); user-facing asks are mirrored in the external handoff.
+
+**Latest integrated unit:** docs(build): record local proof and unresolved deployment gates. Proof: integrated working-tree `bun run verify` passed web 524, SDK 146 and worker 118 tests, typecheck and lint; `forge test` passed 17 and `forge snapshot --check` passed. Native runtime evidence and remaining external gates are recorded below.
 
 | Phase | Status | Done/Total tasks | Next action | Blocker |
 |---|---|---|---|---|
 | 0 — Repo bootstrap | DONE | 2/2 | Maintain guard and commit discipline | None |
 | 1 — Docs first | DONE | 4/4 | Keep docs aligned with implementation | None |
-| 2 — Frontend shell and screens | DOING | 22/23 | Assembled verify walk (2.10) | None |
-| 2b — Experience pass | DOING | 1/5 | Landing at / | Portrait shell waits on the user's mockup decision |
+| 2 — Frontend shell and screens | DONE | 23/23 | Maintain the rendered and behavior checks | None |
+| 2b — Experience pass | DONE | 5/5 | Preserve portrait, help and native sound | None for local experience work |
 | 3 — Pure SDK | DOING | 7/9 | Record measured gas and a real-order encoding fixture after S2 | B1 / S2 for deferred items |
 | 4 — Funded spikes | BLOCKED | 0/6 | Fund DEPLOYER, then broadcast S1/S2; prepare device spike independently | B1; S4 user devices |
 | 5 — DiskRegistry v2 | BLOCKED | 5/6 | Broadcast registry and record code/address | B1 |
-| 6 — Worker | TODO | 0/11 | Implement Hono, SQLite and health locally | B1 for live run; B3 for VPS |
-| 7 — Web integration | TODO | 0/13 | Implement client-only card session after screen work | B1 / S1..S4; B2; B5 for bounty qualification |
-| 8 — Envio indexer | TODO | 0/5 | Configure live event handlers after market deployment | B1 / S2 / S5 |
-| 9 — Deploy and submission | TODO | 0/7 | Obtain fixed hostname and VPS access | B2 / B3; upstream live proof |
+| 6 — Worker | DOING | 4/12 | Funded mirror/drip/leaderboard receipts and target deployment | B1 / B9; B3 for VPS |
+| 7 — Web integration | DOING | 4/14 | Supported-phone/domain proof and funded execution | B1 / B2 / B8 / B9 |
+| 8 — Envio indexer | BLOCKED | 0/5 | Initialize only after verified market deployment/start block | B1 / B9 / S5 |
+| 9 — Deploy and submission | BLOCKED | 0/7 | Obtain fixed hostname and VPS access | B2 / B3; upstream live proof |
 
 ## Phase 0 — Repo bootstrap
 
@@ -77,7 +79,7 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 - [x] **2.9i** Session state preserves choices and binds mascot to difficulty — proof: `a62a8d4`.
 - [x] **2.9j** Assemble routes, root and router without absent imports — proof: `2264eb0`, `54ef7d3`, `91a7cbc`; `bun run generate-routes` output is byte-identical to the tree the dev server writes (shared Start footer in tsr.config.json); `bun run dev` serves /card with HTTP 200.
 - [x] **2.9k** Add console screen-input test harness — proof: `1a74224`; harness existence does not prove screens exist.
-- [ ] **2.10** Verify assembled web and walk S1..S8 on phone viewport — proof required: `bun run verify`; `bun run dev`, keyboard walkthrough at 412x915, eight screenshots and observed console output.
+- [x] **2.10** Verify assembled web and walk S1..S8 on phone viewport — proof: `bun run verify` passed (web 524, SDK 146, worker 118); actual headless Edge 412x915 keyboard/touch walk, eight `screens/phase2b/resume/assembled-S{1..8}-*.png` screenshots. Manual range, inputs, out-of-range sitting, recenter cost, withdrawal and completed result observed without injected run state. jsdom lacks scrollTo/canvas; its warnings remain visible and browser renders supply visual proof.
 - [x] **2.11** Meet the touch minimum after the fit scale on phones — proof: getBoundingClientRect after the change: A/B 50.1 / 52.2 / 54.4 / 57.5 px, D-pad arm hit 46 / 48 / 50 / 52.8 px, START/SELECT 47.4x46 / 49.4x48 / 51.4x50 / 54.4x52.8 px at 360x640 / 375x667 / 390x844 / 412x915; the screen keeps 324.9 / 338.8 / 352.6 / 372.9 px width; desktop screenshots hash-identical at 1280x720, 641x900, 800x1000 and 1920x1080; edge taps fire every control. [V] Before: at 412x915 the console scaled 0.777, so A/B rendered 35.7 px, D-pad arms 22.8 px and START/SELECT 36.9x18.8 px while the console used 475 of 915 px of height.
 - [x] **2.12** Close the Phase 2 review — proof: M1 URL eligibility `0e4f1ac` (one rule in `game/eligibility.ts` for the tracker and the range/live/results routes; `/play/range/0x…ab` renders Pool not found); M5 single session writer `0e4f1ac`; routed walk and S2 TESTNET labels `29f74cd`; ladder error copy and fine dollars `e1b9665`; M2 AUTOPILOT copy without the unsourced fee, S6 inputs view, now-marker clearance `5e7f2e5`; S7/S8 inputs on START, sim constants, out-of-range copy `abd6c88`; M4 rationale comments `662282c`, `a6a8266`, `913bd96`, `36d4eb8`, `e5e7914`. Phone screenshots are 515x1144 px: 412x915 CSS at device scale 1.25.
 
@@ -100,12 +102,14 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 **Goal** Make the first minute feel like switching on a handheld: a front door at `/`, a boot at `/play`, readable phones, help on demand and sound.
 
 - [x] **2b.1** Boot screen at `/play`; START or A goes to `/card`, any other key skips, the sequence plays once per browser session and never under reduced motion — proof: `0283592` (Boot, 6 tests), this commit (route, `sessionStorage` flag, B from `/card` returns to `/play`; routed test 9/9); headless Edge at 412x915: Enter on the ready frame lands on `/card`, flag `monadboy.booted=1`; `screens/phase2b/boot-logo-412x915.png`, `boot-ready-412x915.png`.
-- [ ] **2b.2** Landing page at `/`: generated night city, the held console booting itself, scroll-pinned real screens, product truths, cast, PRESS START with a view transition into `/play` — proof required: screenshots at 1440x900, 1536x730 (dpr 1.25) and 412x915; skyline generator tests.
-- [ ] **2b.3** Portrait shell on portrait phones (screen top, controls in the thumb zone, larger type) — proof required: user approval of `mockups/portrait/board.png`, then before/after text and touch-target sizes at 360x640..412x915.
-- [ ] **2b.4** Rule book: a `?` control and `?`/H key open per-screen help and the key map; the desk-key legend moves into it — proof required: keyboard and touch screenshots.
-- [ ] **2b.5** Sound: chip-style SFX synthesized with WebAudio, a licensed background loop, wired to the VOL slider and an M mute, silent until the first input — proof required: license record and a recorded walk.
+- [x] **2b.2** Landing page at `/`: seeded pixel city, held console boot, scroll-pinned fixture illustrations, product truths, cast and PRESS START handoff — proof: rendered headless Edge 1440x900, 1536x730 and 412x915; `screens/phase2b/resume/landing-*.png`, `how-phone-412x915.png`; START reached `/play`, `monadboy.booted=1`. Shared skyline checks pass in the integrated verify.
+- [x] **2b.3** Native portrait handheld with reflowed screens and compact controls; approved by the user — proof: headless Edge at 360x640, 390x844 and 412x915, all nine surfaces; native viewport 320x376, 350x580 and 372x648, no settled screen overflow. `screens/phase2b/resume/{boot,memory,disks,cartridges,difficulty,tracker,range,live,results}-*.png`. Dense settings scroll inside short screens. Laptop retains 480x320 layout; `play-city-1536x730.png`. Native portrait transform is fixed at 1, including desk-to-phone resize.
+- [x] **2b.4** Rule book: `?`/H contextual help and laptop map, including leaderboard — proof: native 344x624 dialog at 360x640, 44x44 opener; input isolation, held-input clearing, Shift-question chord, Escape focus restoration and next-input unlock observed. Native cancel regression passes; obsolete keyhint removed.
+- [x] **2b.5** Native WebAudio chip effects, licensed CC0 background loop, VOL and M — proof: decoded 100.1739s loop, no context before trusted input, nonzero postmix PCM, exact silence for M/VOL0, preserved VOL and visibility suspend/resume. Actual `sound-walk.webm`; license record accompanies asset. Digital proof is not physical speaker/listening proof.
 
 **Acceptance** Every new surface keeps TESTNET visible, passes the forbidden-term guard, respects reduced motion, and leaves the eight game screens unchanged in behaviour.
+
+**2026-10-06 UTC integrated evidence:** Eight rendered fixture surfaces and outcome walk are recorded under `screens/phase2b/resume/`. Rule-book Escape previously left input locked; native cancel state reconciliation fixed it, and the next X/Shift action worked. Full workspace verify passed with native-cancel and input-lock regressions. Sound evidence is postmix PCM from the actual native graph, not mocked nodes. Phone screenshots use 412x915 CSS (515x1144 pixels at installed Edge scale 1.25). Fixtures remain visibly marked and are not live-chain proof.
 
 ## Phase 3 — Pure SDK
 
@@ -170,11 +174,12 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 
 **Goal** Serve read models and operate the bot/drip continuously without signing for players.
 
-- [ ] **6.1a** Build Hono/Bun server, zod env and numbered SQLite migrations — proof required: start with `bun run --cwd apps/worker dev`; app.request route checks and a fresh SQLite database with applied migration versions.
-- [ ] **6.1b** Serve /v1/health with build/source state — proof required: `curl http://localhost:<WORKER_PORT>/v1/health`; response reports version, ticks and source ages.
-- [ ] **6.2** Sample mainnet/testnet bestBidAsk and serve /v1/mid — proof required: recorded mid_samples rows; three consecutive source failures transition to paused; HTTP response exposes freshness.
+- [x] **6.1a** Hono/Bun server, zod env and migrations — proof: isolated actual Bun worker, fresh SQLite migrations 1..5; routes/job tests within 118 passing worker checks. Absolute SQLite parent resolution fixes observed Windows relative-path startup failure.
+- [x] **6.1b** /v1/health with build/source/job state — proof: HTTP 200 amber with explicit transactions-disabled, fresh source ages, complete coverage and mirror ticks 0; not a live-deployment success claim.
+- [x] **6.2** Mainnet/testnet sampler and /v1/mid — proof: actual mainnet samples and fresh HTTP answer; boundary regressions for three failures, source spread >2% immediate pause/resume and 30s observed-book expiry pass. Testnet no-market-configured is reported honestly, not an empty usable book.
 - [ ] **6.3** Mirror toward mainnet with capped notional, explicit gas and nonce management — proof required: decideMirrorAction behavior tests for threshold/direction/cap/staleness; mirror_ticks rows and transaction receipts under measured limits.
-- [ ] **6.4** Serve seven-market tracker with L2 decoder, 24h fills and shared SDK SAFETY/HEAT — proof required: captured getL2Book decoder result; `curl http://localhost:<WORKER_PORT>/v1/tracker` returns seven markets; MON_AUSD empty-book case is thin; honeypot/playable gates and Kuru calibration checked.
+- [x] **6.4a** Seven-market L2/trade tracker and shared SDK scoring — proof: actual authenticated 24h backfill (one snapshot 21,668 trades), seven validated live rows, MON_AUSD/WBTC_AUSD thin/null-mid; unchanged strict web schema accepts all seven after FP concentration invariant correction. Workspace decoder/gate/history regressions pass.
+- [ ] **6.4b** Calibrate policy and verify playable testnet mapping — proof required: measured deployed-book population, recorded policy choices and S2 market receipts. SDK thresholds/USD parity remain explicit assumptions, not measured calibration; B1/B9.
 - [ ] **6.5** Drip MON then AUSD with refusal ledger and block spacing — proof required: `curl -X POST http://localhost:<WORKER_PORT>/v1/drip -H "Content-Type: application/json" -d '{"address":"<fresh-disk>"}'`; receipts, drips row, repeated request refused and every refusal path exercised.
 - [ ] **6.6** Top up AUSD with observed faucet backoff — proof required: job run/log showing successful request and MaxFrequencyExceeded scheduling without repeated broadcasts.
 - [ ] **6.7** Aggregate leaderboard via FillSource and mid_samples — proof required: known-fill valuation result plus `curl 'http://localhost:<WORKER_PORT>/v1/leaderboard?window=24h'`; chain-derived rows, no submitted scores.
@@ -189,6 +194,9 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 
 **Proof to record** Commands, route outputs and SQL rows in external PROGRESS; measured mainnet inputs/calibration in research; bot/drip receipts and explicit gas in SMART-CONTRACTS.
 
+**2026-10-06 UTC review/runtime:** Authenticated HyperSync query HTTP 200, real book/log inputs and complete SQLite trade window; no broadcast jobs enabled. Expiry is evaluated after inventory awaits; tracker data over 45min cannot remain live/playable. Fresh mid/source reads, CORS allow/deny/preflight, strict invalid queries/bodies and disabled drip 503 observed. Leaderboard truthfully returned no-market-configured, so funded ranking/drip/mirror acceptance remains open. Original WSL systemd verification failed for missing Bun; only a temporary syntax copy passed. Caddy unavailable; target deployment/validation not claimed.
+
+
 ## Phase 7 — Web integration
 
 **Goal** Replace marked fixtures with real data and local passkey signing while preserving every screen.
@@ -196,15 +204,16 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 - [ ] **7.1** Client-only Mera card session and per-disk viem clients — proof required: HTTPS create/insert/eject run; no Mera server import; sessions end on eject / hidden-tab timeout; only credential metadata persists.
 - [ ] **7.2** S1 MemoryCard: real INSERT / NEW CARD and error copy — proof required: supported-phone passkey prompts and mapped error screenshots; FIXTURE marker removed only after real actions.
 - [ ] **7.3** S2 DiskSelect: derive/read/decrypt three slots, create/drip/save and OPEN — proof required: three disk addresses, registry readbacks, save receipt, ciphertext hash/explorer proof and SAVED TO CARD screenshot.
-- [ ] **7.3a** S3 CartridgeSelect: decrypted disk, STAY IN RANGE and leaderboard navigation — proof required: phone walkthrough preserves selected disk; locked COMING SOON stays locked.
-- [ ] **7.3b** S4 Difficulty: disk preferences, mascot binding and sealed persistence — proof required: change difficulty/GOD MODE, save and restore same preferences; unsellable gate remains active.
-- [ ] **7.4** S5 PoolTracker: live query and playable / mainnet-only gates — proof required: /v1/tracker source/time visible; only PLAYABLE (TESTNET) enters a position.
+- [x] **7.3a** Decrypted-disk cartridge and leaderboard navigation — proof: native 412x915 local-registry walk kept disk 1/name, locked cartridges stayed locked; leaderboard window URL/back exercised. Unmatched route-context warning fixed with explicit navigation.
+- [x] **7.3b** Difficulty preferences and sealed persistence — proof: native browser/local-registry profile changes, matching confirmed saves and restore after storage clear, including NORMAL and HARD with GOD MODE enabled. Meaningful regression preserves private notes/history and prevents GOD MODE below HARD. Shared SDK keeps the unsellable gate. Funded supported-phone acceptance remains 7.11/B1/B8.
+- [x] **7.4** Live worker tracker and mainnet-only eligibility — proof: native browser read all seven validated mainnet rows with source/time and inspectable metrics; 0/7 EASY, 1/7 NORMAL, 5/7 HARD at the recorded snapshot, no invented counts. No manifest-backed testnet mirror exists, so no mainnet position can start; SDK eligibility regressions pass.
 - [ ] **7.5** S6 SetRange: live SDK ladder, funding split and confirm sequence — proof required: base/quote/cost screenshot; explicit-gas approve/zap/deposit/provision receipts with IDs, loading steps and partial-failure recovery.
 - [ ] **7.6** S7 InRange: 5s mid polling, real fills, SCORE/DAMAGE and re-center/withdraw — proof required: flipped-fill receipt -> scoreCard increment with sound; NAD-SENSE boundary, sit, displayed re-center cost, PRICE FEED PAUSED and INDEXER OFFLINE states.
 - [ ] **7.7** S8 Results: cancel/withdraw, tx-linked result and sealed run — proof required: batchCancelFlipOrders / batchWithdrawMaxTokens receipts; result inputs inspectable; restored disk contains the appended run.
 - [ ] **7.8** Leaderboard screen — proof required: phone screenshot of /v1/leaderboard-backed rows for selected window with source and no self-reported SCORE.
 - [ ] **7.9** Installable portrait PWA — proof required: manifest/icons from assets/logo, Lighthouse installability report and supported-phone standalone launch; B5 organizer text settles Agora qualification separately.
-- [ ] **7.10** Remove fixtures from production paths — proof required: production route/build review and phone run using real worker/chain/indexer sources; fixtures remain test/dev-only.
+- [x] **7.10a** Exclude fixtures from production gameplay routes — proof: production build deliberately supplied VITE_USE_FIXTURES=true; preview still showed real card-domain errors, actual worker/no-market reads and S6 deployment prerequisite, not simulated position. `/dev/passkey` returned 404; no test surface root.
+- [ ] **7.10b** Full production worker/chain/indexer path — proof required: supported phone using deployed testnet registry/market and indexed fills; B1/B2/B8/B9. Landing illustrations remain explicitly marked development examples, not gameplay data.
 - [ ] **7.11** Record full real-phone play and stateless restore — proof required: HTTPS new card -> funded disk -> tracker/range -> explorer orders -> flipped fill/sound -> withdraw/results; clear site data -> INSERT CARD -> three locally decrypted disks without server restore.
 
 **Acceptance**
@@ -213,6 +222,11 @@ As of **2026-10-05**. External blocker IDs refer to the handoff `BLOCKERS.md`.
 - Signing stays in browser; no production fixture or server restore dependency.
 
 **Proof to record** Screen recordings / screenshots outside repo, paths and observed devices in external PROGRESS; tx/address evidence in SMART-CONTRACTS; Mera support/errors in research notes.
+
+**Reachable integration proof:** Native browser WebAuthn with a virtual PRF-capable reader created/recovered three identical addresses, signed disk 1 and sealed/opened with a non-extractable key. Actual isolated Anvil registry (chain ID 10143, 1885 bytes deployed code) accepted three encrypted saves and preference updates. Eject + local/session-storage clear + reload + discoverable INSERT restored all three disks and preferences; only credential metadata persisted. This is local logic evidence, not Monad deployment, measured gas or physical-device support. Pending-ceremony/funding/post-receipt-refresh eject and hidden expiry regressions pass.
+
+**Production PWA proof:** Built preview manifest parsed without errors; native Chromium Page.getInstallabilityErrors returned an empty error list, with real 192/512/maskable icons. No service worker caches chain responses. Physical-phone standalone launch and Lighthouse report are not recorded, so 7.9 remains open. Live leaderboard no-market and retained OFFLINE state are rendered; no invented ranking or fill is claimed.
+
 
 ## Phase 8 — Envio indexer
 

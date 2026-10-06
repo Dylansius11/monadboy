@@ -64,6 +64,10 @@ Evidence checked 2026-10-05. **[V]** cites fetched documentation; **[I]** is a p
 
 ## Findings
 
+[V: local runtime, 2026-10-06 UTC] Native WebAuthn with a virtual PRF-capable authenticator created and rediscovered the same three disk addresses, recovered a disk-1 signature and round-tripped a non-extractable AES-GCM seal. An isolated Anvil DiskRegistry accepted three encrypted saves. Eject, clear local/session storage, reload and discoverable INSERT restored the disks and NORMAL preferences; a separate fresh virtual card also restored HARD with GOD MODE enabled. Evidence: external `screens/phase2b/resume/local-registry-*.png` and `local-registry-proof.json`.
+
+This settles local integration logic only, not physical authenticator compatibility, measured Monad gas or a testnet deployment. The dev-only `/dev/passkey` surface returned HTTP 404 in the production preview. Only credential metadata remained in localStorage; no PRF material or plaintext disk was persisted there.
+
 [U] **S4 pending:** actual iPhone Safari and Android Chrome create/restore cycles, fresh-device recovery, and supported authenticator combinations must be exercised by the user over an HTTPS development tunnel. A documentation support entry is not proof our app works on those devices.
 
 [U] **S4** must also record hold/end/reinsert behavior and the clear-site-data restore demonstration. Production rpId is fixed before real cards; deployment does not depend on a development-tunnel hostname.

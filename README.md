@@ -116,22 +116,18 @@ The smart-contract document owns parameters and the full deploy log.
 
 ## Run locally
 
-Phase 1 writes documentation. Task 2.1 adds the frontend toolchain; worker, contracts, and indexer commands arrive with their implementation phases.
-Do not mistake the planned commands below for runnable application surfaces in the docs phase.
+The web app, SDK, worker and registry contract are implemented locally. Funded gameplay, physical-phone passkey acceptance and public deployment remain gated in [docs/BLOCKERS.md](docs/BLOCKERS.md). Mainnet reads do not prove testnet execution.
 
 Prerequisites: Bun 1.3 for installation / scripts, Node 24 for Vite / Vitest, and Foundry 1.8.x for contract work.
 
 ```sh
 bun install
 bun run dev
-# In another terminal, after worker implementation:
+# In another terminal, with transactions disabled in the ignored worker .env:
 bun run --cwd apps/worker dev
-# After indexer implementation:
-bun run --cwd indexer codegen
-bun run --cwd indexer dev
-# Quality gate after Task 2.1:
+# Workspace quality gate:
 bun run verify
-# From contracts, after contract implementation:
+# From contracts:
 forge test
 ```
 
@@ -141,9 +137,12 @@ The guard is available now. For explicit files:
 bun scripts/guard-forbidden.ts README.md CLAUDE.md AGENTS.md docs/PRD.md docs/DESIGN-SYSTEM.md docs/LESSONS.md
 ```
 
-Create local, ignored environment files from the app examples when they land.
-Web configuration includes VITE_CHAIN=testnet, VITE_RP_ID, VITE_RP_NAME=MONADBOY, VITE_WORKER_URL, VITE_ENVIO_GRAPHQL_URL, and optional VITE_TESTNET_RPC_URL.
-Worker configuration includes RPC URLs, APP_ORIGIN, WORKER_PORT, SQLITE_PATH, ENVIO_GRAPHQL_URL, and MARKETS_JSON.
+Create ignored `apps/web/.env.local` and `apps/worker/.env` from their `.env.example` files.
+Set `VITE_WORKER_URL` to the worker origin and worker `APP_ORIGIN` to the exact web origin. Missing/failed reads have explicit states, not fixture fallbacks.
+Set `VITE_RP_ID` to the chosen stable hostname and `VITE_REGISTRY_ADDRESS` only after a verified chain-10143 deployment. `VITE_RP_NAME` and `VITE_TESTNET_RPC_URL` are optional.
+To walk the marked screen simulation locally, set `VITE_USE_FIXTURES=true` in the web development environment. Production builds ignore it. `/` is the landing page; `/play` is the handheld. `?`/H opens contextual controls, M mutes, and VOL controls the shared chip effects/music.
+The development-only `/dev/passkey` page exercises disposable WebAuthn create/restore, disk signing and local authenticated sealing without a transaction. It is not a production route or physical-device support claim.
+Worker configuration and safety policy are documented in [deploy/README.md](deploy/README.md); keep `ENABLE_TRANSACTIONS=false` until the funded spikes supply real gas/execution evidence.
 Bot, drip, and deployer keys are distinct local / VPS secrets. Never put secret values in the browser or repository.
 Use HTTPS or localhost for passkeys [V: Mera guide](https://docs.monad.xyz/guides/mera); test supported authenticators before claiming restore works [U: S4].
 
@@ -156,6 +155,7 @@ Use HTTPS or localhost for passkeys [V: Mera guide](https://docs.monad.xyz/guide
 - [Smart contracts](docs/technical/SMART-CONTRACTS.md): registry, market surface, deployment proof.
 - [Data model](docs/technical/ERD.md): chain, indexer, cache, sealed records.
 - [Build plan](docs/technical/BUILD-PLAN.md): phase status and unresolved gates.
+- [Blockers](docs/BLOCKERS.md): exact external gates, settling evidence and resolution history.
 - [Lessons](docs/LESSONS.md): root causes and durable rules.
 
 ## AI disclosure

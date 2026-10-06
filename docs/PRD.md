@@ -80,7 +80,7 @@ Proof views can show transaction links and formulas without turning the primary 
 7. No em-dashes in user-facing copy.
 8. Names are tokens in `src/config/brand.ts` within the web app.
 9. Verify every onchain address with `eth_getCode` before committing it; use `cast code` on the right chain.
-10. Fixed 480x320 logical grid, 4px snap, 8px bitmap font, integer sprite scaling, DOM/CSS, no canvas.
+10. Landscape 480x320 logical grid, native portrait phone layout, 4px snap and integer pixelated sprites. Game UI is DOM/CSS and stepped SVG; decorative scenery outside the screen may use canvas.
 11. Every number on screen has a source the player can open.
 12. Label testnet on every balance screen. Never imply real money.
 
@@ -203,8 +203,8 @@ Treating USDC and AUSD as one USD each is an explicit conversion assumption [I],
 The worker reads the source every 5 seconds.
 When relative deviation exceeds 0.05%, the planned bot trades toward the source, within its configured notional cap.
 Thin resting quotes refresh at target +/-0.1% to support the zap.
-Three consecutive source failures pause the bot; it never invents a replacement price.
-Health turns red and the screen says PRICE FEED PAUSED.
+Three consecutive transport/read failures pause the bot. An empty, crossed, or source book wider than `(ask - bid) / mid > 2%` pauses immediately; a valid tight book resumes sampling. The 2% maximum is a user-approved operator policy [I], not measured market calibration.
+Health turns red and the screen says PRICE FEED PAUSED. No last-trade substitution or invented replacement price is used.
 Low bot inventory turns health amber.
 The exact execution surface and successful bot behavior are [U], settled by S2 and the Phase 6 mirror smoke.
 
@@ -383,13 +383,16 @@ Every reachable control has a visible selection state.
 Cursor location and the applied value are different states.
 The shell owns the key legend; context-sensitive labels rewrite themselves for the current action.
 The console shell never knows about money.
-One flex region absorbs remaining height rather than manually adding pixels to 320.
+One flex region absorbs remaining height. On short portrait phones, dense settings scroll within the screen while action footers stay visible.
 Every balance surface carries TESTNET, including modal and proof variants.
 
 ### Presentation and production data
 
-Preserve the existing console shell, pixel UI primitives, palette, sprites, fonts, motion, and key legend in look and feel.
-Connecting real data changes sources and copy, not the chosen visual language or the 480x320 layout.
+Preserve the existing laptop clamshell, pixel UI primitives, palette, sprites, fonts, motion, and key legend in look and feel.
+Connecting real data changes sources and copy, not the chosen visual language.
+The user-approved phone adaptation uses native portrait dimensions, readable type and compact physical controls rather than scaling the laptop shell.
+Each screen reflows its content: character selection, pool map, range settings, price field and results.
+The night-city backdrop is decorative, not a source of market activity or player accounting.
 The web app is a portrait, standalone PWA with a web manifest and icons from the existing logo assets.
 Native app-store publication is outside scope; mobile-web bounty eligibility remains an organizer decision.
 
