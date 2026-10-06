@@ -1,5 +1,6 @@
 import {
   HeadContent,
+  Outlet,
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router'
@@ -10,6 +11,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 
 import appCss from '../styles.css?url'
 import { brand } from '../config/brand'
+import { SoundProvider } from '../sound/SoundProvider'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -27,6 +29,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         name: 'viewport',
         content: 'width=device-width, initial-scale=1',
       },
+      { name: 'theme-color', content: '#6e54ff' },
       {
         title: `${brand.CONSOLE_NAME} · ${brand.CARTRIDGE_01}`,
       },
@@ -39,12 +42,19 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       {
         rel: 'icon',
         type: 'image/png',
-        href: '/sprites/molandak-64/idle.png',
+        href: '/sprites/molandak-64/idle-0.png',
       },
+      { rel: 'manifest', href: '/manifest.webmanifest' },
+      { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png' },
     ],
   }),
+  component: RootApp,
   shellComponent: RootDocument,
 })
+
+function RootApp() {
+  return <SoundProvider><Outlet /></SoundProvider>
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
