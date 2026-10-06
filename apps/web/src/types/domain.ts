@@ -85,7 +85,7 @@ export type Pool = z.infer<typeof zPool>
 // ---------------------------------------------------------------------------
 
 /**
- * Every field is derived and pure, computed by lib/scoring from market
+ * Every field is derived and pure, computed by packages/sdk scoring from market
  * inputs. Nothing here is fetched, which is what makes it testable and
  * what makes the formula defensible to a judge.
  */

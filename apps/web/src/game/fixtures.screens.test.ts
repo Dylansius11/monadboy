@@ -1,15 +1,15 @@
-import { mainnetMarkets } from '@monadboy/sdk'
-import { describe, expect, it } from 'vitest'
 import {
+  evaluateGates,
   gatesFor,
+  mainnetMarkets,
   mainnetProfile,
   profiles,
+  scorePool,
   selfTestnetProfile,
-} from '../config/thresholds'
+} from '@monadboy/sdk'
+import { describe, expect, it } from 'vitest'
 import { ladderPlanner } from '../lib/range/ladder-planner'
 import { planForWidth } from '../lib/range/plan'
-import { evaluateGates } from '../lib/scoring/gates'
-import { scorePool } from '../lib/scoring/score'
 import { zPool, zSaveDisk } from '../types/domain'
 import { FIXTURE_MARKETS, FIXTURE_NOW, saveDisks, scoredPools } from './fixtures'
 

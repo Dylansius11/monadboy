@@ -4,10 +4,8 @@
  * Pool is the venue-neutral domain shape until the tracker interfaces land.
  */
 import { brand } from '../config/brand'
-import { gatesFor, mainnetProfile } from '../config/thresholds'
-import { evaluateGates } from '../lib/scoring/gates'
-import { scorePool } from '../lib/scoring/score'
-import type { GateResult } from '../lib/scoring/gates'
+import { evaluateGates, gatesFor, mainnetProfile, scorePool } from '@monadboy/sdk'
+import type { GateResult } from '@monadboy/sdk'
 import type { Difficulty, GateSet, Pool, PoolScore, SaveDisk } from '../types/domain'
 
 /** Frozen clock prevents fixture ages and scores drifting between renders. */
