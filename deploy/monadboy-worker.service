@@ -1,0 +1,32 @@
+[Unit]
+Description=MONADBOY worker
+Documentation=file:///opt/monadboy/deploy/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=monadboy
+Group=monadboy
+# Bun reads apps/worker/.env (mode 0600, owned by monadboy) from the working directory.
+WorkingDirectory=/opt/monadboy/apps/worker
+ExecStart=/usr/local/bin/bun src/index.ts
+# systemd creates /var/lib/monadboy for the user and keeps it the only writable path.
+StateDirectory=monadboy
+Environment=SQLITE_PATH=/var/lib/monadboy/worker.sqlite
+Environment=WORKER_BIND=127.0.0.1
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

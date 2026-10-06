@@ -1,0 +1,9 @@
+# {$WORKER_HOST} is the worker's public hostname, set in Caddy's service environment.
+{$WORKER_HOST} {
+	encode zstd gzip
+
+	# The worker listens on loopback only. Caddy does not trust a client-supplied
+	# X-Forwarded-For (no trusted_proxies is configured), so it sets the header to
+	# the real peer address, which is what the drip quota hashes.
+	reverse_proxy 127.0.0.1:8787
+}
