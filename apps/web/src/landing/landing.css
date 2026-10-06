@@ -1,0 +1,553 @@
+/*
+  THE LANDING PAGE.
+
+  A night in the city the console lives in. One typeface, the console's own;
+  sizes on Departure Mono's 11px grid (11 / 16 / 22 / 44 / 66 / 88) so the
+  letters stay pixel-sharp. One accent beyond the shell purples: the LED cyan,
+  used for the things that are lit.
+
+  The rest of the app pins the document to the viewport for the console.
+  This page scrolls, so it releases that pin for itself and nothing else.
+*/
+
+body:has(.landing) {
+  overflow: auto;
+  overscroll-behavior: auto;
+  scrollbar-color: #4a35c4 #0e091c;
+}
+
+.landing {
+  --night: #0e091c;
+  --night-2: #130c2c;
+  --street: #0b0716;
+  --text: #e4dfff;
+  --text-soft: #c9bfff;
+  --text-dim: #9c89ff;
+  --text-faint: #7a6cc0;
+  --lit: #85e6ff;
+  --gutter: clamp(20px, 4vw, 56px);
+
+  min-height: 100%;
+  background: var(--night);
+  color: var(--text);
+  font-family: var(--font-pixel);
+  -webkit-font-smoothing: none;
+}
+
+.landing ::selection {
+  background: #6e54ff;
+  color: #fff;
+}
+
+.landing :focus-visible {
+  outline: 2px solid var(--lit);
+  outline-offset: 4px;
+}
+
+.landing a {
+  color: inherit;
+}
+
+/* ---- shared type ------------------------------------------------------- */
+
+.landing .display {
+  margin: 0 0 24px;
+  font-size: 88px;
+  line-height: 0.94;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: #f4f1ff;
+  /* one art-pixel drop, the way a title card is drawn */
+  text-shadow: 0 4px 0 #2a1f6a;
+}
+
+.landing .heading {
+  margin: 0 0 40px;
+  font-size: 44px;
+  line-height: 1;
+  font-weight: 400;
+  text-transform: uppercase;
+  color: #f4f1ff;
+}
+
+.landing .lead {
+  max-width: 30ch;
+  margin: 0 0 44px;
+  font-size: 22px;
+  line-height: 1.45;
+  color: var(--text-soft);
+}
+
+.landing .tag {
+  padding: 3px 7px 2px;
+  background: var(--text);
+  color: var(--night);
+  letter-spacing: 0.16em;
+}
+
+/* ---- the START key ----------------------------------------------------- */
+
+.landing .start {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  height: 58px;
+  padding: 0 18px 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--night);
+  font: inherit;
+  font-size: 22px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 4px 0 #3a2a9e,
+    0 12px 28px rgba(110, 84, 255, 0.28);
+  transition:
+    transform 120ms var(--ease-out-screen),
+    box-shadow 120ms var(--ease-out-screen),
+    background-color 160ms ease;
+}
+.landing .start:hover {
+  background: #fff;
+}
+.landing .start:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 #3a2a9e,
+    0 6px 14px rgba(110, 84, 255, 0.22);
+}
+.landing .start-pill {
+  width: 30px;
+  height: 12px;
+  border-radius: 6px;
+  background: #6e54ff;
+  box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.3);
+}
+.landing .start kbd {
+  padding: 3px 6px 2px;
+  border: 1px solid #b3a6ec;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: #4a35c4;
+}
+
+.landing .quiet-link {
+  font-size: 16px;
+  color: var(--text-dim);
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 1px;
+}
+.landing .quiet-link:hover {
+  color: var(--text);
+}
+
+/* ---- hero -------------------------------------------------------------- */
+
+.landing .hero {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100svh;
+  overflow: clip;
+  /* the street the console's shadow lands on */
+  border-bottom: 24px solid var(--street);
+}
+
+.landing .city {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.landing .city-layer,
+.landing .city-layer-group {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.landing .city-layer-group {
+  inset: 0;
+}
+
+.landing .topbar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px var(--gutter);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+.landing .topbar-mark {
+  letter-spacing: 0.32em;
+}
+.landing .topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.landing .topbar-nav a {
+  color: var(--text-dim);
+  text-decoration: none;
+}
+.landing .topbar-nav a:hover {
+  color: var(--text);
+}
+
+.landing .hero-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 88px);
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 56px;
+}
+
+.landing .hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 28px;
+}
+
+.landing .hero-console {
+  display: grid;
+  justify-items: center;
+  animation: hover-float 6s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+.landing .street-shadow {
+  width: 64%;
+  height: 22px;
+  margin-top: 18px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), transparent);
+  animation: shadow-breathe 6s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+@keyframes hover-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-8px);
+  }
+}
+@keyframes shadow-breathe {
+  from {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(0.92);
+    opacity: 0.8;
+  }
+}
+
+.landing .screen-off {
+  width: 100%;
+  height: 100%;
+  background: #0b0716;
+}
+
+/* ---- how it plays ------------------------------------------------------ */
+
+.landing .how {
+  position: relative;
+  height: 300vh;
+  background: var(--night);
+}
+.landing .how-pin {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 88px);
+  height: 100svh;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.landing .beats {
+  display: grid;
+  gap: 32px;
+  margin: 0;
+  padding: 0 0 0 28px;
+  list-style: none;
+}
+.landing .beat {
+  position: relative;
+  opacity: 0.3;
+  transition: opacity 320ms var(--ease-out-screen);
+}
+.landing .beat.is-on {
+  opacity: 1;
+}
+/* the menu cursor: the one lit square on the page that moves */
+.landing .beat::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: -28px;
+  width: 11px;
+  height: 11px;
+  background: var(--lit);
+  opacity: 0;
+}
+.landing .beat.is-on::before {
+  opacity: 1;
+}
+.landing .beat h3 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 400;
+  text-transform: uppercase;
+  color: #f4f1ff;
+}
+.landing .beat p {
+  max-width: 44ch;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+
+.landing .how-console {
+  display: grid;
+  justify-items: center;
+}
+.landing .fixture-note {
+  margin: 20px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ---- what is real ------------------------------------------------------ */
+
+.landing .real {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: clamp(24px, 5vw, 88px);
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 160px var(--gutter);
+}
+.landing .facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 56px 64px;
+  margin: 0;
+}
+.landing .fact dt {
+  margin: 0 0 14px;
+  font-size: 22px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: #f4f1ff;
+}
+.landing .fact dd {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text-soft);
+}
+.landing .fact a {
+  color: var(--lit);
+  text-underline-offset: 4px;
+}
+
+/* ---- cast -------------------------------------------------------------- */
+
+.landing .cast {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 40px var(--gutter) 160px;
+}
+.landing .cast-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.landing .cast-member {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  cursor: default;
+}
+.landing .cast-stage {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  width: 224px;
+  height: 208px;
+  margin-bottom: 14px;
+}
+/* the pedestal: a block of street the sprite stands on */
+.landing .cast-stage::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 16px;
+  right: 16px;
+  height: 8px;
+  background: #2a1f6a;
+  box-shadow: 0 8px 0 #1d143b;
+}
+.landing .cast-name {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  color: #f4f1ff;
+  transition: color 160ms ease;
+}
+.landing .cast-member:hover .cast-name,
+.landing .cast-member:focus-visible .cast-name {
+  color: var(--lit);
+}
+.landing .cast-tier {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--text-dim);
+}
+.landing .cast-quote {
+  max-width: 28ch;
+  margin: 8px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+
+/* ---- closing ----------------------------------------------------------- */
+
+.landing .closing {
+  border-top: 1px solid #241845;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 120px var(--gutter) 48px;
+}
+.landing .closing-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+.landing .closing-cta .heading {
+  margin: 0;
+}
+.landing .closing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 36px;
+  margin-top: 112px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.landing .closing-meta a {
+  color: var(--text-dim);
+}
+
+/* ---- the hand-over to /play ------------------------------------------- */
+
+::view-transition-group(console) {
+  animation-duration: 560ms;
+  animation-timing-function: cubic-bezier(0.77, 0, 0.175, 1);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 280ms;
+}
+
+/* ---- narrower ---------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .landing .display {
+    font-size: 66px;
+  }
+}
+
+@media (max-width: 900px) {
+  .landing .hero-grid,
+  .landing .real {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .landing .hero-grid {
+    gap: 40px;
+    padding-top: 24px;
+  }
+  .landing .how-pin {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    align-content: start;
+    gap: 24px;
+    padding-top: 24px;
+  }
+  .landing .how-copy {
+    order: 2;
+    align-self: start;
+  }
+  .landing .how-copy .heading {
+    display: none;
+  }
+  /* one beat at a time: the console holds the top of the screen */
+  .landing .beat:not(.is-on) {
+    display: none;
+  }
+  .landing .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .landing .cast-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 64px;
+  }
+}
+
+@media (max-width: 560px) {
+  .landing .display {
+    font-size: 44px;
+  }
+  .landing .heading {
+    font-size: 33px;
+  }
+  .landing .lead {
+    font-size: 16px;
+  }
+  .landing .topbar-nav a {
+    display: none;
+  }
+  .landing .real {
+    padding-top: 112px;
+    padding-bottom: 112px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing .hero-console,
+  .landing .street-shadow {
+    animation: none;
+  }
+  .landing .beat {
+    transition: none;
+  }
+}
