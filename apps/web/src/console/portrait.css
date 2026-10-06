@@ -1,0 +1,163 @@
+/* Portrait is native-sized hardware, not a scaled clamshell. The screen
+   grows into the available height; controls retain their actual hit sizes.
+   Held consoles on the landing page keep the landscape presentation. */
+@media (max-width: 640px) and (orientation: portrait) {
+  .console-stage .console {
+    display: flex;
+    flex-direction: column;
+    width: calc(100% - 16px);
+    max-width: 428px;
+    height: calc(100% - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: 888px;
+    /* Native dimensions already fit the stage; never inherit a stale desk scale. */
+    transform: translate(-50%, -50%) !important;
+    border-radius: 24px 24px 36px 24px;
+    background: linear-gradient(165deg, #9c89ff, #6e54ff 12%, #6e54ff 82%, #4a35c4);
+    box-shadow: inset 2px 0 0 #b3a6ec, inset -2px 0 0 #3a2a9e;
+    filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.55));
+  }
+
+  .console-stage .lid {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    padding: 8px 8px 0;
+    border-radius: 24px 24px 0 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .console-stage .wordmark {
+    order: -1;
+    padding: 0 0 8px;
+    color: #e4dfff;
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0.3em;
+  }
+
+  .console-stage .lid > .screw.bl,
+  .console-stage .lid > .screw.br,
+  .console-stage .hinge,
+  .console-stage .keyhint {
+    display: none;
+  }
+
+  .console-stage .bezel {
+    flex: 1;
+    min-height: 0;
+    padding: 4px;
+    border-radius: 8px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.75), 0 1px 0 #b3a6ec;
+  }
+
+  .console-stage .viewport {
+    width: 100%;
+    height: 100%;
+    --text-micro: 11px;
+    --text-micro--line-height: 16px;
+    --text-body: 11px;
+    --text-body--line-height: 16px;
+    --text-title: 16px;
+    --text-title--line-height: 24px;
+    --text-value: 22px;
+    --text-value--line-height: 28px;
+    --text-hero: 33px;
+    --text-hero--line-height: 40px;
+  }
+
+  .console-stage .base {
+    flex: none;
+    padding: 4px 12px 8px;
+    border-radius: 0 0 36px 24px;
+    background: none;
+    box-shadow: none;
+  }
+
+  .console-stage .toprow {
+    height: 44px;
+    margin: 0 4px;
+  }
+
+  .console-stage .mark { width: 20px; height: 20px; }
+  .console-stage .led { width: 8px; height: 8px; }
+  .console-stage .vol-cap { color: #e4dfff; font-size: 9px; }
+  .console-stage .vol-track { height: 44px; background: none; box-shadow: none; }
+  .console-stage .vol-track::before {
+    content: '';
+    position: absolute;
+    inset: 16px 0;
+    border-radius: 8px;
+    background: var(--shell-dd);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  .console-stage .vol-knob { top: 10px; }
+
+  .console-stage .deck {
+    grid-template-columns: 144px 1fr;
+    grid-template-rows: 144px;
+    gap: 8px;
+  }
+
+  .console-stage .dpad-well {
+    grid-column: 1;
+    grid-row: 1;
+    width: 144px;
+    height: 144px;
+    border-radius: 24px;
+    background: rgba(58, 42, 158, 0.5);
+  }
+  .console-stage .dpad { width: 132px; height: 132px; }
+  .console-stage .dpad i.v {
+    top: 0; left: 44px; width: 44px; height: 132px;
+  }
+  .console-stage .dpad i.h {
+    top: 44px; left: 0; width: 132px; height: 44px;
+  }
+  .console-stage .dpad i.c {
+    top: 54px; left: 54px; width: 24px; height: 24px;
+  }
+
+  .console-stage .mid { display: contents; }
+  .console-stage .speaker { display: none; }
+  .console-stage .ab-well {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    justify-self: end;
+    margin: 8px 4px 0 0;
+    padding: 8px;
+    gap: 12px;
+  }
+  .console-stage .ab-well button {
+    width: 52px;
+    height: 52px;
+    font-size: 16px;
+  }
+
+  .console-stage .startsel {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    justify-self: center;
+    gap: 12px;
+    padding-bottom: 8px;
+  }
+  .console-stage .startsel button { width: 52px; height: 44px; }
+  .console-stage .startsel button::before { width: 40px; margin-left: -20px; }
+  .console-stage .startsel button::after {
+    position: absolute;
+    top: 34px;
+    left: 0;
+    width: 100%;
+    color: #e4dfff;
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    line-height: 12px;
+    text-align: center;
+    content: 'SELECT';
+  }
+  .console-stage .startsel button:last-child::after { content: 'START'; }
+}
