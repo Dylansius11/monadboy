@@ -39,7 +39,7 @@ if (major < MIN_NODE_MAJOR) {
  * between a test suite you run constantly and one you stop running.
  *
  * Default environment is node, because the modules with real coverage pressure
- * (lib/scoring, lib/range, design) are pure. A file that needs a DOM opts in
+ * (lib/range, lib/worker, design) are pure. A file that needs a DOM opts in
  * with `// @vitest-environment jsdom` on its first line.
  */
 export default defineConfig({

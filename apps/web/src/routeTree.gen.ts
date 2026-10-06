@@ -15,6 +15,7 @@ import { Route as ConsoleCardRouteImport } from './routes/_console/card'
 import { Route as ConsoleCartridgesRouteImport } from './routes/_console/cartridges'
 import { Route as ConsoleDisksRouteImport } from './routes/_console/disks'
 import { Route as ConsoleGalleryRouteImport } from './routes/_console/gallery'
+import { Route as ConsoleLeaderboardRouteImport } from './routes/_console/leaderboard'
 import { Route as ConsolePlayIndexRouteImport } from './routes/_console/play/index'
 import { Route as ConsolePlayDifficultyRouteImport } from './routes/_console/play/difficulty'
 import { Route as ConsolePlayTrackerRouteImport } from './routes/_console/play/tracker'
@@ -49,6 +50,11 @@ const ConsoleDisksRoute = ConsoleDisksRouteImport.update({
 const ConsoleGalleryRoute = ConsoleGalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleLeaderboardRoute = ConsoleLeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsolePlayIndexRoute = ConsolePlayIndexRouteImport.update({
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/cartridges': typeof ConsoleCartridgesRoute
   '/disks': typeof ConsoleDisksRoute
   '/gallery': typeof ConsoleGalleryRoute
+  '/leaderboard': typeof ConsoleLeaderboardRoute
   '/play/difficulty': typeof ConsolePlayDifficultyRoute
   '/play/tracker': typeof ConsolePlayTrackerRoute
   '/play/': typeof ConsolePlayIndexRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/cartridges': typeof ConsoleCartridgesRoute
   '/disks': typeof ConsoleDisksRoute
   '/gallery': typeof ConsoleGalleryRoute
+  '/leaderboard': typeof ConsoleLeaderboardRoute
   '/play/difficulty': typeof ConsolePlayDifficultyRoute
   '/play/tracker': typeof ConsolePlayTrackerRoute
   '/play': typeof ConsolePlayIndexRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/_console/cartridges': typeof ConsoleCartridgesRoute
   '/_console/disks': typeof ConsoleDisksRoute
   '/_console/gallery': typeof ConsoleGalleryRoute
+  '/_console/leaderboard': typeof ConsoleLeaderboardRoute
   '/_console/play/difficulty': typeof ConsolePlayDifficultyRoute
   '/_console/play/tracker': typeof ConsolePlayTrackerRoute
   '/_console/play/': typeof ConsolePlayIndexRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/cartridges'
     | '/disks'
     | '/gallery'
+    | '/leaderboard'
     | '/play/difficulty'
     | '/play/tracker'
     | '/play/'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/cartridges'
     | '/disks'
     | '/gallery'
+    | '/leaderboard'
     | '/play/difficulty'
     | '/play/tracker'
     | '/play'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/_console/cartridges'
     | '/_console/disks'
     | '/_console/gallery'
+    | '/_console/leaderboard'
     | '/_console/play/difficulty'
     | '/_console/play/tracker'
     | '/_console/play/'
@@ -215,6 +227,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleGalleryRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/leaderboard': {
+      id: '/_console/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof ConsoleLeaderboardRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/play/': {
       id: '/_console/play/'
       path: '/play'
@@ -265,6 +284,7 @@ interface ConsoleRouteChildren {
   ConsoleCartridgesRoute: typeof ConsoleCartridgesRoute
   ConsoleDisksRoute: typeof ConsoleDisksRoute
   ConsoleGalleryRoute: typeof ConsoleGalleryRoute
+  ConsoleLeaderboardRoute: typeof ConsoleLeaderboardRoute
   ConsolePlayDifficultyRoute: typeof ConsolePlayDifficultyRoute
   ConsolePlayTrackerRoute: typeof ConsolePlayTrackerRoute
   ConsolePlayIndexRoute: typeof ConsolePlayIndexRoute
@@ -278,6 +298,7 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleCartridgesRoute: ConsoleCartridgesRoute,
   ConsoleDisksRoute: ConsoleDisksRoute,
   ConsoleGalleryRoute: ConsoleGalleryRoute,
+  ConsoleLeaderboardRoute: ConsoleLeaderboardRoute,
   ConsolePlayDifficultyRoute: ConsolePlayDifficultyRoute,
   ConsolePlayTrackerRoute: ConsolePlayTrackerRoute,
   ConsolePlayIndexRoute: ConsolePlayIndexRoute,

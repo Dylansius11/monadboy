@@ -1,6 +1,9 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router'
+import { Outlet, createFileRoute, useRouterState } from '@tanstack/react-router'
 import { Console } from '../console/Console'
 import { brand } from '../config/brand'
+import { PlayBackdrop } from '../scenery/PlayBackdrop'
+import { RuleBook } from '../game/help/RuleBook'
+import { SoundControls } from '../sound/SoundControls'
 
 /**
  * The console shell, mounted ONCE for every screen underneath it.
@@ -17,8 +20,10 @@ import { brand } from '../config/brand'
 export const Route = createFileRoute('/_console')({ component: Shell })
 
 function Shell() {
+  const path = useRouterState({ select: (s) => s.location.pathname })
   return (
-    <Console wordmark={brand.CONSOLE_NAME}>
+    <Console wordmark={brand.CONSOLE_NAME} backdrop={<PlayBackdrop />}
+      tools={<><SoundControls boot={path === '/play' || path === '/play/'} /><RuleBook /></>}>
       <Outlet />
     </Console>
   )
