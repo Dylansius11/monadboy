@@ -3,6 +3,7 @@ import { ActionButtons, DPad, Speaker, StartSelect } from './Controls'
 import { VolumeSlider } from './VolumeSlider'
 import { useFitScale } from './useFitScale'
 import { ConsoleInputProvider } from './useConsoleInput'
+import { useSound } from '../sound/SoundProvider'
 import type { ReactNode, RefObject } from 'react'
 
 /**
@@ -44,14 +45,11 @@ function MonadMark() {
 }
 
 /**
- * Shouts when a screen is taller than 320 and is being silently clipped.
+ * Shouts when a screen overruns its actual viewport.
  *
- * The viewport is `overflow: hidden` at exactly 480x320, which is the right
- * behaviour for a console and the wrong one for finding a bug: a screen that
- * overruns loses its footer with no error, no warning, and no visible seam.
- * Worse, jsdom performs no layout, so not one test in this repo can fail on
- * it. Both screens built in this pass overran on the first draft and the only
- * thing that caught it was counting line heights by hand.
+ * The landscape viewport is 480x320; portrait screens use native dimensions.
+ * Both clip at the bezel, so overflow has to be caught on the rendered page,
+ * not by jsdom, which performs no layout.
  *
  * Dev only, and deliberately a console warning rather than a rendered banner:
  * a banner would itself take screen height and change the thing it measures.
@@ -69,7 +67,7 @@ function useOverflowWarning(viewport: RefObject<HTMLDivElement | null>) {
       if (over > 0) {
         console.warn(
           `[viewport] screen overruns by ${over}px and is being clipped. ` +
-            `The 480x320 box is fixed; something above the footer has to give.`,
+            `The ${el.clientWidth}x${el.clientHeight} screen has to reflow.`,
         )
       }
     }
@@ -113,18 +111,18 @@ export function ConsoleBody({
   wordmark,
   viewportRef,
   powered = true,
-  keyHints = true,
+  tools,
 }: {
-  /** The 480x320 screen contents. */
+  /** Screen contents, landscape or native portrait. */
   children: ReactNode
   wordmark: string
   viewportRef?: RefObject<HTMLDivElement | null>
   /** Power LED. Off only before a boot. */
   powered?: boolean
-  /** The desk-key legend under the controls. */
-  keyHints?: boolean
+  /** Context tools supplied by the application; the shell does not interpret them. */
+  tools?: ReactNode
 }) {
-  const [volume, setVolume] = useState(0.6)
+  const { volume, setVolume } = useSound()
   return (
     <>
       <div className="lid">
@@ -157,6 +155,7 @@ export function ConsoleBody({
           <VolumeSlider value={volume} onChange={setVolume} />
           <MonadMark />
           <i className={powered ? 'led' : 'led is-off'} aria-hidden="true" />
+          {tools && <div className="console-tools">{tools}</div>}
         </div>
 
         <div className="deck">
@@ -168,30 +167,6 @@ export function ConsoleBody({
           <ActionButtons />
         </div>
 
-        {/* Which desk key is which console button. See console.css.
-            SELECT and START were missing here, which is the exact bug
-            console.css's own comment warns about: a screen says "SELECT
-            MANUAL", the player has no idea SELECT is Shift, and presses
-            nothing. Four keys now, not two. */}
-        {keyHints && (
-          <p className="keyhint">
-            <span>
-              <b>Z</b> a button
-            </span>
-            <span>
-              <b>X</b> b button
-            </span>
-            <span>
-              <b>Shift</b> select
-            </span>
-            <span>
-              <b>Enter</b> start
-            </span>
-            <span>
-              <b>Arrows</b> d-pad
-            </span>
-          </p>
-        )}
       </div>
     </>
   )
@@ -200,10 +175,15 @@ export function ConsoleBody({
 export function Console({
   children,
   wordmark,
+  backdrop,
+  tools,
 }: {
-  /** The 480x320 screen contents. */
+  /** Screen contents, landscape or native portrait. */
   children: ReactNode
   wordmark: string
+  /** Decorative scenery, kept outside the money-agnostic shell. */
+  backdrop?: ReactNode
+  tools?: ReactNode
 }) {
   const stage = useRef<HTMLDivElement>(null)
   const box = useRef<HTMLDivElement>(null)
@@ -219,6 +199,7 @@ export function Console({
   return (
     <ConsoleInputProvider>
       <div className="console-stage" ref={stage}>
+        {backdrop}
         {/* translate before scale: the centring has to happen in the scaled
             frame, or a console at 0.6 would be centred on its unscaled size
             and sit off to one side. */}
@@ -227,7 +208,7 @@ export function Console({
           ref={box}
           style={{ transform: `translate(-50%, -50%) scale(${scale})` }}
         >
-          <ConsoleBody wordmark={wordmark} viewportRef={viewport}>
+          <ConsoleBody wordmark={wordmark} viewportRef={viewport} tools={tools}>
             {children}
           </ConsoleBody>
         </div>

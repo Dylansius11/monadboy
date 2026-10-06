@@ -129,7 +129,7 @@
 }
 
 :root {
-  /* The logical screen. Never responsive. Only the scale factor changes. */
+  /* Landscape defaults. Portrait hardware overrides its own viewport. */
   --screen-w: 480px;
   --screen-h: 320px;
   --safe: 12px; /* nothing touches the bezel */

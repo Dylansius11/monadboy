@@ -3,9 +3,9 @@ import type { ReactNode } from 'react'
 /**
  * The five type roles. Nothing else exists.
  *
- * Never 12px, never 20px, never 24px. A bitmap font at a non-integer multiple
- * resamples and the illusion dies in a way people feel without being able to
- * name it.
+ * Landscape uses the compact grid; portrait hardware overrides the same
+ * role tokens with native-sized Departure Mono type. No component picks a
+ * device-specific font size.
  */
 const ROLE = {
   micro: 'text-micro',

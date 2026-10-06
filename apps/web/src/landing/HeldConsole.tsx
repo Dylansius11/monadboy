@@ -67,7 +67,7 @@ export function HeldConsole({
         }}
       >
         <ConsoleInputProvider keyboard={false}>
-          <ConsoleBody wordmark={brand.CONSOLE_NAME} powered={powered} keyHints={false}>
+          <ConsoleBody wordmark={brand.CONSOLE_NAME} powered={powered}>
             {children}
           </ConsoleBody>
         </ConsoleInputProvider>
