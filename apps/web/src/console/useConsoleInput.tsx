@@ -71,6 +71,25 @@ export function useConsolePressed(): ReadonlySet<ConsoleIntent> {
   )
 }
 
+/**
+ * Lock the console's input while `paused` is true and the caller is mounted.
+ *
+ * For one modal that owns the keys and the screen (the rule book). While
+ * locked nothing reaches any screen from keyboard, touch or gamepad, held
+ * intents are dropped, and arrow keys and Space are left alone so the modal
+ * can scroll. Unlocks when `paused` turns false or the caller unmounts. One
+ * lock, deliberately: two modals locking at once would need a stack, and the
+ * console has exactly one such modal.
+ */
+export function useConsoleInputLock(paused: boolean) {
+  const store = useStore()
+  useEffect(() => {
+    if (!paused) return
+    store.setPaused(true)
+    return () => store.setPaused(false)
+  }, [store, paused])
+}
+
 /** Touch handlers for the on-screen controls. */
 export function useConsoleControls() {
   const store = useStore()

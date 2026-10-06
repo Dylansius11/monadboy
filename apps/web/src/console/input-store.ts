@@ -28,6 +28,14 @@ export interface InputStore {
   /** Touch and programmatic input enter here. */
   press: (intent: ConsoleIntent) => void
   release: (intent: ConsoleIntent) => void
+  /**
+   * Locks input for a modal that owns the keys and the screen, such as the
+   * rule book. Locking drops every held intent, so nothing stays "down" behind
+   * the modal. While locked, no source (keyboard, touch, gamepad) emits, and
+   * the keyboard handler leaves keys alone so arrows and Space can scroll the
+   * modal. Releases stay safe whatever the state.
+   */
+  setPaused: (paused: boolean) => void
   /** Attaches window listeners and gamepad polling. Returns a teardown. */
   attach: () => () => void
 }
@@ -41,6 +49,11 @@ export function createInputStore(): InputStore {
   // Replaced rather than mutated, so useSyncExternalStore sees a new reference
   // only when something actually changed.
   let pressed: ReadonlySet<ConsoleIntent> = EMPTY
+  let paused = false
+  // Shift is SELECT, and Shift is also how `?` is typed. SELECT therefore
+  // fires when Shift is released, and only if no other key was struck while it
+  // was down: Shift+/ must open the rule book without pressing SELECT first.
+  let shiftArmed = false
 
   function emit(intent: ConsoleIntent) {
     for (const handler of intentHandlers) handler(intent)
@@ -52,6 +65,7 @@ export function createInputStore(): InputStore {
   }
 
   function press(intent: ConsoleIntent) {
+    if (paused) return
     if (pressed.has(intent)) {
       // Already held. Only directions are allowed to fire again.
       if (REPEATABLE.has(intent)) emit(intent)
@@ -61,6 +75,13 @@ export function createInputStore(): InputStore {
     next.add(intent)
     setPressed(next)
     emit(intent)
+  }
+
+  function setPaused(next: boolean) {
+    if (paused === next) return
+    paused = next
+    shiftArmed = false
+    if (next && pressed.size > 0) setPressed(EMPTY)
   }
 
   function release(intent: ConsoleIntent) {
@@ -74,9 +95,22 @@ export function createInputStore(): InputStore {
     if (typeof window === 'undefined') return () => {}
 
     const onKeyDown = (e: KeyboardEvent) => {
+      // Locked: the keys belong to the modal. Not intercepted, so the arrows
+      // and Space scroll it instead of being swallowed by the console.
+      if (paused) return
+      if (e.key !== 'Shift') shiftArmed = false
       const intent = intentFromKey(e.key)
       if (!intent) return
       if (shouldPreventDefault(e.key)) e.preventDefault()
+
+      if (e.key === 'Shift') {
+        if (e.repeat || pressed.has(intent)) return
+        shiftArmed = true
+        const next = new Set(pressed)
+        next.add(intent)
+        setPressed(next)
+        return
+      }
 
       // The browser's own key repeat drives direction repeat, so the timing
       // matches the user's OS settings rather than a number we invented.
@@ -86,11 +120,19 @@ export function createInputStore(): InputStore {
 
     const onKeyUp = (e: KeyboardEvent) => {
       const intent = intentFromKey(e.key)
-      if (intent) release(intent)
+      if (!intent) return
+      if (e.key === 'Shift' && shiftArmed) {
+        shiftArmed = false
+        if (!paused) emit(intent)
+      }
+      release(intent)
     }
 
     // A held key with the window unfocused would otherwise stay held forever.
-    const onBlur = () => setPressed(EMPTY)
+    const onBlur = () => {
+      shiftArmed = false
+      setPressed(EMPTY)
+    }
 
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
@@ -161,6 +203,7 @@ export function createInputStore(): InputStore {
       window.removeEventListener('gamepadconnected', onConnect)
       window.removeEventListener('gamepaddisconnected', onDisconnect)
       if (frame) cancelAnimationFrame(frame)
+      shiftArmed = false
       setPressed(EMPTY)
     }
   }
@@ -177,6 +220,7 @@ export function createInputStore(): InputStore {
     getPressed: () => pressed,
     press,
     release,
+    setPaused,
     attach,
   }
 }
