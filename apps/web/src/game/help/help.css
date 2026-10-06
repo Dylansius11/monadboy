@@ -1,0 +1,208 @@
+/* The rule book. Scoped to .rulebook*: nothing here restyles a screen.
+
+   The dialog lives in the browser's top layer, so it is NOT inside the
+   console's scaled stage. It is real viewport pixels, which is the point:
+   Departure Mono is drawn at 11px (a multiple of its pixel grid) and 16px for
+   titles, at 360x640, 412x915 and a 480x320 desktop window alike. When the
+   content is taller than the window the DIALOG scrolls, so arrow keys, Space,
+   Page Up/Down and touch drag all work on whichever control has focus. */
+
+.rulebook-trigger {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px solid var(--color-edge);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-hard);
+  color: var(--color-ink);
+  font: 16px/24px var(--font-pixel);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.rulebook-trigger:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+/* A ring that reads on both the purple shell and the pale screen: dark ring,
+   with a light gap between it and the control. */
+.rulebook-trigger:focus-visible,
+.rulebook-close:focus-visible,
+.rulebook:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-panel);
+}
+
+.rulebook {
+  box-sizing: border-box;
+  width: min(480px, calc(100vw - 16px));
+  max-width: none;
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
+  margin: auto;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  border: 2px solid var(--color-edge);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-hard);
+  color: var(--color-ink);
+  font: 11px/16px var(--font-pixel);
+  /* The console shell disables selection; the book is for reading. */
+  user-select: text;
+  -webkit-user-select: text;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-dim) var(--color-sunk);
+}
+
+.rulebook::backdrop {
+  background: rgb(14 9 28 / 0.72);
+}
+
+.rulebook-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--color-edge);
+  background: var(--color-sunk);
+}
+
+.rulebook-heading {
+  min-width: 0;
+  flex: 1;
+}
+
+.rulebook-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.rulebook-screen {
+  margin: 0;
+  color: var(--color-ink-dim);
+  text-transform: uppercase;
+}
+
+.rulebook-tag {
+  flex: none;
+  padding: 0 4px;
+  border: 1px solid var(--color-edge);
+  background: var(--color-panel);
+  text-transform: uppercase;
+}
+
+.rulebook-close {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 2px solid var(--color-edge);
+  background: var(--color-panel);
+  color: var(--color-ink);
+  font: inherit;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.rulebook-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.rulebook-body p,
+.rulebook-body ul,
+.rulebook-body dl,
+.rulebook-body h3 {
+  margin: 0;
+}
+
+.rulebook-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rulebook-key {
+  display: grid;
+  grid-template-columns: fit-content(40%) 1fr;
+  gap: 12px;
+}
+
+.rulebook-key dt {
+  align-self: start;
+  padding: 0 4px;
+  background: var(--color-sunk);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.rulebook-key dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rulebook-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 12px;
+  list-style: square;
+}
+
+.rulebook-topic {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-edge-soft);
+}
+
+.rulebook-topic h3 {
+  color: var(--color-ink-dim);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.rulebook-map {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.rulebook-map th,
+.rulebook-map td {
+  padding: 4px;
+  border: 1px solid var(--color-edge-soft);
+  font-weight: 400;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.rulebook-map thead th {
+  background: var(--color-sunk);
+  text-transform: uppercase;
+}
+
+.rulebook-map tbody th {
+  text-transform: uppercase;
+}
