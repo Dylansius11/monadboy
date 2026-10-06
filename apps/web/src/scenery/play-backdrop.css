@@ -1,0 +1,28 @@
+.play-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #100b21;
+  isolation: isolate;
+}
+.play-city { position: absolute; top: 0; left: 0; image-rendering: pixelated; }
+.play-railway { position: absolute; left: 0; right: 0; top: 76%; }
+.play-train {
+  position: absolute;
+  width: calc(72px * var(--art-scale, 3));
+  height: calc(12px * var(--art-scale, 3));
+  left: -216px;
+  bottom: 0;
+  image-rendering: pixelated;
+  animation: city-train 48s linear infinite;
+}
+.console-stage > .console { z-index: 1; }
+.play-backdrop.is-paused .play-train { animation-play-state: paused; }
+@keyframes city-train {
+  0%, 20% { transform: translateX(0); }
+  65%, 100% { transform: translateX(var(--train-travel, 1800px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .play-train { animation: none; left: 8%; }
+}
