@@ -132,7 +132,7 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
 
   if (inspecting) {
     return (
-      <div className="bg-screen flex h-full w-full flex-col gap-2 p-2">
+      <div className="screen-inputs bg-screen flex h-full w-full flex-col gap-2 p-2">
         <PixelText role="title" upper>FIXTURE inputs</PixelText>
         <Panel className="flex flex-col gap-1">
           <PixelText role="micro">TESTNET simulation summary from the finished session, not chain fills.</PixelText>
@@ -154,12 +154,12 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
   const spriteAnimation = ANIMATION_BY_OUTCOME[outcome]
 
   return (
-    <div className="bg-screen flex h-full w-full flex-col gap-1 p-2">
+    <div className="screen-results bg-screen flex h-full w-full flex-col gap-1 p-2">
       {/* Title band. One row, not two: stacking SESSION OVER over the pair
           tag costs a whole extra title-role line height (24px) this screen
           does not have to spare, and reading them left to right loses
           nothing a beginner needs. */}
-      <div className="flex items-baseline justify-center gap-2">
+      <div className="results-header flex items-baseline justify-center gap-2">
         <PixelText role="title" upper>
           Session over
         </PixelText>
@@ -177,7 +177,7 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
           height budget without something getting clipped by the viewport's
           overflow:hidden. Side by side is what buys the room for the block
           that actually carries the never-hide-a-loss rule. */}
-      <div className="grid grid-cols-[96px_1fr] items-start gap-2">
+      <div className="results-money grid grid-cols-[96px_1fr] items-start gap-2">
         <div className="flex flex-col items-center gap-1">
           <Sprite
             character={characterId}
@@ -245,7 +245,7 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
           Meter, both bigger than the two rows under them: it is the only
           number here that measures a skill rather than a deposit size, and a
           profit-ranked leaderboard would just reward whoever put in most. */}
-      <div className="flex flex-col gap-1">
+      <div className="results-instruments flex flex-col gap-1">
         <div className="flex items-baseline justify-between">
           <PixelText role="body" upper>
             Time in range
@@ -299,7 +299,7 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
 
       {/* Footer, pinned to the bottom whatever the block above it needed.
           START opens the inputs view behind the numbers on this screen. */}
-      <div className="mt-auto flex items-center justify-between">
+      <div className="screen-footer mt-auto flex items-center justify-between">
         <PixelText role="micro" upper>
           A back to disks
         </PixelText>

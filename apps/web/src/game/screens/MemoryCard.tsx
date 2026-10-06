@@ -6,19 +6,15 @@ import { PixelText } from '../../ui'
 export interface MemoryCardProps {
   /** Non-null once a card is already in the slot. A returning player. */
   cardAddress: string | null
-  onInsert: () => void
+  onInsert: (method: 'insert' | 'new') => void
   onBack: () => void
+  fixture?: boolean
+  pending?: boolean
+  error?: string
+  onEject?: () => void
 }
 
-/**
- * The two ways in.
- *
- * Both land on the same fixture card today, which is why `onInsert` takes no
- * argument: the screen must not pretend to know which method was used when
- * neither one has actually run. Both rows exist anyway because the SHAPE is
- * what the sign-in wiring keeps, so the route can swap `onInsert` without this
- * file changing.
- */
+/** Returning players insert the same card; NEW CARD creates a different root. */
 const METHODS = ['INSERT CARD', 'NEW CARD'] as const
 
 /**
@@ -64,7 +60,9 @@ function shortAddress(address: string): string {
  * whose exact height carries no information absorb the slack removes the
  * guess, and a correct screen with empty space reads as unfinished.
  */
-export function MemoryCard({ cardAddress, onInsert, onBack }: MemoryCardProps) {
+export function MemoryCard({
+  cardAddress, onInsert, onBack, fixture = true, pending = false, error, onEject,
+}: MemoryCardProps) {
   const [index, setIndex] = useState(0)
   const inserted = cardAddress !== null
   // Once a card is in the slot only the first row remains, so the cursor is pinned to it.
@@ -75,8 +73,8 @@ export function MemoryCard({ cardAddress, onInsert, onBack }: MemoryCardProps) {
       onBack()
       return
     }
-    if (intent === 'A') {
-      onInsert()
+    if (intent === 'A' && !pending) {
+      onInsert(cursor === 0 ? 'insert' : 'new')
       return
     }
     if (intent === 'UP' || intent === 'DOWN') {
@@ -87,7 +85,7 @@ export function MemoryCard({ cardAddress, onInsert, onBack }: MemoryCardProps) {
   })
 
   return (
-    <div className="bg-screen flex h-full w-full flex-col gap-1 p-2">
+    <div className="screen-memory bg-screen flex h-full w-full flex-col gap-1 p-2">
       <CardArt inserted={inserted} />
 
       <div className="flex flex-col items-center">
@@ -97,11 +95,8 @@ export function MemoryCard({ cardAddress, onInsert, onBack }: MemoryCardProps) {
               ? `${brand.WALLET_UNIT} in`
               : `Insert ${brand.WALLET_UNIT}`}
           </PixelText>
-          {/* Honesty marker, the same one S6 carries: sign-in is not wired, so
-              both rows below land on a committed fixture card. Nobody watching
-              a demo should believe a real login just happened. */}
           <PixelText role="micro" tone="dim" upper>
-            Fixture
+            {fixture ? 'Fixture' : 'Testnet'}
           </PixelText>
         </div>
         <PixelText role="micro" tone="dim">
@@ -111,7 +106,7 @@ export function MemoryCard({ cardAddress, onInsert, onBack }: MemoryCardProps) {
         </PixelText>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="memory-methods flex flex-col gap-1">
         {METHODS.map((method, i) => (
           <MethodRow
             key={method}
@@ -124,11 +119,18 @@ export function MemoryCard({ cardAddress, onInsert, onBack }: MemoryCardProps) {
             hidden={inserted && i === 1}
             onSelect={() => {
               setIndex(i)
-              onInsert()
+              if (!pending) onInsert(i === 0 ? 'insert' : 'new')
             }}
           />
         ))}
       </div>
+      {pending && <PixelText role="body">Reading card. Complete the reader prompt.</PixelText>}
+      {error && <PixelText role="body" tone="loss">{error}</PixelText>}
+      {inserted && onEject && (
+        <button type="button" className="pressable border-edge bg-panel min-h-11 border p-2" onClick={onEject}>
+          <PixelText role="body" upper>Eject card</PixelText>
+        </button>
+      )}
 
       <div className="flex items-center justify-center gap-4">
         {REASSURANCES.map((fact) => (
@@ -165,7 +167,7 @@ export function MemoryCard({ cardAddress, onInsert, onBack }: MemoryCardProps) {
 function CardArt({ inserted }: { inserted: boolean }) {
   return (
     <div
-      className="border-edge bg-sunk relative flex min-h-0 flex-1 items-center justify-center overflow-hidden border"
+      className="memory-art border-edge bg-sunk relative flex min-h-0 flex-1 items-center justify-center overflow-hidden border"
       style={{ minHeight: 96 }}
     >
       {/* The slot the card goes into. A hard edge, so the card reads as

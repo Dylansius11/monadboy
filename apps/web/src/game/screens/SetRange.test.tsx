@@ -460,22 +460,17 @@ describe('the manual range editor', () => {
     expect(onConfirm).not.toHaveBeenCalled()
   })
 
-  it('clamps both editable edges and applies their bounded values', () => {
-    const { onChangeManualRange } = renderSetRange()
+  it.each([
+    { manualRange: { lowerPct: -90, upperPct: 10 }, upper: false, direction: 'LEFT' as const },
+    { manualRange: { lowerPct: -1, upperPct: 10 }, upper: false, direction: 'RIGHT' as const },
+    { manualRange: { lowerPct: -10, upperPct: 1 }, upper: true, direction: 'LEFT' as const },
+    { manualRange: { lowerPct: -10, upperPct: 400 }, upper: true, direction: 'RIGHT' as const },
+  ])('clamps $direction at the chosen edge boundary $manualRange', ({ manualRange, upper, direction }) => {
+    const { onChangeManualRange } = renderSetRange({ manualRange })
     press('SELECT')
-    for (let i = 0; i < 100; i += 1) press('LEFT')
-    press('A')
-    expect(onChangeManualRange).toHaveBeenLastCalledWith({ lowerPct: -90, upperPct: seededUpperPct })
-    press('SELECT')
-    for (let i = 0; i < 200; i += 1) press('RIGHT')
-    press('DOWN')
-    for (let i = 0; i < 200; i += 1) press('LEFT')
-    press('A')
-    expect(onChangeManualRange).toHaveBeenLastCalledWith({ lowerPct: -1, upperPct: 1 })
-    press('SELECT', 'DOWN')
-    for (let i = 0; i < 500; i += 1) press('RIGHT')
-    press('A')
-    expect(onChangeManualRange).toHaveBeenLastCalledWith({ lowerPct: -1, upperPct: 400 })
+    if (upper) press('DOWN')
+    press(direction, direction, direction, 'A')
+    expect(onChangeManualRange).toHaveBeenLastCalledWith(manualRange)
   })
 
 })

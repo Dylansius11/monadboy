@@ -110,7 +110,7 @@ export function DiskSelect({
   const emptySlots = Math.max(0, maxDisks - disks.length)
 
   return (
-    <div className="bg-screen flex h-full w-full flex-col gap-1 p-2">
+    <div className="screen-disks bg-screen flex h-full w-full flex-col gap-1 p-2">
       <div className="flex items-baseline justify-between">
         <div className="flex items-baseline gap-1">
           <PixelText role="title" upper>
@@ -132,7 +132,7 @@ export function DiskSelect({
         </PixelText>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-1">
+      <div className="disk-list flex min-h-0 flex-1 flex-col gap-1">
         {disks.map((disk, i) => (
           <DiskRow
             key={disk.diskId}
@@ -160,7 +160,7 @@ export function DiskSelect({
       {/* The console owns the key legend; a screen names the BUTTON. The pixel
           font has no confirmed down-triangle, so the vertical pair is spelled
           out rather than drawn. */}
-      <div className="flex items-center justify-between">
+      <div className="screen-footer flex items-center justify-between">
         <PixelText role="micro" upper>
           Move cursor
         </PixelText>
@@ -209,7 +209,7 @@ function DiskRow({
       type="button"
       onClick={onOpen}
       aria-current={focused ? 'true' : undefined}
-      className={`pressable border-edge flex min-h-0 flex-1 items-center gap-2 border px-1 text-left ${
+      className={`disk-row pressable border-edge flex min-h-0 flex-1 items-center gap-2 border px-1 text-left ${
         focused ? 'bg-sunk' : 'bg-panel'
       }`}
     >
@@ -222,7 +222,7 @@ function DiskRow({
         <span aria-hidden="true" className="bg-ink h-8 w-1 shrink-0" />
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="disk-information flex min-w-0 flex-1 flex-col">
         <div className="flex items-baseline gap-2">
           <PixelText role="micro" tone="dim" upper>
             Disk {slot}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { brand } from '../../config/brand'
 import { LadderError, mainnetMarkets } from '@monadboy/sdk'
@@ -36,10 +36,6 @@ const FINE_STEP = 5
  * where it comes from.
  */
 const TESTNET_TAKER_FEE_BPS = 30
-
-/** 480 screen less 8px of page padding on each side, the same measurement
- * InRange.tsx uses for its own full-bleed field. */
-const STRIP_WIDTH = 464
 
 /**
  * FLOORS, not heights. The strip takes whatever the screen has left over
@@ -155,6 +151,12 @@ export function SetRange({
   const [focusRow, setFocusRow] = useState<FocusRow>('amount')
   const [manualOpen, setManualOpen] = useState(false)
   const [inspecting, setInspecting] = useState(false)
+  const body = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = body.current
+    if (!el?.clientHeight) return // display: contents on landscape
+    el.querySelector<HTMLElement>('[data-focused="true"]')?.scrollIntoView({ block: 'nearest' })
+  }, [focusRow])
   /**
    * Where the cursor sits INSIDE the width row, which is not the same thing
    * as the width in force.
@@ -333,7 +335,7 @@ export function SetRange({
 
   if (inspecting) {
     return (
-      <div className="bg-screen flex h-full w-full flex-col gap-2 p-2">
+      <div className="screen-inputs bg-screen flex h-full w-full flex-col gap-2 p-2">
         <PixelText role="title" upper>FIXTURE inputs</PixelText>
         <Panel className="flex flex-col gap-1">
           <PixelText role="micro">TESTNET funds do not move here. Quote token valued at $1.</PixelText>
@@ -366,12 +368,12 @@ export function SetRange({
   }
 
   return (
-    <div className="bg-screen relative flex h-full w-full flex-col gap-1 p-2">
+    <div className="screen-range bg-screen relative flex h-full w-full flex-col gap-1 p-2">
       {/* Header. Body weight, not title: this screen has three controls, a
           picture, and a funding preview to fit inside 320px, and a 24px title
           row buys eight pixels of screen name at the cost of eight pixels of
           the thing the screen is for. InRange.tsx makes the same trade. */}
-      <div className="flex items-baseline justify-between">
+      <div className="range-header flex items-baseline justify-between">
         <div className="flex items-baseline gap-1">
           <PixelText role="body" upper>
             Set your range
@@ -392,6 +394,7 @@ export function SetRange({
           {pool.tokenX.symbol} / {pool.tokenY.symbol}
         </PixelText>
       </div>
+      <div ref={body} className="screen-scroll range-body">
 
       {/* HOW MUCH and HOW WIDE share one row. Stacked, the blocks plus the
           range picture plus the funding preview come to roughly 460px inside a
@@ -405,9 +408,10 @@ export function SetRange({
 
           The cursor bar plus a background fill both mark focus, because a ring
           on an 8px label reads as "a slightly bolder label", not as a cursor. */}
-      <div className="grid grid-cols-[auto_1fr] gap-2">
+      <div className="range-choices grid grid-cols-[auto_1fr] gap-2">
         <div
-          className={`flex flex-col gap-1 p-1 ${focusRow === 'amount' ? 'bg-sunk' : ''}`}
+          className={`range-amount-column flex flex-col gap-1 p-1 ${focusRow === 'amount' ? 'bg-sunk' : ''}`}
+          data-focused={focusRow === 'amount'}
         >
           <div className="flex items-center gap-1">
             <FocusCursor active={focusRow === 'amount'} />
@@ -427,7 +431,7 @@ export function SetRange({
               of a budget with no margin to give. Same size, same prominence,
               one row fewer, and it reads better anyway: the number lands where
               the chip that set it is. */}
-          <div className="flex items-baseline gap-1">
+          <div className="range-amount flex items-baseline gap-1">
             {PRESETS.map((preset) => (
               <Chip
                 key={preset}
@@ -448,6 +452,7 @@ export function SetRange({
 
         <div
           className={`flex flex-col gap-1 p-1 ${focusRow === 'width' ? 'bg-sunk' : ''}`}
+          data-focused={focusRow === 'width'}
         >
           <div className="flex items-center gap-1">
             <FocusCursor active={focusRow === 'width'} />
@@ -498,7 +503,7 @@ export function SetRange({
                 prints the edges instead, because the same eight pixels crediting
                 the player's own number to the pool's volatility would be worse
                 than saying nothing. */}
-            <div className="h-3">
+            <div className="range-width-caption h-3">
               <PixelText role="micro" tone="dim">
                 {manualRange
                   ? `manual  ${pct(manualRange.lowerPct, 0)} / +${pct(manualRange.upperPct, 0)}`
@@ -532,7 +537,7 @@ export function SetRange({
            `min-h-0` is load bearing. A flex item defaults to `min-height:
            auto`, which refuses to shrink below its content, and that is
            precisely how a "flexible" row overflows its parent anyway. */
-        <div className="flex min-h-0 flex-1 flex-col gap-1">
+        <div className="range-picture flex min-h-0 flex-1 flex-col gap-1">
           {/* The two edge prices, with the strip's colour key between them.
               The key belongs on the same side of the picture as the two
               numbers it colours: without it the strip is a two-tone bar and
@@ -575,7 +580,7 @@ export function SetRange({
           <div
             className="flex min-h-0 flex-1 flex-col"
             style={{
-              width: STRIP_WIDTH,
+              width: '100%',
               minHeight: STRIP_MIN_HEIGHT + NOW_MARKER_HEIGHT,
             }}
           >
@@ -593,8 +598,8 @@ export function SetRange({
               words, in the same wording the manual editor uses, not silently
               substituted. */}
           <div
-            className="flex items-baseline justify-between gap-2"
-            style={{ width: STRIP_WIDTH }}
+            className="range-caption flex items-baseline justify-between gap-2"
+            style={{ width: '100%' }}
           >
             <PixelText role="micro" tone="dim" className="tabular-nums">
               {pct(range.plan.step * 100, 2)} steps, {range.plan.levels} levels per side
@@ -619,7 +624,7 @@ export function SetRange({
           two kept under ~55 characters make both structurally impossible
           rather than merely usually-fine. p-1, not p-2: the panel has to fit
           inside a budget that is already tight. */}
-      <Panel className="flex flex-col gap-1 p-1">
+      <Panel className="range-funding flex flex-col gap-1 p-1">
         <div className="flex items-baseline gap-1 whitespace-nowrap">
           <PixelText role="micro" tone="dim" upper>
             You will hold
@@ -649,7 +654,8 @@ export function SetRange({
           caption sits on the toggle's own row, because a second row for it
           costs the same 16px as a row of the range picture. */}
       <div
-        className={`flex items-center gap-2 p-1 ${focusRow === 'autopilot' ? 'bg-sunk' : ''}`}
+        className={`range-autopilot flex items-center gap-2 p-1 ${focusRow === 'autopilot' ? 'bg-sunk' : ''}`}
+        data-focused={focusRow === 'autopilot'}
       >
         <FocusCursor active={focusRow === 'autopilot'} />
         <Toggle
@@ -661,6 +667,7 @@ export function SetRange({
           re-arms after every fill. re-centering is manual and costs a swap.
         </PixelText>
       </div>
+      </div>
 
       {/* Footer. Bare text, the same shape as every other screen's key legend:
           bordered boxes would make this one screen's footer look like a
@@ -670,7 +677,7 @@ export function SetRange({
 
           Button name, then action. The KEY each button answers to is the
           console shell's job, never a screen's. */}
-      <div className="grid grid-cols-3 items-center gap-1">
+      <div className="screen-footer grid grid-cols-3 items-center gap-1">
         {/* The one slot on this screen that rewrites itself, and it has to.
             A means CONFIRM everywhere except on the MANUAL chip, where it
             opens the editor, and a key that quietly means two things is how a
@@ -867,7 +874,7 @@ function ManualRangeEditor({
   const highPrice = preview?.plan.high ?? mid * (1 + end / 100)
 
   return (
-    <div className="bg-screen absolute inset-0 flex flex-col gap-1 p-2">
+    <div className="range-editor bg-screen absolute inset-0 flex flex-col gap-1 p-2">
       <PixelText role="body" upper>
         Manual range FIXTURE
       </PixelText>
@@ -898,7 +905,7 @@ function ManualRangeEditor({
         <div className="flex min-h-0 flex-1 flex-col gap-1">
           <div
             className="flex min-h-0 flex-1 flex-col"
-            style={{ width: STRIP_WIDTH }}
+            style={{ width: '100%' }}
           >
             <RangeStrip
               plan={preview.plan}
@@ -909,7 +916,7 @@ function ManualRangeEditor({
               leftPct={((mid - lowPrice) / (highPrice - lowPrice)) * 100}
             />
           </div>
-          <div style={{ width: STRIP_WIDTH }}>
+          <div style={{ width: '100%' }}>
             <PixelText role="micro" tone="dim" className="tabular-nums">
               {preview.plan.clamped
                 ? 'wider than one transaction fits, so this is narrower.'
@@ -923,7 +930,7 @@ function ManualRangeEditor({
           each slot names its button. A fourth child in this grid would wrap
           to a second row underneath the other three, which reads as a broken
           toolbar. */}
-      <div className="grid grid-cols-3 items-center gap-1">
+      <div className="screen-footer grid grid-cols-3 items-center gap-1">
         <FooterButton
           label="A apply"
           onClick={() => { if (preview) onApply({ lowerPct: start, upperPct: end }) }}
@@ -987,9 +994,9 @@ function EditRowLine({
  */
 function NowMarker({ leftPct }: { leftPct: number }) {
   return (
-    <div className="relative h-3 shrink-0" style={{ width: STRIP_WIDTH }}>
+    <div className="range-marker relative h-3 shrink-0" style={{ width: '100%' }}>
       <span
-        className="absolute top-0 flex h-3 -translate-x-1/2 items-center"
+        className="range-marker-label absolute top-0 flex h-3 -translate-x-1/2 items-center"
         style={{ left: `${leftPct}%` }}
       >
         <PixelText role="micro" tone="dim">
