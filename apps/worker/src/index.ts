@@ -1,0 +1,251 @@
+import { Database } from 'bun:sqlite'
+import { mkdirSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { createPublicClient, http } from 'viem'
+import type { Address } from 'viem'
+import { mainnetProfile, monad, monadTestnet, scorePool } from '@monadboy/sdk'
+import manifest from '../package.json'
+import { createApp } from './app'
+import type { HealthSections, RouteModule } from './app'
+import { createBirthResolver } from './chain/market-births'
+import { createBookReader } from './chain/l2-book'
+import { createDirectFillSource } from './chain/fill-source'
+import {
+  createHypersyncFetcher,
+  createRpcFetcher,
+} from './chain/trade-fetchers'
+import { createTradeSource } from './chain/trade-source'
+import { createTransferProbe } from './chain/transfer-check'
+import { migrate } from './db/migrate'
+import { parseEnv } from './env'
+import { faucetSection } from './jobs/faucet-topup'
+import { createLeaderboardJob, leaderboardSection } from './jobs/leaderboard'
+import {
+  createMidSampler,
+  createMidState,
+  SOURCE_MARKET,
+  sourceSection,
+  testnetSection,
+} from './jobs/mid-sampler'
+import {
+  createMirrorJob,
+  createMirrorState,
+  mirrorSection,
+} from './jobs/mirror'
+import { createScheduler } from './jobs/scheduler'
+import type { JobSpec } from './jobs/scheduler'
+import { createTrackerSnapshot, trackerSection } from './jobs/tracker-snapshot'
+import { treasurySection } from './jobs/treasury-monitor'
+import { log } from './logger'
+import { loadTestnetMarkets } from './markets'
+import { createOperations } from './operations'
+import { dripRoute } from './routes/drip'
+import { leaderboardRoute } from './routes/leaderboard'
+import { midRoute } from './routes/mid'
+import { trackerRoute } from './routes/tracker'
+
+// [V] Kuru mainnet MarginAccount holds deposited tokens: the holder for sellability eth_calls (cast code: 141 bytes).
+const MAINNET_MARGIN: Address = '0x2A68ba1833cDf93fa9Da1EEbd7F46242aD8E90c5'
+const now = Date.now
+
+const env = parseEnv(Bun.env)
+mkdirSync(dirname(resolve(env.SQLITE_PATH)), { recursive: true })
+const db = new Database(env.SQLITE_PATH, { create: true })
+migrate(db)
+
+const mainnet = createPublicClient({
+  chain: monad,
+  transport: http(env.MAINNET_RPC_URL, { timeout: 8_000, retryCount: 0 }),
+})
+// getLogs over 100 blocks and bisection reads are slower than book reads: longer budget, separate client.
+const mainnetHistory = createPublicClient({
+  chain: monad,
+  transport: http(env.MAINNET_RPC_URL, { timeout: 25_000, retryCount: 0 }),
+})
+const testnet = createPublicClient({
+  chain: monadTestnet,
+  transport: http(env.TESTNET_RPC_URL, { timeout: 8_000, retryCount: 0 }),
+})
+const markets = loadTestnetMarkets(env.MARKETS_JSON)
+
+const mid = createMidState()
+const mirrorState = createMirrorState()
+const ops = await createOperations({ db, env, client: testnet, markets })
+
+const fetcher = env.HYPERSYNC_API_TOKEN
+  ? createHypersyncFetcher({
+      url: env.HYPERSYNC_URL,
+      token: env.HYPERSYNC_API_TOKEN,
+    })
+  : createRpcFetcher(mainnetHistory)
+const trades = createTradeSource({
+  db,
+  client: mainnetHistory,
+  fetcher,
+  // Public RPC caps getLogs at 100 blocks [V]. HyperSync pages server-side and meters 1000 units per
+  // request against 15000 per minute [V], so parallel chunks only burn the budget: one chunk at a time.
+  chunkBlocks: env.HYPERSYNC_API_TOKEN ? 25_000n : 100n,
+  concurrency: env.HYPERSYNC_API_TOKEN ? 1 : env.TRACKER_LOG_CONCURRENCY,
+})
+const births = createBirthResolver({ db, client: mainnetHistory })
+// SAFETY and HEAT come from the shared SDK model (mainnet profile), so the web and worker never fork the maths.
+const tracker = createTrackerSnapshot({
+  db,
+  readBook: createBookReader(mainnet),
+  probe: createTransferProbe(mainnet, MAINNET_MARGIN),
+  trades,
+  births: births.births,
+  scorer: (input) => scorePool(input, mainnetProfile),
+  testnetMarkets: markets,
+  sourceSymbol: SOURCE_MARKET,
+})
+const fills = createDirectFillSource({
+  db,
+  client: testnet,
+  markets,
+  margin: env.TESTNET_MARGIN_ADDRESS,
+  registry: env.TESTNET_REGISTRY_ADDRESS,
+  startBlock: env.TESTNET_START_BLOCK,
+})
+
+const scheduler = createScheduler()
+const trackerJob: JobSpec = {
+  name: 'tracker-snapshot',
+  intervalMs: 900_000,
+  timeoutMs: 180_000,
+  run: tracker,
+}
+const jobs: JobSpec[] = [
+  {
+    name: 'mid-sampler',
+    intervalMs: 5_000,
+    timeoutMs: 20_000,
+    run: createMidSampler({
+      db,
+      state: mid,
+      mainnet,
+      testnet,
+      testnetMarkets: markets,
+    }),
+  },
+  {
+    name: 'trade-source',
+    intervalMs: 30_000,
+    timeoutMs: 120_000,
+    run: async () => {
+      const covered = trades.coverage().complete
+      await trades.refresh()
+      // Volume, concentration and volatility only exist once the 24h window is covered: snapshot at once.
+      if (!covered && trades.coverage().complete)
+        void scheduler.runOnce(trackerJob)
+    },
+  },
+  {
+    name: 'market-births',
+    intervalMs: 300_000,
+    timeoutMs: 300_000,
+    run: async () => {
+      const before = births.births().size
+      await births.resolve()
+      if (births.births().size > before) void scheduler.runOnce(trackerJob)
+    },
+  },
+  trackerJob,
+  {
+    name: 'leaderboard',
+    intervalMs: 60_000,
+    timeoutMs: 120_000,
+    run: createLeaderboardJob({ db, source: fills }),
+  },
+]
+if (ops.executor)
+  jobs.push({
+    name: 'mirror',
+    intervalMs: 5_000,
+    timeoutMs: 60_000,
+    run: createMirrorJob({
+      db,
+      mid,
+      state: mirrorState,
+      executor: ops.executor,
+      maxStepNotional: env.MIRROR_MAX_STEP_NOTIONAL,
+      deviationThreshold: env.MIRROR_DEVIATION_THRESHOLD,
+    }),
+  })
+if (ops.topup)
+  jobs.push({
+    name: 'faucet-topup',
+    intervalMs: 60_000,
+    timeoutMs: 120_000,
+    run: ops.topup.tick,
+  })
+if (ops.monitor)
+  jobs.push({
+    name: 'treasury-monitor',
+    intervalMs: 30_000,
+    timeoutMs: 30_000,
+    run: ops.monitor.tick,
+  })
+
+const sections: HealthSections = {
+  source: sourceSection(mid, now),
+  testnet: testnetSection(mid, now),
+  mirror: mirrorSection(mirrorState, ops.execution, now),
+  tracker: trackerSection(db, trades, now),
+  treasury: treasurySection(
+    ops.monitor,
+    { mon: env.TREASURY_MIN_MON, ausd: env.TREASURY_MIN_AUSD },
+    now,
+  ),
+  faucet: faucetSection(ops.topup, now),
+  drip: () => ({ value: ops.dripStatus }),
+  leaderboard: leaderboardSection(
+    db,
+    markets.length ? 'direct-logs' : 'not-configured',
+    now,
+  ),
+  // Envio is wired in Phase 8; the URL is only reported, never queried.
+  envio: () => ({
+    value: {
+      status: env.ENVIO_GRAPHQL_URL ? 'configured-unqueried' : 'not-configured',
+      lagMs: null,
+    },
+  }),
+}
+const routes: RouteModule[] = [
+  midRoute(mid, now),
+  trackerRoute(db, now),
+  leaderboardRoute(db, now),
+  dripRoute(ops.drip),
+]
+const app = createApp({
+  origin: env.APP_ORIGIN,
+  version: manifest.version,
+  sections,
+  jobs: () => scheduler.status,
+  routes,
+  now,
+})
+
+const server = Bun.serve({
+  hostname: env.WORKER_BIND,
+  port: env.WORKER_PORT,
+  fetch: app.fetch,
+})
+log('worker.started', {
+  host: env.WORKER_BIND,
+  port: server.port,
+  version: manifest.version,
+  execution: ops.execution,
+  jobs: jobs.map((job) => job.name),
+})
+scheduler.start(jobs)
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    scheduler.stop()
+    void server.stop(true)
+    // In-flight reads may still touch SQLite; closing the process closes it.
+    process.exit(0)
+  })
+}
