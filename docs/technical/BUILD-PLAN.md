@@ -10,7 +10,7 @@ Read a task as `box + task ID + deliverable + proof`. `[x]` means the named deli
 
 As of **2026-10-07 local / 2026-10-06 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCKERS.md); user-facing asks are mirrored in the external handoff.
 
-**Latest integrated unit:** feat(landing): introduce the console and playable cast. Proof: integrated working-tree `bun run verify` passed web 524, SDK 146 and worker 118 tests, typecheck and lint; `forge test` passed 17 and `forge snapshot --check` passed. Native runtime evidence and remaining external gates are recorded below.
+**Latest integrated unit:** feat(landing): explain real mechanics and development illustrations. Proof: integrated working-tree `bun run verify` passed web 524, SDK 146 and worker 118 tests, typecheck and lint; `forge test` passed 17 and `forge snapshot --check` passed. Native runtime evidence and remaining external gates are recorded below.
 
 | Phase | Status | Done/Total tasks | Next action | Blocker |
 |---|---|---|---|---|
