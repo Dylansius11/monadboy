@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
-import { skyline, stars } from './skyline'
-import type { Building, CityWindow, LayerName } from './skyline'
+import { skyline, stars } from '../../scenery/skyline'
+import type { Building, CityWindow, LayerName } from '../../scenery/skyline'
 
 /**
  * The night city, drawn once per resize at art resolution and then only

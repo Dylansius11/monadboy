@@ -1,5 +1,5 @@
 /**
- * The city behind the landing page, generated rather than drawn.
+ * The city shared by the landing and the play backdrop.
  *
  * Every unit here is one art pixel. The canvas draws at that resolution and
  * CSS scales it up with `image-rendering: pixelated`, so the city stays on
