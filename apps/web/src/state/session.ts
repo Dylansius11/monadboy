@@ -1,8 +1,8 @@
 /**
  * What the player has chosen so far, and nothing else.
  *
- * This store holds choices, not live pool or position data. Screens use
- * fixtures; Kuru, Mera and worker reads are wired in Phase 7 (see BUILD-PLAN).
+ * This store holds choices, not live pool or position data. Runtime reads stay
+ * in the card/shelf closures and worker query cache; fixtures are explicit dev-only.
  * Caching those reads here would create a second version of the truth.
  *
  * Everything is defaulted, so any screen can be opened directly at its URL and
@@ -79,6 +79,8 @@ export interface SessionState {
   lastRun: RunSummary | null
 
   insertCard: (cardAddress: string) => void
+  /** The card left the slot: its address and the disk opened from it go with it. */
+  ejectCard: () => void
   chooseDifficulty: (difficulty: Difficulty, godMode?: boolean) => void
   setAmount: (amount: number) => void
   setWidth: (width: RangeWidth) => void
@@ -102,6 +104,7 @@ export const useSession = create<SessionState>((set) => ({
   lastRun: null,
 
   insertCard: (cardAddress) => set({ cardAddress }),
+  ejectCard: () => set({ cardAddress: null, diskId: null }),
   chooseDifficulty: (difficulty, godMode = false) =>
     // GOD MODE is only reachable from HARD, so it cannot survive a downgrade.
     set({

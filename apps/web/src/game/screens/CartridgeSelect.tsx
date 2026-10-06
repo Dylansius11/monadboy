@@ -16,7 +16,14 @@ export interface CartridgeSelectProps {
   disk: SaveDisk | undefined
   cartridges: Array<Cartridge>
   onInsert: (cartridgeId: string) => void
+  /** Opens the leaderboard: a place of its own, not a cartridge. */
+  onLeaderboard: () => void
   onBack: () => void
+  /**
+   * Whether the cartridge list and disk are development fixtures. True by
+   * default so forgetting it can only over-label, never hide a fixture.
+   */
+  fixture?: boolean
 }
 
 /**
@@ -43,7 +50,9 @@ export function CartridgeSelect({
   disk,
   cartridges,
   onInsert,
+  onLeaderboard,
   onBack,
+  fixture = true,
 }: CartridgeSelectProps) {
   const [index, setIndex] = useState(0)
   const current = cartridges[index]
@@ -66,6 +75,10 @@ export function CartridgeSelect({
       onBack()
       return
     }
+    if (intent === 'START') {
+      onLeaderboard()
+      return
+    }
     if (intent === 'A') {
       if (index < cartridges.length && !current.locked) onInsert(current.id)
       return
@@ -79,16 +92,18 @@ export function CartridgeSelect({
   })
 
   return (
-    <div className="bg-screen flex h-full w-full flex-col gap-1 p-2">
+    <div className="screen-cartridges bg-screen flex h-full w-full flex-col gap-1 p-2">
       <div className="flex items-baseline justify-between">
         <div className="flex items-baseline gap-1">
           <PixelText role="title" upper>
             Select cartridge
           </PixelText>
-          {/* The cartridge list is a committed fixture, so the screen says so. */}
-          <PixelText role="micro" tone="dim" upper>
-            Fixture
-          </PixelText>
+          {/* Fixture builds label the committed cartridge list. */}
+          {fixture ? (
+            <PixelText role="micro" tone="dim" upper>
+              Fixture
+            </PixelText>
+          ) : null}
         </div>
         <PixelText role="micro" tone="dim" upper>
           {disk ? `Disk ${disk.diskId}: ${disk.name}` : 'No disk'}
@@ -104,7 +119,7 @@ export function CartridgeSelect({
           bearing: a flex item defaults to `min-height: auto` and will refuse
           to shrink below its content, which is how a flexible row overflows
           its parent anyway. */}
-      <div className="flex min-h-0 flex-1 items-stretch gap-2">
+      <div className="cartridge-shelf flex min-h-0 flex-1 items-stretch gap-2">
         {cartridges.map((cart, i) => (
           <CartridgeShell
             key={cart.id}
@@ -130,13 +145,23 @@ export function CartridgeSelect({
           did. The console owns the key legend; this screen only names the
           button. ◄► and not ◀▶: the pixel font does not map the
           pointing-triangle pair the wireframe uses. */}
-      <div className="mt-auto flex items-center justify-between">
+      <div className="screen-footer mt-auto flex items-center justify-between">
         <PixelText role="micro" upper>
           {'◄►'} Select
         </PixelText>
         <PixelText role="micro" upper>
           A Insert
         </PixelText>
+        <button
+          type="button"
+          aria-label="Open leaderboard"
+          onClick={onLeaderboard}
+          className="pressable"
+        >
+          <PixelText role="micro" upper>
+            Start Ranks
+          </PixelText>
+        </button>
         <PixelText role="micro" upper>
           B Back
         </PixelText>
@@ -176,7 +201,7 @@ function CartridgeShell({
       onClick={() => onActivate(index)}
     >
       <div
-        className={`border-edge flex min-h-0 flex-1 flex-col items-center justify-center gap-1 border-2 p-1 ${
+        className={`cartridge-art border-edge flex min-h-0 flex-1 flex-col items-center justify-center gap-1 border-2 p-1 ${
           cartridge.locked ? 'bg-panel border-dashed' : 'bg-panel shadow-hard'
         }`}
         // The floor the shelf stops giving ground at. Below roughly this, a

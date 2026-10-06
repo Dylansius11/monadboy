@@ -115,7 +115,7 @@ export function GodModeGate({ onConfirm, onCancel }: GodModeGateProps) {
 
   return (
     
-    <div className="bg-alarm flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center">
+    <div className="godmode-gate bg-alarm flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center">
       
       <PixelText role="title" upper>
         {'†'}&nbsp;&nbsp;G O D&nbsp;&nbsp;M O D E&nbsp;&nbsp;{'†'}

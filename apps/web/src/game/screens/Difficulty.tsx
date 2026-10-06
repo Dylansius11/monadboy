@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { gatesFor, mainnetProfile } from '@monadboy/sdk'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { characters } from '../../config/brand'
 import { fixtureGates, passingCount, scoredPools } from '../fixtures'
@@ -21,6 +22,10 @@ export interface DifficultyProps {
   onChange: (difficulty: DifficultyTier) => void
   onConfirm: (difficulty: DifficultyTier, godMode: boolean) => void
   onBack: () => void
+  fixture?: boolean
+  pending?: boolean
+  error?: string
+  preview?: { counts: Record<DifficultyTier, number>; total: number; source: string }
 }
 
 /** The Monanimal tied to each tier. Kept local rather than shared: the
@@ -99,6 +104,10 @@ export function Difficulty({
   onChange,
   onConfirm,
   onBack,
+  fixture = true,
+  pending = false,
+  error,
+  preview,
 }: DifficultyProps) {
   const [focus, setFocus] = useState<Focus>('tier')
   // GOD MODE is a local commitment, not the session's live value: nothing in
@@ -108,6 +117,13 @@ export function Difficulty({
   // with GOD MODE already chosen shows it chosen.
   const [godModeOn, setGodModeOn] = useState(godMode)
   const [overlayOpen, setOverlayOpen] = useState(false)
+  const body = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = body.current
+    if (!el?.clientHeight) return
+    el.querySelector<HTMLElement>(focus === 'godmode' ? '[role="option"]' : '.difficulty-cast')
+      ?.scrollIntoView({ block: 'nearest' })
+  }, [focus])
 
   // GOD MODE cannot survive a downgrade off HARD. `session.ts`'s
   // `chooseDifficulty` enforces the same rule at the store; this is the
@@ -120,7 +136,7 @@ export function Difficulty({
     }
   }, [difficulty])
 
-  const gates = fixtureGates(difficulty)
+  const gates = fixture ? fixtureGates(difficulty) : gatesFor(difficulty, mainnetProfile)
   const description = DESCRIPTIONS[difficulty]
 
   function activateGodMode() {
@@ -136,6 +152,7 @@ export function Difficulty({
   }
 
   useConsoleIntent((intent) => {
+    if (pending) return
     // The overlay has its own subscriber and its own B and A meanings. Both
     // handlers fire on every intent (the input store fans out to every
     // subscriber), so this screen has to go silent while the overlay is open
@@ -179,28 +196,35 @@ export function Difficulty({
        five row gate readout, a count strip, and a control row. The viewport
        clips silently at 320, so a gap that is merely generous is a footer
        nobody ever sees. */
-    <div className="bg-screen relative flex h-full w-full flex-col gap-1 p-2">
+    <div className="screen-difficulty bg-screen relative flex h-full w-full flex-col gap-1 p-2">
       <div className="flex items-baseline justify-between">
         <PixelText role="title" upper>
           Choose your Monanimal
         </PixelText>
-        {/* The gate numbers below are committed fixtures, so the screen says so. */}
         <PixelText role="micro" tone="dim" upper>
-          FIXTURE
+          {fixture ? 'FIXTURE' : 'TESTNET'}
         </PixelText>
       </div>
+      <div ref={body} className="screen-scroll difficulty-body">
 
       {/* The three characters. The selected one is the biggest thing on the
           screen at 64px; the other two are 32, `Sprite`'s only other allowed
           size. That size jump, not a ring, is what reads as "this one is
           chosen" from across a phone screen. */}
-      <div className="flex items-end justify-between gap-1">
+      <div className="difficulty-cast flex items-end justify-between gap-1">
         {TIER_ORDER.map((tier) => {
           const characterId = CHARACTER_BY_DIFFICULTY[tier]
           const character = characters[characterId]
           const selected = tier === difficulty
           return (
-            <div key={tier} className="flex flex-1 flex-col items-center gap-1">
+            <button
+              type="button"
+              key={tier}
+              aria-label={`Choose ${character.label}, ${character.tier}`}
+              aria-pressed={selected}
+              onClick={() => { setFocus('tier'); onChange(tier) }}
+              className="difficulty-choice flex flex-1 flex-col items-center gap-1"
+            >
               <Sprite
                 character={characterId}
                 animation="idle"
@@ -215,7 +239,7 @@ export function Difficulty({
                   and the tier already gets a column of its own in the count
                   strip below. */}
               <div
-                className={`flex items-baseline gap-1 px-2 py-1 ${
+                className={`difficulty-label flex items-baseline gap-1 px-2 py-1 ${
                   selected ? 'bg-accent' : ''
                 }`}
               >
@@ -230,28 +254,27 @@ export function Difficulty({
                   {character.tier}
                 </PixelText>
               </div>
-            </div>
+            </button>
           )
         })}
       </div>
 
       {/* The description. Plain sentences, no jargon, from the keyed table
           above so a new tier is a data edit and not a JSX branch. */}
-      <div className="border-edge bg-panel flex flex-col border p-1">
+      <div className="difficulty-description border-edge bg-panel flex flex-col border p-1">
         <PixelText role="body">{description.tagline}</PixelText>
         <PixelText role="micro" tone="dim">
           {description.body}
         </PixelText>
       </div>
 
-      {/* THE LIVE GATE READOUT. Every value is `fixtureGates(difficulty)`
-          read back onto the screen, never a literal: tune `thresholds.ts`
-          and this table moves with it.
+      {/* Gate numbers come from the selected shared SDK profile, or the
+          explicitly marked development fixture profile.
 
           No gap between rows. Five 12px lines stacked flush read as a table,
           which is what they are, and 4px of air between each would spend 16px
           separating rows that a right-aligned value column already separates. */}
-      <div className="border-edge bg-sunk flex flex-col border p-1">
+      <div className="difficulty-gates border-edge bg-sunk flex flex-col border p-1">
         {gateRows(gates).map((row) => (
           <div
             key={row.label}
@@ -275,26 +298,31 @@ export function Difficulty({
           all sit on a single 12px baseline, because a 5-segment meter is 8px
           tall and giving it a row of its own would triple the strip's height
           to say nothing more. */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="difficulty-counts flex items-center justify-between gap-2">
         {TIER_ORDER.map((tier) => {
-          const passing = passingCount(tier, false)
+          const passing = fixture ? passingCount(tier, false) : preview?.counts[tier]
+          const total = fixture ? TOTAL_POOLS : preview?.total
           const selected = tier === difficulty
           return (
             <div key={tier} className="flex flex-1 items-center gap-1">
               <PixelText role="micro" tone={selected ? 'ink' : 'dim'} upper>
                 {characters[CHARACTER_BY_DIFFICULTY[tier]].tier}
               </PixelText>
-              <Meter value={passing} max={TOTAL_POOLS} segments={5} />
-              {/* The denominator is not decoration. "14 pools passed" with
-                  nothing to divide it by is a number with no shape; "14 of
-                  24" is evidence a filter rejected ten. */}
+              {passing !== undefined && total !== undefined && <Meter value={passing} max={total} segments={5} />}
               <PixelText role="micro" tone="dim" className="tabular-nums">
-                {passing} of {TOTAL_POOLS}
+                {passing === undefined ? 'not read' : `${passing} of ${total}`}
               </PixelText>
             </div>
           )
         })}
       </div>
+      {!fixture && <details className="text-micro">
+        <summary className="pressable min-h-11">Open checks and count source</summary>
+        <p>Checks: shared SDK mainnet profile. Threshold calibration is not yet measured.</p>
+        <p>{preview?.source ?? 'No worker snapshot has been read. Counts are unavailable, not zero.'}</p>
+      </details>}
+      {pending && <PixelText role="micro">Saving your choice to card. Wait for confirmation.</PixelText>}
+      {error && <PixelText role="micro" tone="loss">{error}</PixelText>}
 
       {/* GOD MODE. A modifier on HARD, never a fourth tier: disabled and
           dimmed on the other two, with the reason printed next to it rather
@@ -309,11 +337,12 @@ export function Difficulty({
           hard only
         </PixelText>
       </Row>
+      </div>
 
       {/* Footer, pinned to the bottom edge whatever the content above it did.
           The console owns the key legend: this screen names the BUTTON, never
           the key it happens to be bound to on a keyboard. */}
-      <div className="mt-auto flex items-center justify-between">
+      <div className="screen-footer mt-auto flex items-center justify-between">
         {/* U+25C4 and U+25BA, not U+25C0 and U+25B6. The pixel font does not
             map the pointing-triangle pair, so the obvious glyphs render as two
             tofu boxes on the first row a player reads. */}

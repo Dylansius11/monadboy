@@ -13,16 +13,18 @@ const DISK = saveDisks()[0]
 function renderCartridgeSelect(overrides: Partial<CartridgeSelectProps> = {}) {
   const onInsert = vi.fn()
   const onBack = vi.fn()
+  const onLeaderboard = vi.fn()
   const utils = renderScreen(
     <CartridgeSelect
       disk={DISK}
       cartridges={CARTS}
       onInsert={onInsert}
+      onLeaderboard={onLeaderboard}
       onBack={onBack}
       {...overrides}
     />,
   )
-  return { ...utils, onInsert, onBack }
+  return { ...utils, onInsert, onBack, onLeaderboard }
 }
 
 describe('the shelf', () => {
@@ -122,5 +124,25 @@ describe('fixture and locked states', () => {
     press('LEFT', 'LEFT', 'A')
     expect(getByText(CARTS[0].tagline ?? '')).toBeInTheDocument()
     expect(onInsert).toHaveBeenCalledExactlyOnceWith('cart-01')
+  })
+})
+
+describe('the leaderboard', () => {
+  it('opens from START on any slot, without inserting a cartridge', () => {
+    const { onLeaderboard, onInsert } = renderCartridgeSelect()
+    press('RIGHT', 'START')
+    expect(onLeaderboard).toHaveBeenCalledOnce()
+    expect(onInsert).not.toHaveBeenCalled()
+  })
+
+  it('opens from a tap on its footer button', () => {
+    const { onLeaderboard, getByLabelText } = renderCartridgeSelect()
+    fireEvent.click(getByLabelText('Open leaderboard'))
+    expect(onLeaderboard).toHaveBeenCalledOnce()
+  })
+
+  it('drops the FIXTURE label when the caller says the list is not a fixture', () => {
+    const { queryByText } = renderCartridgeSelect({ fixture: false })
+    expect(queryByText(/^fixture$/i)).not.toBeInTheDocument()
   })
 })
