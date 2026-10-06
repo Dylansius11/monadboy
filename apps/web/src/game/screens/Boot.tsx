@@ -65,12 +65,12 @@ export function Boot({ instant, onStart }: BootProps) {
   const reached = (s: Stage) => STAGES.indexOf(stage) >= STAGES.indexOf(s)
 
   return (
-    <div className="bg-screen relative flex h-full w-full flex-col items-center justify-center gap-4 overflow-hidden">
+    <div className="screen-boot bg-screen relative flex h-full w-full flex-col items-center justify-center gap-4 overflow-hidden">
       <div className={`flex flex-col items-center gap-1 ${reached('logo') ? '' : 'invisible'}`}>
         <PixelText
           role="hero"
           upper
-          className={`tracking-[0.2em] ${stage === 'logo' ? 'boot-drop' : ''}`}
+          className={`boot-wordmark tracking-[0.2em] ${stage === 'logo' ? 'boot-drop' : ''}`}
         >
           {brand.CONSOLE_NAME}
         </PixelText>
@@ -84,7 +84,7 @@ export function Boot({ instant, onStart }: BootProps) {
         </PixelText>
       </div>
 
-      <div className={`flex gap-6 ${reached('cast') ? '' : 'invisible'}`}>
+      <div className={`boot-cast flex gap-6 ${reached('cast') ? '' : 'invisible'}`}>
         {CAST.map((character, i) => (
           <span
             key={character}

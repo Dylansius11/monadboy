@@ -1,6 +1,7 @@
 import { act, render } from '@testing-library/react'
 import { ConsoleInputProvider } from '../console/useConsoleInput'
-import type { ReactElement } from 'react'
+import { SoundProvider } from '../sound/SoundProvider'
+import type { ReactElement, ReactNode } from 'react'
 import type { ConsoleIntent } from '../console/intents'
 
 /**
@@ -25,9 +26,13 @@ import type { ConsoleIntent } from '../console/intents'
  *      pass while the screen was unreachable by keyboard.
  */
 
-/** Every screen mounts inside the console's input provider and nothing else. */
+/** Screens use the same input and audio boundaries as the running app. */
 export function renderScreen(ui: ReactElement) {
-  return render(<ConsoleInputProvider>{ui}</ConsoleInputProvider>)
+  return render(ui, { wrapper: ScreenProviders })
+}
+
+function ScreenProviders({ children }: { children: ReactNode }) {
+  return <SoundProvider><ConsoleInputProvider>{children}</ConsoleInputProvider></SoundProvider>
 }
 
 /**

@@ -7,7 +7,6 @@ import { FIXTURE_MARKETS } from '../fixtures'
 import { cached, live } from '../../lib/envelope'
 import { duration, pct } from '../../lib/format'
 import { DAMAGE_APR, FEE_APR, REBALANCE_COST_FRACTION, STEP_SECONDS } from '../sim'
-import { ConsoleInputProvider } from '../../console/useConsoleInput'
 
 const POOL = FIXTURE_MARKETS[0].pool
 
@@ -346,9 +345,9 @@ describe('fixture freshness and inputs', () => {
       expect(onWithdraw.mock.calls[0][0]).toMatchObject({
         elapsedSeconds: 0, feesEarnedUsd: 0, damageUsd: 0, rebalances: 0,
       })
-      rerender(<ConsoleInputProvider><InRange pool={POOL} amount={100} width="wide" manualRange={null}
+      rerender(<InRange pool={POOL} amount={100} width="wide" manualRange={null}
         autopilot characterId="molandak" priceFeed={live(0.03314)}
-        onWithdraw={onWithdraw} onRebalance={onRebalance} onBack={onBack} /></ConsoleInputProvider>)
+        onWithdraw={onWithdraw} onRebalance={onRebalance} onBack={onBack} />)
       expect(getByText(/^A Jump$/i)).toBeInTheDocument()
       await tick(500, vi)
       press('B')

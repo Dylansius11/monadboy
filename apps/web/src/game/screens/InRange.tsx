@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSound } from '../../sound/SoundProvider'
 import { LadderError, mainnetMarkets, rangeState } from '@monadboy/sdk'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { brand } from '../../config/brand'
@@ -90,6 +91,7 @@ export function InRange({
   pool, amount, width, manualRange, autopilot, characterId, priceFeed,
   onWithdraw, onRebalance, onBack,
 }: InRangeProps) {
+  const { play } = useSound()
   const book = FIXTURE_MARKETS.find(({ pool: fixture }) => fixture.pairAddress === pool?.pairAddress)?.book
   const openingMid = book?.bid != null && book.ask != null ? (book.bid + book.ask) / 2 : 0
   // The player's range SHAPE. planForSession is the one entry point plan.ts
@@ -150,6 +152,13 @@ export function InRange({
   const state = sim && edges
     ? rangeState(sim.mid, edges.low, edges.high, anchorMid * edges.step)
     : 'IN_RANGE'
+  const lastSound = useRef({ score: sim?.feesEarnedUsd ?? 0, state })
+  useEffect(() => {
+    const score = sim?.feesEarnedUsd ?? 0
+    if (score > lastSound.current.score) play('coin')
+    if (state !== lastSound.current.state && state !== 'IN_RANGE') play('alert')
+    lastSound.current = { score, state }
+  }, [sim?.feesEarnedUsd, state, play])
 
   useConsoleIntent((intent) => {
     // The inputs view is a full-screen read-only page: B or START closes it,
@@ -163,7 +172,7 @@ export function InRange({
       return
     }
     if (intent === 'START') { setInspecting(true); return }
-    if (intent === 'B') { onWithdraw(summarize(sim)); return }
+    if (intent === 'B') { play('withdraw'); onWithdraw(summarize(sim)); return }
     if (paused) return
     if (intent === 'A') {
       if (state === 'OUT_OF_RANGE') {
@@ -242,7 +251,7 @@ export function InRange({
 
   if (inspecting) {
     return (
-      <div className="bg-screen flex h-full w-full flex-col gap-2 p-2">
+      <div className="screen-inputs bg-screen flex h-full w-full flex-col gap-2 p-2">
         <PixelText role="title" upper>FIXTURE inputs</PixelText>
         <Panel className="flex flex-col gap-1">
           <PixelText role="micro">TESTNET simulation, not chain fills. Quote token valued at $1.</PixelText>
@@ -268,14 +277,14 @@ export function InRange({
        notice from four metres is the cheapest way to say it. Gated behind
        prefers-reduced-motion in styles.css. */
     <div
-      className={`bg-screen flex h-full w-full flex-col gap-1 p-2 ${
+      className={`screen-live bg-screen flex h-full w-full flex-col gap-1 p-2 ${
         warning ? 'nad-pulse' : ''
       }`}
     >
       {/* Header, on a three column grid so SCORE is genuinely centred rather
           than merely between two things of unequal width.
           Never hide a loss: DAMAGE sits at the same visual weight as SCORE. */}
-      <div className="grid grid-cols-3 items-baseline">
+      <div className="live-header grid grid-cols-3 items-baseline">
         <div className="flex items-baseline gap-1">
           <PixelText role="body" upper>
             {pool.tokenX.symbol}/{pool.tokenY.symbol}
@@ -322,7 +331,7 @@ export function InRange({
           same two edges as lines; this row is what makes them readable as
           prices rather than as decoration. The middle label marks the money
           as testnet and names the key behind the inputs view. */}
-      <div className="flex items-baseline justify-between">
+      <div className="live-range flex items-baseline justify-between">
         <div className="flex items-baseline gap-1">
           <PixelText role="micro" tone="dim" upper>
             Range
@@ -369,14 +378,14 @@ export function InRange({
           Grouped in its own wrapper with a tighter gap than the screen above
           it, so the three text rows read as one block of chrome and the field
           keeps the space instead of the gaps taking it. */}
-      <div className="flex flex-col gap-1">
+      <div className="live-instruments flex flex-col gap-1">
         {/* ONE banner slot, always in the same place, directly above the
             readings it is warning you about. Paused feed, OUT OF RANGE and
             NAD-SENSE all use it, so the most important messages on the screen
             teach the player one place to look. The slot is reserved whether or
             not anything is in it: a strip that appeared and disappeared would
             shove the field by its own height at the exact moment price moves. */}
-        <div className="h-5 shrink-0">
+        <div className="live-banner h-5 shrink-0">
           {paused ? (
             <div className="border-edge bg-alarm flex h-full items-center justify-center overflow-hidden border px-1">
               <PixelText role="body" className="text-center">PRICE FEED PAUSED</PixelText>
@@ -412,7 +421,7 @@ export function InRange({
             rather than parked against whatever the meter's width happens to
             be. Two rows that centre on the same axis read as one instrument
             panel; two rows that merely balance do not. */}
-        <div className="grid grid-cols-3 items-center">
+        <div className="live-status grid grid-cols-3 items-center">
           <div className="flex items-center gap-2">
             <PixelText
               role="micro"
@@ -445,7 +454,7 @@ export function InRange({
             action. No dollar figure: there is no swap quote path yet, and a
             number this screen made up would be exactly the kind of claim the
             product rules forbid. */}
-        <div className="flex items-center justify-between">
+        <div className="screen-footer flex items-center justify-between">
           <PixelText role="micro" upper>
             A {paused ? 'Paused' : state === 'OUT_OF_RANGE' ? 'Recentre, costs a swap' : 'Jump'}
           </PixelText>
