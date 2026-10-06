@@ -1,18 +1,17 @@
 import { useState } from 'react'
 import { useConsoleIntent } from '../../console/useConsoleInput'
-import { characters } from '../../config/brand'
-import { GATE_COPY, UNVERIFIED_COPY } from '../../lib/scoring/gates'
+import { characterQuotes, characters } from '../../config/brand'
+import { GATE_COPY, UNVERIFIED_COPY } from '@monadboy/sdk'
 import { ageInDays, compactUsd } from '../../lib/format'
-import { FIXTURE_NOW } from '../fixtures'
+import { provenanceBadge, provenanceLine } from '../data/provenance'
 import { isBookThin, isExecutable, isTestnet } from '../eligibility'
 import { nextPin, panFor, riskBand, scoreToPosition } from '../map'
 import { BAND_FILL, WorldMap } from '../WorldMap'
 import { MapPin, PIN_SIZE, PIN_SIZE_SELECTED } from '../MapPin'
 import { Meter, Panel, PixelText, Sprite } from '../../ui'
-import { fallback } from '../../lib/envelope'
 import type { ReactNode } from 'react'
 import type { CharacterId } from '../../config/brand'
-import type { ScoredPool } from '../fixtures'
+import type { TrackerPool, TrackerProvenance } from '../data/types'
 import type { CursorDirection } from '../map'
 import type { GateSet } from '../../types/domain'
 
@@ -27,13 +26,16 @@ import type { GateSet } from '../../types/domain'
 export interface PoolTrackerProps {
   /** Every pool at the caller's difficulty, filtered-out ones INCLUDED.
    * fixtures.ts returns them on purpose so this screen can draw them dim. */
-  pools: Array<ScoredPool>
+  pools: Array<TrackerPool>
   /** The player's Monanimal, which is also the tier: brand.ts's `characters`
    * map answers both `label` and `tier` from this one id. */
   characterId: CharacterId
   /** The same gate set `pools` was scored against. Drawn as the shaded region
    * on the map, so the box and the pins can never tell different stories. */
   gates: GateSet
+  /** Where `pools` came from and how old it is. Required, so no caller can
+   * show a set of pools without saying what it is. */
+  provenance: TrackerProvenance
   onPlayPool: (pairAddress: string) => void
   onBack: () => void
 }
@@ -70,14 +72,6 @@ function bucket(score: number, low: string, mid: string, high: string): string {
   return low
 }
 
-/** Names where the pools came from and how fresh they are, so the screen
- * never reads as live market data. */
-const FIXTURE_SOURCE = fallback(
-  'Development market fixtures',
-  FIXTURE_NOW * 1000,
-  'Not live. Snapshot 2026-10-05.',
-)
-
 /**
  * Fee income is not a PoolScore field: HEAT's `turnover` term is a normalised
  * 0-100 SCORE, not a percentage a beginner can read. This is a separate,
@@ -85,21 +79,17 @@ const FIXTURE_SOURCE = fallback(
  * parameter yet, so 30bps stands in as a representative fee until a live rate
  * replaces it. The label next to the number is what keeps this honest either
  * way.
+ *
+ * It exists for the development fixtures only. A worker pool has no per-swap
+ * fee read, so it gets no estimate at all rather than a rate nobody measured.
  */
 const ASSUMED_FEE_RATE = 0.003
 
 /** Null when volume is unread, so the caller renders "not read" and not a 0%. */
-function feeIncomePct(pool: ScoredPool['pool']): number | null {
+function feeIncomePct(pool: TrackerPool['pool']): number | null {
   if (pool.volume24hUsd === null) return null
   if (pool.tvlUsd <= 0) return 0
   return (pool.volume24hUsd / pool.tvlUsd) * ASSUMED_FEE_RATE * 365 * 100
-}
-
-/** Canned: nothing on this screen waits on a model. */
-const QUOTES: Record<CharacterId, string> = {
-  molandak: 'deep, old, boring. boring is good.',
-  moyaki: 'it moves. so do I. we get along.',
-  mouch: 'if it is not shaking, why bother.',
 }
 
 const DIRECTIONS: ReadonlySet<CursorDirection> = new Set([
@@ -113,6 +103,7 @@ export function PoolTracker({
   pools,
   characterId,
   gates,
+  provenance,
   onPlayPool,
   onBack,
 }: PoolTrackerProps) {
@@ -123,7 +114,8 @@ export function PoolTracker({
 
   const character = characters[characterId]
   const passing = pools.filter((p) => p.passes)
-  const selected = pools[cursorIndex]
+  const cursor = Math.max(0, Math.min(cursorIndex, pools.length - 1))
+  const selected = pools[cursor]
 
   useConsoleIntent((intent) => {
     // The empty state only has one control. Handled first so the map and
@@ -168,7 +160,7 @@ export function PoolTracker({
       setCursorIndex((current) =>
         nextPin(
           pools.map((p) => p.score),
-          current,
+          Math.min(current, pools.length - 1),
           intent as CursorDirection,
         ),
       )
@@ -186,7 +178,7 @@ export function PoolTracker({
             Nothing passed
           </PixelText>
           <PixelText role="micro" tone="dim" upper>
-            FIXTURE · {FIXTURE_SOURCE.freshness} · {FIXTURE_SOURCE.note}
+            {provenanceLine(provenance)}
           </PixelText>
           <PixelText role="body">
             {character.label}&apos;s filter removed every pool at this
@@ -201,12 +193,12 @@ export function PoolTracker({
   }
 
   return (
-    <div className="bg-screen flex h-full w-full flex-col gap-1 p-2">
+    <div className="screen-tracker bg-screen flex h-full w-full flex-col gap-1 p-2">
       {/* Three columns, not justify-between, for the same reason S7's header
           is a grid: with three items of unequal width, "spread them apart"
           puts the middle one wherever the other two leave room, and it drifts
           every time the count changes from one digit to two. */}
-      <div className="grid grid-cols-3 items-baseline">
+      <div className="tracker-header grid grid-cols-3 items-baseline">
         <div className="flex items-baseline gap-1">
           <PixelText role="body" upper>
             Pool tracker
@@ -217,7 +209,7 @@ export function PoolTracker({
               fixture, and the pair addresses are placeholders. Eight pixels of
               honesty. */}
           <PixelText role="micro" tone="dim" upper>
-            Fixture
+            {provenanceBadge(provenance)}
           </PixelText>
         </div>
         <PixelText role="micro" tone="dim" className="text-center" upper>
@@ -228,20 +220,26 @@ export function PoolTracker({
         </PixelText>
       </div>
       <PixelText role="micro" tone="dim" upper>
-        FIXTURE source · {FIXTURE_SOURCE.freshness} · {FIXTURE_SOURCE.note}
+        {provenanceLine(provenance)}
       </PixelText>
+      {provenance.notes.map((note) => (
+        <PixelText key={note} role="micro" tone="dim">
+          {note}
+        </PixelText>
+      ))}
 
       {view === 'inspect' ? (
         <InspectPanel
           entry={selected}
-          quote={QUOTES[characterId]}
+          provenance={provenance}
+          quote={characterQuotes[characterId]}
           quoteSpeaker={character.label}
           characterId={characterId}
         />
       ) : (
         <MapView
           pools={pools}
-          cursorIndex={cursorIndex}
+          cursorIndex={cursor}
           characterLabel={character.label}
           gates={gates}
           zoom={zoom}
@@ -264,7 +262,7 @@ function MapView({
   zoom,
   onZoom,
 }: {
-  pools: Array<ScoredPool>
+  pools: Array<TrackerPool>
   cursorIndex: number
   characterLabel: string
   gates: GateSet
@@ -279,8 +277,8 @@ function MapView({
   const panY = panFor(cursor.topPct, zoom)
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-1">
-      <div className="flex gap-1">
+    <div className="tracker-map flex min-h-0 flex-1 flex-col gap-1">
+      <div className="tracker-map-region flex gap-1">
         {/* HEAT, one letter per row rather than a rotated string: a bitmap
             font rotated with CSS resamples, and four short lines cost nothing
             a transform would have saved. */}
@@ -293,7 +291,7 @@ function MapView({
         </div>
 
         <div
-          className="border-edge relative flex-1 overflow-hidden border"
+          className="tracker-plot border-edge relative flex-1 overflow-hidden border"
           style={{ height: PLOT_HEIGHT }}
         >
           {/* Everything that lives in score space moves together. The minimap
@@ -363,7 +361,7 @@ function MapView({
         </div>
       </div>
 
-      <div className="flex items-center justify-between pl-5">
+      <div className="tracker-map-tools flex items-center justify-between pl-5">
         <PixelText role="micro" tone="dim" upper>
           Safety, increasing right. Heat, increasing up.
         </PixelText>
@@ -410,7 +408,7 @@ function MapView({
           a pool can be reached from. Whether THIS tier's filter accepted it is
           a different question, so it gets its own entry rather than a fourth
           colour that would collide with the first three. */}
-      <div className="flex items-center gap-3 pl-5">
+      <div className="tracker-map-legend flex items-center gap-3 pl-5">
         {(
           [
             { band: 'green', label: 'Safe' },
@@ -433,9 +431,24 @@ function MapView({
         </div>
       </div>
 
+      <div className="tracker-selection border-edge border bg-panel p-2">
+        <PixelText role="title" upper>
+          {pools[cursorIndex].pool.tokenX.symbol} / {pools[cursorIndex].pool.tokenY.symbol}
+        </PixelText>
+        <PixelText role="micro" tone="dim" upper>
+          {isExecutable(pools[cursorIndex]) ? 'PLAYABLE · TESTNET'
+            : !pools[cursorIndex].passes ? 'LOCKED BY FILTER'
+              : pools[cursorIndex].stale ? 'STALE READ · READ ONLY'
+                : !isTestnet(pools[cursorIndex]) ? 'MAINNET · READ ONLY' : 'BOOK TOO THIN'}
+        </PixelText>
+        <div className="flex justify-between gap-2">
+          <PixelText role="micro">Safety {pools[cursorIndex].score.safety}</PixelText>
+          <PixelText role="micro">Heat {pools[cursorIndex].score.heat}</PixelText>
+        </div>
+      </div>
       {/* `mt-auto` pins the controls to the bottom EDGE of the screen rather
           than to the bottom of the content above them. */}
-      <div className="mt-auto flex items-center justify-between">
+      <div className="screen-footer mt-auto flex items-center justify-between">
         <PixelText role="micro" upper>
           Move cursor
         </PixelText>
@@ -471,7 +484,7 @@ function ZoomButton({
       aria-label={title}
       disabled={disabled}
       onClick={onClick}
-      className="pressable border-edge bg-panel text-ink disabled:text-ink-dim flex h-4 w-4 items-center justify-center border font-bold leading-none disabled:opacity-40"
+      className="tracker-zoom pressable border-edge bg-panel text-ink disabled:text-ink-dim flex h-4 w-4 items-center justify-center border font-bold leading-none disabled:opacity-40"
     >
       {label}
     </button>
@@ -491,7 +504,7 @@ function Minimap({
   cursorIndex,
   zoom,
 }: {
-  pools: Array<ScoredPool>
+  pools: Array<TrackerPool>
   cursorIndex: number
   zoom: number
 }) {
@@ -554,11 +567,13 @@ function Minimap({
  */
 function InspectPanel({
   entry,
+  provenance,
   quote,
   quoteSpeaker,
   characterId,
 }: {
-  entry: ScoredPool
+  entry: TrackerPool
+  provenance: TrackerProvenance
   quote: string
   quoteSpeaker: string
   characterId: CharacterId
@@ -566,9 +581,10 @@ function InspectPanel({
   const { pool, score, gates, passes } = entry
   // The proven minimum, so a pool whose exact birthday is unreadable reads as
   // "at least this old" rather than borrowing a number it does not have.
-  const ageSeconds = Math.max(0, FIXTURE_NOW - pool.createdAt)
+  const ageSeconds = Math.max(0, provenance.referenceSeconds - pool.createdAt)
   const ageIsExact = pool.createdAtIsExact
-  const feeIncome = feeIncomePct(pool)
+  // Only the fixtures have an assumed fee rate to estimate from.
+  const feeIncome = provenance.kind === 'fixture' ? feeIncomePct(pool) : null
 
   /**
    * THE WORST POOL IN THE SET IS THE ONE THAT BREAKS THE LAYOUT.
@@ -595,11 +611,11 @@ function InspectPanel({
   const pad = veryDense ? 'py-0.5' : dense ? 'py-1' : 'py-2'
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="tracker-inspect flex min-h-0 flex-1 flex-col">
       {/* 1. WHICH POOL. The only thing on this screen at title weight, so the
              eye lands here first and knows what the rest is about. */}
       <div
-        className={`border-edge flex items-center justify-between border-b ${dense ? 'pb-1' : 'pb-2'}`}
+        className={`tracker-pair border-edge flex items-center justify-between border-b ${dense ? 'pb-1' : 'pb-2'}`}
       >
         <div className="flex items-center gap-2">
           <MapPin band={riskBand(score.safety)} filtered={!passes} />
@@ -617,7 +633,7 @@ function InspectPanel({
 
       {/* 2. WHAT IT IS. Four facts, one per row, label left and value right so
              the numbers form a column the eye can run down. */}
-      <div className={`border-edge flex flex-col gap-1 border-b ${pad}`}>
+      <div className={`tracker-facts border-edge flex flex-col gap-1 border-b ${pad}`}>
         <Fact label="Liquidity" value={compactUsd(pool.tvlUsd)}>
           <div className="w-16">
             <Meter value={score.liquidityDepth} segments={10} />
@@ -647,9 +663,11 @@ function InspectPanel({
               unread there is nothing to caveat, and printing the caveat anyway
               would imply a number is hiding behind it. */}
           <PixelText role="micro" tone="dim">
-            {feeIncome === null
-              ? 'needs 24h volume, which this rpc will not serve'
-              : 'estimate, not a promise'}
+            {feeIncome !== null
+              ? 'estimate, not a promise'
+              : provenance.kind === 'worker'
+                ? 'no per-swap fee rate is read, so no estimate is made'
+                : 'needs 24h volume, which this rpc will not serve'}
           </PixelText>
         </Fact>
 
@@ -674,7 +692,7 @@ function InspectPanel({
              to trust a black box. Score left, terms right, so the two headline
              numbers line up under each other instead of hiding at the head of
              two different-length sentences. */}
-      <div className={`border-edge flex flex-col gap-1 border-b ${pad}`}>
+      <div className={`tracker-scores border-edge flex flex-col gap-1 border-b ${pad}`}>
         <div className="flex items-baseline justify-between gap-2">
           <PixelText role="body" upper>
             Safety {score.safety}
@@ -701,7 +719,7 @@ function InspectPanel({
           a lot wrong with it. `min-h-0` is what lets a flex child actually
           shrink; without it the box keeps its content height and pushes the
           footer off the bottom of a screen that has no scrollbar. */}
-      <div className="min-h-0 flex-1 py-1">
+      <div className="tracker-failures min-h-0 flex-1 py-1">
         {!passes ? (
           // GATE_COPY already holds a sentence per failure; every one of them
           // renders, not just the first, because `evaluateGates` collected all
@@ -777,7 +795,7 @@ function Fact({
   children?: ReactNode
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="tracker-fact flex items-center gap-2">
       <PixelText role="micro" tone="dim" upper className="w-20 shrink-0">
         {label}
       </PixelText>

@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { PixelText, Sprite } from '../ui'
 import { price as fmt } from '../lib/format'
 import { yDomain } from './domain'
@@ -44,14 +45,30 @@ export function PriceField({
   series,
   lowerPrice,
   upperPrice,
-  width,
-  height,
+  width: naturalWidth,
+  height: naturalHeight,
   character,
   animation,
   jumping,
   earning,
 }: PriceFieldProps) {
-  const plotWidth = width - LABEL_GUTTER
+  const field = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ width: naturalWidth, height: naturalHeight })
+  useLayoutEffect(() => {
+    const el = field.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const measure = () => {
+      const next = { width: el.clientWidth, height: el.clientHeight }
+      if (!next.width || !next.height) return
+      setSize((current) => current.width === next.width && current.height === next.height ? current : next)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  const { width, height } = size
+  const plotWidth = width - (width < 440 ? 104 : LABEL_GUTTER)
   const { low, high } = yDomain(series, lowerPrice, upperPrice)
 
   const y = (value: number) => ((high - value) / (high - low)) * height
@@ -82,7 +99,7 @@ export function PriceField({
   const edge = earning ? 'var(--color-accent)' : 'var(--color-ink-dim)'
 
   return (
-    <div className="relative h-full w-full" style={{ height }}>
+    <div ref={field} className="price-field relative h-full w-full" style={{ height: naturalHeight }}>
       <svg
         width={width}
         height={height}

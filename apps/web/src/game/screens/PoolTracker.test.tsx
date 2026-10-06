@@ -7,11 +7,16 @@ import { press, renderScreen } from '../../test/harness'
 import { PoolTracker } from './PoolTracker'
 
 import { FIXTURE_NOW, fixtureGates, scoredPools } from '../fixtures'
-import { evaluateGates, GATE_COPY } from '../../lib/scoring/gates'
-import { scorePool } from '../../lib/scoring/score'
-import { mainnetProfile } from '../../config/thresholds'
+import { FIXTURE_PROVENANCE } from '../data/provenance'
+import {
+  evaluateGates,
+  GATE_COPY,
+  mainnetProfile,
+  scorePool,
+} from '@monadboy/sdk'
 import type { ScoredPool } from '../fixtures'
-import type { GateFailure } from '../../lib/scoring/gates'
+import type { TrackerPool, TrackerProvenance } from '../data/types'
+import type { GateFailure } from '@monadboy/sdk'
 import type { Pool, PoolScore } from '../../types/domain'
 
 function pool(overrides: Partial<Pool> = {}): Pool {
@@ -128,6 +133,7 @@ function renderTracker(
       pools={THREE_POOLS}
       characterId="molandak"
       gates={fixtureGates('easy')}
+      provenance={FIXTURE_PROVENANCE}
       onPlayPool={onPlayPool}
       onBack={onBack}
       {...overrides}
@@ -196,13 +202,12 @@ describe('inspecting a pool', () => {
     expect(getByText(/Safety below this difficulty floor/)).toBeInTheDocument()
   })
 
-  it('B returns to the map, not to onBack', () => {
-    const { getByText, queryByText, onBack } = renderTracker()
-    press('A')
-    expect(getByText(/AAA \/ USDC/)).toBeInTheDocument()
-    press('B')
-    expect(queryByText(/AAA \/ USDC/)).not.toBeInTheDocument()
+  it('consumes the first B to leave inspection and the second B to leave the tracker', () => {
+    const { onBack } = renderTracker()
+    press('A', 'B')
     expect(onBack).not.toHaveBeenCalled()
+    press('B')
+    expect(onBack).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -487,5 +492,51 @@ describe('fixture source and deployment boundaries', () => {
     expect(getByText(GATE_COPY['safety-too-low'])).toBeInTheDocument()
     expect(getByText(GATE_COPY['heat-too-high'])).toBeInTheDocument()
     expect(getByText(/buzz 50 \(offline\)/)).toBeInTheDocument()
+  })
+})
+
+describe('a worker read says it is one', () => {
+  const REFERENCE = Date.parse('2026-10-06T12:00:00Z') / 1000
+  const worker: TrackerProvenance = {
+    kind: 'worker',
+    source: 'kuru-mainnet',
+    takenAtMs: REFERENCE * 1000,
+    ageMs: 5 * 60_000,
+    referenceSeconds: REFERENCE,
+    stale: false,
+    partial: true,
+    notes: ['24h trade history is incomplete (rpc).'],
+  }
+  const workerPool = (): TrackerPool => ({
+    network: 'mainnet',
+    pool: pool({ createdAt: REFERENCE - 3 * 86_400, createdAtIsExact: true }),
+    score: score(),
+    gates: { passed: true, failures: [], unverified: [] },
+    passes: true,
+    book: { state: 'available' },
+  })
+
+  it('prints its source, snapshot time, age and gaps, and never the fixture label', () => {
+    const { getByText, queryByText } = renderTracker({ pools: [workerPool()], provenance: worker })
+    expect(getByText(/kuru-mainnet \(mainnet, read only\) · taken 2026-10-06 12:00 UTC · 5m 00s old · PARTIAL/)).toBeInTheDocument()
+    expect(getByText(/24h trade history is incomplete/)).toBeInTheDocument()
+    expect(queryByText(/fixture/i)).not.toBeInTheDocument()
+  })
+
+  it('measures pool age from the snapshot clock and invents no fee estimate', () => {
+    const { getByText, queryByText } = renderTracker({ pools: [workerPool()], provenance: worker })
+    press('A')
+    expect(getByText('3 days')).toBeInTheDocument()
+    expect(queryByText(/% \/ yr/)).not.toBeInTheDocument()
+    expect(getByText(/no per-swap fee rate is read/)).toBeInTheDocument()
+  })
+
+  it('cannot play a read-only snapshot even if every gate passed', () => {
+    const { onPlayPool } = renderTracker({
+      pools: [{ ...workerPool(), network: 'testnet', stale: true }],
+      provenance: worker,
+    })
+    press('A', 'A')
+    expect(onPlayPool).not.toHaveBeenCalled()
   })
 })
