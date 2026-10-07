@@ -1,5 +1,3 @@
-import type { Hex } from 'viem'
-
 export type Fill = {
   orderId: bigint
   price: number
@@ -7,7 +5,7 @@ export type Fill = {
   isBuy: boolean
   isFlippedOrder: boolean
   flipPrice: number
-  tx: Hex
+  tx: `0x${string}`
   at: number
 }
 

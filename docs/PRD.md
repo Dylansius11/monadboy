@@ -302,21 +302,20 @@ If width shrinks, report the clamped result rather than hiding it.
 
 The output includes step, levels, low, high, orders, baseNeeded, quoteNeeded, and clamped.
 Encoding uses integer price * pricePrecision and base size * sizePrecision.
-Tick compatibility, encodings, and `provisionOrRevert` semantics are [U], spike S2.
-A planned batch is one whole ladder; fallback is individual flip orders if S2 rejects batch semantics.
+[V, S2] Tick-compatible batch encodings and `provisionOrRevert` succeeded on our deployed testnet book; the observed-order regression pins their units. See [SMART-CONTRACTS](technical/SMART-CONTRACTS.md) for receipts and parameters.
+A planned batch is one whole ladder. Single-order fallback remains unnecessary for the verified batch path.
 
 ### What the entry costs
 
 The deposit split is visible before confirm.
 A single AUSD amount needs some MON inventory for sell levels, so the zap is necessary, not cosmetic.
 S6 shows quoted base and quote, slippage, taker fee, and transaction cost.
-The market design targets taker 30 bps and maker 0; these are planned parameters, not verified deployment values [U: S2 / Phase 5 deploy].
-Minimum size targets roughly 0.05 AUSD per level and is recorded after deployment [U: S2].
+[V, S2] Our deployed market has taker 30 bps and maker 0, independently read back from `getMarketParams`.
+Minimum size is 1.5 MON; its AUSD equivalent varies with price. Deployment parameters and receipt-backed gas measurements live in [SMART-CONTRACTS](technical/SMART-CONTRACTS.md).
 
-The approved sequence is allowance / approval, zap, quote deposit, ladder provision, then sealed save.
+The approved sequence is allowance / approval, quote deposit, margin zap, ladder provision, then sealed save.
 Each stage has its own loading progress and transaction link.
-The zap should land bought MON in MarginAccount; actual `isMargin` behavior is [U], spike S2.
-If it instead lands in the disk, deposit native MON before provisioning.
+[V, S2] `isMargin=true` debits and credits MarginAccount, so quote must be deposited before the zap. Bought MON remains in margin for sell-level provisioning; approval alone is insufficient.
 All transaction calls pass explicit gas because Monad charges the declared limit [V: gas pricing](https://docs.monad.xyz/developer-essentials/gas-pricing).
 For an undelegated low-balance account, the emptying exception requires no other sender transaction in the prior three blocks [V: reserve balance](https://docs.monad.xyz/developer-essentials/reserve-balance).
 Sequence by blocks, not a guessed time delay.
@@ -333,7 +332,7 @@ No successful-looking animation may substitute for a receipt.
 SCORE is realized flip spread, never negative.
 Count maker fills only for orders whose IDs came from FlippedOrderCreated.
 Initial-order fills change inventory only.
-Event attribution and partial-fill behavior are [U], spike S2.
+[V, S2] `Trade.isBuy` describes the taker; maker accounting inverts it. Partial fills can leave both linked flip members active. Only flipped-origin fills realize SCORE; initial fills change inventory.
 
 ```text
 SCORE = sum(|flipPrice - price| * filledSize) over eligible flipped-order maker fills

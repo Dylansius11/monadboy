@@ -67,13 +67,13 @@ function allowance(address owner, address spender) external view returns (uint25
 function approve(address spender, uint256 amount) external returns (bool);
 ```
 
-[U, S2] `provisionOrRevert`, market-buy `isMargin`, market quote-size encoding, and all executable funding/order semantics must be exercised on testnet before callers depend on them. If batched provisioning fails the spike, use the two single-level flip functions only after confirming their semantics.
+[V, S2] Our deployed MON-AUSD bulk passive ladder and native flip lifecycle succeeded. `provisionOrRevert=true` rejects crossing placement; false can skip it. Market-buy quote input uses pricePrecision, while minOut uses raw output-token decimals. `isMargin=true` consumes and credits prefunded margin; approval alone does not fund the zap. These findings are scoped to the verified manifest and receipt-backed parameters.
 
 ## Encoding and ladder planning
 
-[U, S2] SPEC 5.4 proposes `priceUnits = price * pricePrecision`, an integer multiple of `tickSize`; `sizeUnits = baseAmount * sizePrecision`. S2 must confirm both encodings. Price and flipPrice must fit `uint32`; sizes must fit `uint96` and respect `minSize`/`maxSize`. Do not silently round overflowing values or confuse ERC-20 raw units with book units.
+[V, S2] Placement uses `priceUnits = price * pricePrecision`, tick-aligned, and `sizeUnits = base * sizePrecision`. Buy quote input uses `quote * pricePrecision`, not ERC-20 decimals. Use SDK `quoteToUnits` for that boundary. Prices fit uint32; market quote/sizes fit uint96 and sizes respect minSize/maxSize.
 
-[U, S2] Starting deployment parameters are `pricePrecision = 1e8`, `sizePrecision = 1e10`, `tickSize = 1`. Final values, fee choices, and minimum size come from the deployed market and spike evidence, not hardcoded assumptions.
+[V] Our market readback is pricePrecision1e8, sizePrecision1e10, tickSize1 and minSize15e9 (1.5 MON). Real creation log block68940830/log11 is pinned in SDK fixtures; use live params rather than assuming every deployment shares them.
 
 Use `planLadder` and `batchProvisionArgs` in `packages/sdk`. Width and step are coupled; never expose the raw tick. For each buy, round price down to tick and flipPrice up so `flipPrice > price`; for each sell, round price up and flipPrice down so `flipPrice < price`. Floor sizes. Drop the outermost level pair and recompute when below minSize; fewer than two levels means "AMOUNT TOO SMALL FOR THIS RANGE". [I] Product arithmetic: SPEC 5.4.
 
@@ -103,15 +103,15 @@ Track active order IDs through flip events, not just the initial receipt. `score
 
 [V] Orders require funds already in MarginAccount. For MON, `deposit(user, address(0), amount)` is payable with matching `msg.value`; for AUSD, approve MarginAccount and deposit its raw token amount. Source: [Kuru SDK](https://github.com/Kuru-Labs/kuru-sdk) and SPEC 2.
 
-Follow SPEC 5.5, rendering every transaction link and its own loading step:
+Follow the receipt-backed S2 sequence, rendering each confirmed transaction link:
 
-1. Read allowance; if insufficient, approve `quoteNeeded + zapQuote` to MarginAccount.
-2. Zap with `placeAndExecuteMarketBuy(zapQuote, minOut, true, false)`.
-3. Deposit the resting-buy AUSD budget into MarginAccount.
-4. Provision encoded arrays in one `batchProvisionLiquidity` transaction and parse IDs.
-5. Save the sealed run to DiskRegistry v2. A save failure never blocks play.
+1. Read allowance; approve the total required AUSD to MarginAccount only when insufficient.
+2. Deposit the quote for the resting buys **and** zap into MarginAccount.
+3. Zap with `placeAndExecuteMarketBuy(quoteToUnits(zapQuote, params), minOutRawMon, true, false)`; bought MON stays in margin.
+4. Provision the ladder with measured aligned arrays; parse actual creation IDs.
+5. Optionally save the sealed run/profile to DiskRegistry. Save failure never blocks play.
 
-[U, S2] If `isMargin=true` does not place purchased MON in MarginAccount, S2 determines the alternative: market-buy to the disk account then native deposit with value. The spike must also confirm the zap's quote funding/allowance path before this sequence is enabled.
+Wallet-mode false uses an allowance to the **market**, not MarginAccount, and pays MON to the EOA; native sells attach matching value. Prefer prefunded margin mode. Bound native-payout estimation: an unbounded S2 estimate billed over21M gas, while a later capped estimate and receipt succeeded near310k. Samples are shape-specific, not universal limits.
 
 On any partial failure, preserve the observable wallet/margin balances and offer WITHDRAW on S7/S8. Never report the whole sequence as atomic. [I] Product recovery rule: SPEC 5.5.
 
@@ -121,4 +121,4 @@ On any partial failure, preserve the observable wallet/margin balances and offer
 
 [V] Reserve balance is 10 MON. An undelegated EOA may dip below it through an emptying transaction only when it is the first transaction from that sender in `k=3` blocks. Space value-spending transactions at least three blocks apart, or retain at least 10 MON; receipt confirmation alone does not prove that spacing. Source: [reserve balance](https://docs.monad.xyz/developer-essentials/reserve-balance).
 
-Exit in this order: cancel every active flip ID with `batchCancelFlipOrders`, wait for confirmation, then `batchWithdrawMaxTokens([address(0), AUSD])`, confirm, show SCORE/DAMAGE/NET/fills/time with source links, and append the run to the sealed disk. [V] Cancellation and withdrawal ABI; [I] results/save policy: SPEC 5.7. Re-center is exit + replan + provision, with zap fee and gas shown before confirmation.
+Exit in this order: read current live order pairs, choose **one ID per linked pair**, cancel with `batchCancelFlipOrders`, confirm, then `batchWithdrawMaxTokens([address(0), AUSD])`, confirm and append the real result to the sealed disk. S2 observed that canceling a pair member also cancels its linked partner; supplying both reverts. Show SCORE/DAMAGE/NET/fills with sources. Re-center is exit + replan + provision, with honest fee and transaction cost before confirmation.

@@ -13,7 +13,7 @@ export type MarketParams = {
   makerFeeBps: number
 }
 
-/** [U] Placement encodings await spike S2's real testnet order and emitted units. */
+/** Placement units are pinned to S2's captured testnet FlipOrderCreated receipt. */
 export async function readMarketParams(client: PublicClient, market: Address): Promise<MarketParams> {
   const raw = await client.readContract({ address: market, abi: kuruOrderbookAbi, functionName: 'getMarketParams' })
   return {
@@ -34,7 +34,7 @@ function fraction(value: number, precision: bigint): readonly [bigint, bigint] {
   return power >= 0 ? [numerator * 10n ** BigInt(power), 1n] : [numerator, 10n ** BigInt(-power)]
 }
 
-/** [U] Price times pricePrecision, tick-aligned; S2 must pin this to a real order. */
+/** Price times pricePrecision, tick-aligned; verified against the S2 order. */
 export function priceToUnits(price: number, p: MarketParams, round: 'down' | 'up'): number {
   if (p.tickSize <= 0n) throw new RangeError('Invalid tick size')
   const [numerator, denominator] = fraction(price, p.pricePrecision)
@@ -49,11 +49,19 @@ export function unitsToPrice(units: number | bigint, p: MarketParams): number {
   return Number(units) / Number(p.pricePrecision)
 }
 
-/** [U] Base times sizePrecision, floored; S2 must pin this to a real order. */
+/** Base times sizePrecision, floored; verified against the S2 order. */
 export function sizeToUnits(base: number, p: MarketParams): bigint {
   const [numerator, denominator] = fraction(base, p.sizePrecision)
   const units = numerator / denominator
   if (units > (1n << 96n) - 1n) throw new RangeError('Size exceeds uint96')
+  return units
+}
+
+/** Market-buy quote uses book pricePrecision, not the quote token's decimals. [V, S2] */
+export function quoteToUnits(quote: number, p: MarketParams): bigint {
+  const [numerator, denominator] = fraction(quote, p.pricePrecision)
+  const units = numerator / denominator
+  if (units > (1n << 96n) - 1n) throw new RangeError('Quote exceeds uint96')
   return units
 }
 
