@@ -11,6 +11,7 @@ import {
   kuruMarginAccountAbi,
   kuruOrderbookAbi,
   mainnetMarkets,
+  scoreCard,
 } from '@monadboy/sdk'
 import type { Market } from '@monadboy/sdk'
 import { createDirectFillSource } from '../src/chain/fill-source'
@@ -92,7 +93,7 @@ const history: Fake[] = [
   book(105, 0, 'Trade', [
     1,
     owner,
-    true,
+    false,
     10n * 10n ** 18n,
     0n,
     stranger,
@@ -111,7 +112,7 @@ const history: Fake[] = [
   book(110, 0, 'Trade', [
     2,
     owner,
-    false,
+    true,
     11n * 10n ** 18n,
     0n,
     stranger,
@@ -169,6 +170,8 @@ function client(head: bigint, overrides: { failLogs?: () => boolean } = {}) {
         return args[0] === 2
           ? [owner, 10_000_000_000n, 0, 0, 0, 1_100_000_000, 0, false]
           : [zeroAddress, 0n, 0, 0, 0, 0, 0, false]
+      if (functionName === 's_sellPricePoints') return [2, 2]
+      if (functionName === 's_buyPricePoints') return [0, 0]
       throw new Error(`unexpected ${functionName}`)
     },
   }
@@ -249,6 +252,21 @@ test('valuation inputs come from chain state: net margin deposits for the market
   })
 })
 
+test('a filled order retaining positive storage is excluded from holdings when detached from the price point', async () => {
+  const c = client(130n).client
+  const original = c.readContract.bind(c)
+  c.readContract = (async (request: { functionName: string }) => {
+    if (request.functionName === 's_sellPricePoints') return [0, 0]
+    return original(request as never)
+  }) as typeof c.readContract
+  const snapshot = await source(c).read()
+  expect(snapshot.status).toBe('complete')
+  expect(snapshot.disks[0].fills).toHaveLength(2)
+  expect(snapshot.disks[0].holdings).toEqual({
+    marginBase: 0, marginQuote: 8, restingBase: 0, restingQuote: 0,
+  })
+})
+
 test('history is read forward in bounded chunks and resumed from the cursor, so partial is reported until the head is reached', async () => {
   const db = memoryDb()
   const a = client(500n)
@@ -315,4 +333,46 @@ test('no configured market and no start block are explicit states, never an empt
   expect((await source(c, { startBlock: undefined }).read()).status).toBe(
     'unavailable',
   )
+})
+
+test('an indexed cursor reread excludes later cached fills and deposits, and values chain holdings at that cursor', async () => {
+  const db = memoryDb()
+  const c = client(130n).client
+  const original = c.readContract.bind(c)
+  const blocks: bigint[] = []
+  c.readContract = (async (request: { blockNumber?: bigint }) => {
+    if (request.blockNumber !== undefined) blocks.push(request.blockNumber)
+    return original(request as never)
+  })
+  const s = source(c, { db })
+  expect((await s.read()).disks[0].fills).toHaveLength(2)
+  const cursor = await s.read(106n)
+  expect(cursor.status).toBe('complete')
+  expect(cursor.disks[0].fills).toHaveLength(1)
+  expect(blocks.slice(-4).every((block) => block === 106n)).toBe(true)
+})
+
+test('withdrawing swapped inventory preserves cash-flow-adjusted NET instead of creating phantom DAMAGE', async () => {
+  const db = memoryDb()
+  const c = client(130n).client
+  const s = source(c, { db })
+  const before = (await s.read()).disks[0]
+  for (const [index, token, amount] of [[0, market.baseToken, 10n ** 18n], [1, market.quoteToken, 8_000_000n]] as const) {
+    db.query('INSERT INTO fill_events (market, block, log_index, at, json) VALUES (?, ?, ?, ?, ?)').run(
+      market.address, 120, index, 1_200_000,
+      JSON.stringify({ kind: 'Withdrawal', args: { owner, token, amount: amount.toString() }, tx: tx('4'), at: 1_200_000 }),
+    )
+  }
+  const original = c.readContract.bind(c)
+  c.readContract = (async (request: { functionName: string }) => {
+    if (request.functionName === 'getBalance') return 0n
+    if (request.functionName === 's_sellPricePoints') return [0, 0]
+    return original(request as never)
+  }) as typeof c.readContract
+  const closed = (await s.read()).disks[0]
+  expect(closed.deposit).toEqual({ base0: -1, quote0: 12 })
+  const initialValue = scoreCard(before.fills, before.holdings!, before.deposit!, 10)
+  const closedValue = scoreCard(closed.fills, closed.holdings!, closed.deposit!, 10)
+  expect(initialValue).toMatchObject({ net: -2, damage: 3 })
+  expect(closedValue).toEqual(initialValue)
 })

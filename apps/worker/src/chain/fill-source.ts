@@ -10,6 +10,11 @@ import type { Deposit, Fill, Holdings, Market } from '@monadboy/sdk'
 import type { DiskFills, FillSnapshot, FillSource } from '../jobs/leaderboard'
 import { describeError, log } from '../logger'
 import type { Logger } from '../logger'
+import { readActiveOrder } from './active-order'
+
+export type DirectFillSource = FillSource & {
+  hydrate: (market: Market, owner: string, ids: ReadonlySet<number>, throughBlock: bigint) => Promise<Pick<DiskFills, 'tag' | 'deposit' | 'holdings'>>
+}
 
 type Stored = {
   kind:
@@ -23,12 +28,12 @@ type Stored = {
   at: number
 }
 type Ingest = { block: number; index: number; event: Stored }
-const MARKET_EVENTS = new Set([
-  'Trade',
-  'FlipOrderCreated',
-  'FlippedOrderCreated',
-])
-const MARGIN_EVENTS = new Set(['Deposit', 'Withdrawal'])
+const MARKET_EVENTS: Partial<Record<string, true>> = {
+  Trade: true,
+  FlipOrderCreated: true,
+  FlippedOrderCreated: true,
+}
+const MARGIN_EVENTS: Partial<Record<string, true>> = { Deposit: true, Withdrawal: true }
 const json = (value: unknown) =>
   JSON.stringify(value, (_, item: unknown) =>
     typeof item === 'bigint' ? item.toString() : item,
@@ -61,7 +66,7 @@ export function createDirectFillSource({
   groupsPerRun?: number
   now?: () => number
   logger?: Logger
-}): FillSource {
+}): DirectFillSource {
   async function ingest(market: Market, head: bigint): Promise<boolean> {
     const saved = db
       .query<{ next_block: number }, [string]>(
@@ -107,7 +112,7 @@ export function createDirectFillSource({
           continue
         }
         const kind: string = decoded.eventName
-        if (!(fromMargin ? MARGIN_EVENTS : MARKET_EVENTS).has(kind)) continue
+        if (!(fromMargin ? MARGIN_EVENTS : MARKET_EVENTS)[kind]) continue
         const args = JSON.parse(json(decoded.args)) as Stored['args']
         if (fromMargin && !tokens.has(String(args.token).toLowerCase()))
           continue
@@ -169,6 +174,7 @@ export function createDirectFillSource({
     market: Market,
     owner: Address,
     ids: ReadonlySet<number>,
+    blockNumber: bigint,
   ): Promise<Holdings> {
     const p = market.params
     const balance = async (token: Address, decimals: number) =>
@@ -178,19 +184,15 @@ export function createDirectFillSource({
           abi: kuruMarginAccountAbi,
           functionName: 'getBalance',
           args: [owner, token],
+          blockNumber,
         }),
       ) /
       10 ** decimals
     let restingBase = 0
     let restingQuote = 0
     for (const id of ids) {
-      const order = await client.readContract({
-        address: market.address,
-        abi: kuruOrderbookAbi,
-        functionName: 's_orders',
-        args: [id],
-      })
-      if (order[0].toLowerCase() !== owner.toLowerCase() || order[1] === 0n)
+      const order = await readActiveOrder(client, market.address, id, blockNumber)
+      if (!order || order[0].toLowerCase() !== owner.toLowerCase())
         continue
       const size = Number(order[1]) / Number(p.sizePrecision)
       if (order[7]) restingQuote += size * (order[5] / Number(p.pricePrecision))
@@ -206,6 +208,7 @@ export function createDirectFillSource({
 
   function assemble(
     market: Market,
+    throughBlock: bigint,
   ): Map<string, DiskFills & { ids: Set<number> }> {
     const p = market.params
     const scale = Number(p.pricePrecision)
@@ -215,10 +218,10 @@ export function createDirectFillSource({
     >()
     const disks = new Map<string, DiskFills & { ids: Set<number> }>()
     const rows = db
-      .query<{ json: string }, [string]>(
-        'SELECT json FROM fill_events WHERE market = ? ORDER BY block, log_index',
+      .query<{ json: string }, [string, bigint]>(
+        'SELECT json FROM fill_events WHERE market = ? AND block <= ? ORDER BY block, log_index',
       )
-      .all(market.address)
+      .all(market.address, throughBlock)
     for (const { json: text } of rows) {
       const event = JSON.parse(text) as Stored
       if (
@@ -261,7 +264,8 @@ export function createDirectFillSource({
           orderId: BigInt(String(event.args.orderId)),
           flipPrice: order.flipPrice,
           isFlippedOrder: order.isFlipped,
-          isBuy: Boolean(event.args.isBuy),
+          // Trade.isBuy is the taker's side; SDK fills describe the maker's inventory.
+          isBuy: !event.args.isBuy,
           price: Number(event.args.price) / 1e18,
           size: Number(event.args.filledSize) / Number(p.sizePrecision),
           tx: event.tx,
@@ -273,13 +277,13 @@ export function createDirectFillSource({
     return disks
   }
 
-  function netDeposit(market: Market, owner: string): Deposit {
+  function netDeposit(market: Market, owner: string, throughBlock: bigint): Deposit {
     const totals = { base: 0, quote: 0 }
     for (const { json: text } of db
-      .query<{ json: string }, [string]>(
-        "SELECT json FROM fill_events WHERE market = ? AND json_extract(json, '$.kind') IN ('Deposit', 'Withdrawal')",
+      .query<{ json: string }, [string, bigint]>(
+        "SELECT json FROM fill_events WHERE market = ? AND block <= ? AND json_extract(json, '$.kind') IN ('Deposit', 'Withdrawal')",
       )
-      .all(market.address)) {
+      .all(market.address, throughBlock)) {
       const event = JSON.parse(text) as Stored
       if (String(event.args.owner).toLowerCase() !== owner) continue
       const token = String(event.args.token).toLowerCase()
@@ -291,30 +295,34 @@ export function createDirectFillSource({
         totals.quote +=
           (sign * Number(event.args.amount)) / 10 ** market.params.quoteDecimals
     }
-    return {
-      base0: Math.max(0, totals.base),
-      quote0: Math.max(0, totals.quote),
-    }
+    // A swap can withdraw more of one token than was deposited. Preserve signed
+    // cash flows or a fully exited position acquires phantom HODL-relative DAMAGE.
+    return { base0: totals.base, quote0: totals.quote }
   }
 
   return {
-    read: async (): Promise<FillSnapshot> => {
+    hydrate: async (market, owner, ids, throughBlock) => ({
+      tag: await tag(owner as Address),
+      deposit: netDeposit(market, owner, throughBlock),
+      holdings: await holdings(market, owner as Address, ids, throughBlock),
+    }),
+    read: async (throughBlock?: bigint): Promise<FillSnapshot> => {
       if (!markets.length)
         return { status: 'no-market-configured', at: now(), disks: [] }
       if (startBlock === undefined)
         return { status: 'unavailable', at: now(), disks: [] }
       try {
-        const head = await client.getBlockNumber({ cacheTime: 0 })
+        const head = throughBlock ?? await client.getBlockNumber({ cacheTime: 0 })
         let complete = true
         const disks: DiskFills[] = []
         for (const market of markets) {
           complete = (await ingest(market, head)) && complete
-          for (const { ids, ...disk } of assemble(market).values()) {
+          for (const { ids, ...disk } of assemble(market, head).values()) {
             disks.push({
               ...disk,
               tag: await tag(disk.disk as Address),
-              deposit: netDeposit(market, disk.disk),
-              holdings: await holdings(market, disk.disk as Address, ids).catch(
+              deposit: netDeposit(market, disk.disk, head),
+              holdings: await holdings(market, disk.disk as Address, ids, head).catch(
                 () => null,
               ),
             })
