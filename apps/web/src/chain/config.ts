@@ -1,4 +1,5 @@
 import { monadTestnet, rpcUrl } from '@monadboy/sdk'
+import deployments from '../../../../packages/sdk/src/deployments.testnet.json'
 import { getAddress, isAddress, zeroAddress } from 'viem'
 import { brand } from '../config/brand'
 import { CardError } from './errors'
@@ -66,14 +67,9 @@ export function assertOrigin(rpId: string, location: { protocol: string; hostnam
   }
 }
 
-/**
- * The registry address from build configuration, when the SDK has no
- * deployment config. The SDK ships none today, so the env value is the only
- * source; it is still only an address until `verifyRegistry` finds code on the
- * right chain.
- */
+/** Public receipt-backed TESTNET deployment, with an explicit override for isolated runtime checks. */
 export function resolveRegistryAddress(env: ChainEnv): Address {
-  const raw = env.VITE_REGISTRY_ADDRESS?.trim()
+  const raw = env.VITE_REGISTRY_ADDRESS?.trim() ?? (deployments.chainId === CHAIN.id ? deployments.diskRegistry.address : undefined)
   if (!raw) throw new CardError('REGISTRY_UNCONFIGURED')
   if (!isAddress(raw) || getAddress(raw) === zeroAddress) throw new CardError('REGISTRY_INVALID')
   return getAddress(raw)

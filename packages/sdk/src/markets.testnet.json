@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "chain": "testnet",
+    "address": "0xD9F66B3bdBb1741f33e01fA3Acb514623e0a60Bc",
+    "symbol": "MON_AUSD",
+    "baseSymbol": "MON",
+    "quoteSymbol": "AUSD",
+    "baseToken": "0x0000000000000000000000000000000000000000",
+    "quoteToken": "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+    "params": {
+      "pricePrecision": "100000000",
+      "sizePrecision": "10000000000",
+      "baseDecimals": 18,
+      "quoteDecimals": 6,
+      "tickSize": "1",
+      "minSize": "15000000000",
+      "maxSize": "79228162514264337593543950335",
+      "takerFeeBps": 30,
+      "makerFeeBps": 0
+    }
+  }
+]

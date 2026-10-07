@@ -8,7 +8,12 @@ test('an empty environment is a valid read-only configuration with no signing ke
   expect(env.WORKER_BIND).toBe('127.0.0.1')
   expect(env.ENABLE_TRANSACTIONS).toBe(false)
   expect(env.BOT_PRIVATE_KEY).toBeUndefined()
-  expect(env.TESTNET_START_BLOCK).toBeUndefined()
+  expect(env.TESTNET_START_BLOCK).toBe(68940637n)
+})
+
+test('custom market history needs an explicit start rather than inheriting the default deployment', () => {
+  expect(parseEnv({ MARKETS_JSON: 'custom-market.json' }).TESTNET_START_BLOCK).toBeUndefined()
+  expect(parseEnv({ MARKETS_JSON: 'custom-market.json', TESTNET_START_BLOCK: '42' }).TESTNET_START_BLOCK).toBe(42n)
 })
 
 test('blank values count as unset and token amounts become exact base units', () => {

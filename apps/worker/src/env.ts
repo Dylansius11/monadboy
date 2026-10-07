@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import { parseUnits } from 'viem'
 import type { Address, Hex } from 'viem'
-import { rpcUrl } from '@monadboy/sdk'
+import { boundedEstimateGasCap, measuredTestnetGas, rpcUrl, testnetMarkets } from '@monadboy/sdk'
+import deployments from '../../../packages/sdk/src/deployments.testnet.json'
 
 const optional = <T extends z.ZodType>(schema: T) => schema.optional()
 const address = z
@@ -41,13 +42,14 @@ const schema = z
       .default('false')
       .transform((value) => value === 'true'),
     // Notional is quote units (USD) per mirror tick; deviation is a fraction of the target mid.
-    MIRROR_MAX_STEP_NOTIONAL: z.coerce.number().positive().default(1),
+    MIRROR_MAX_STEP_NOTIONAL: z.coerce.number().positive().default(0.06),
     MIRROR_DEVIATION_THRESHOLD: z.coerce.number().positive().default(0.0005),
-    // [U, S2] Conservative explicit gas limits until spike S2 measures receipts. Monad charges the limit.
-    GAS_MARKET_ORDER: gas(1_000_000n),
-    GAS_BATCH_UPDATE: gas(1_000_000n),
-    GAS_ERC20: gas(100_000n),
-    GAS_FAUCET: gas(200_000n),
+    // Mirror ceilings bound estimation/declared limits; each actual call gets a fresh estimate +20%.
+    // S2 samples are shape-specific, so never reuse partial-fill gas for a multi-level traversal.
+    GAS_MARKET_ORDER: gas(boundedEstimateGasCap),
+    GAS_BATCH_UPDATE: gas(boundedEstimateGasCap),
+    GAS_ERC20: gas(measuredTestnetGas.erc20Transfer.gasLimit),
+    GAS_FAUCET: gas(measuredTestnetGas.faucet.gasLimit),
     DRIP_MON: decimal(18, '0.5'),
     DRIP_AUSD: decimal(6, '10'),
     DRIP_MON_THRESHOLD: decimal(18, '0.01'),
@@ -83,9 +85,19 @@ export type WorkerEnv = z.infer<typeof schema>
 
 export function parseEnv(input: Record<string, string | undefined>): WorkerEnv {
   // A blank line in .env (copied from .env.example) means unset, for every variable.
-  return schema.parse(
+  const parsed = schema.parse(
     Object.fromEntries(
       Object.entries(input).filter(([, value]) => value !== ''),
     ),
   )
+  // Only the checked-in market can inherit its receipt-backed deployment start.
+  // A custom market without an explicit start stays unavailable, never "complete".
+  if (
+    parsed.TESTNET_START_BLOCK === undefined &&
+    !parsed.MARKETS_JSON &&
+    deployments.chainId === 10143 &&
+    testnetMarkets.length === 1 &&
+    testnetMarkets[0].address.toLowerCase() === deployments.orderBook.address.toLowerCase()
+  ) parsed.TESTNET_START_BLOCK = BigInt(deployments.orderBook.blockNumber)
+  return parsed
 }

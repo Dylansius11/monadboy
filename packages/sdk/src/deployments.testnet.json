@@ -1,0 +1,24 @@
+{
+  "chainId": 10143,
+  "diskRegistry": {
+    "address": "0xbfc885C572Cb1121FC4e4e82434279c4B4302714",
+    "transactionHash": "0xaf7a396b8f73814ba6fac77829c73e632f4ec1c2e0dfa83cfa1e9f50354229af",
+    "blockNumber": "68939801",
+    "gasUsed": "558564",
+    "gasLimit": "558564",
+    "codeBytes": 1885,
+    "gasEstimated": "465470",
+    "effectiveGasPrice": "102000000000",
+    "runtimeCodeHash": "0xeb8ae6d215a0a3a267d3b79aa6c6370a25bf5a32b37b44efb53eaa9770a5c2e2"
+  },
+  "orderBook": {
+    "address": "0xD9F66B3bdBb1741f33e01fA3Acb514623e0a60Bc",
+    "transactionHash": "0xa7877c745f7d3f3011bd589e78095c3175c845d14f7b1689d41af8d9ca3a52bc",
+    "blockNumber": "68940637",
+    "gasUsed": "1354631",
+    "gasLimit": "1354631",
+    "codeBytes": 141,
+    "gasEstimated": "1128859",
+    "effectiveGasPrice": "102000000000"
+  }
+}
