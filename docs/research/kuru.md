@@ -52,7 +52,7 @@ getMarketParams() view returns(uint32,uint96,address,uint256,address,uint256,uin
 
 [V] The [OrderBook SDK guide](https://docs.kuru.io/sdk/orderbook-sdk) explicitly requires funds already deposited into MarginAccount and sufficient token allowance before placing limit orders. Its receipt decoder also uses the SDK's non-indexed `Trade` payload.
 
-[U] **S2** must prove `batchProvisionLiquidity` semantics, aligned-array encoding, `provisionOrRevert`, `isMargin`, zap routing, returned amounts and gas on our actual testnet market. The ABI proves the five-argument function exists; it does not prove successful whole-ladder behavior. Prices are planned as price times `pricePrecision`, tick-aligned; sizes as base times `sizePrecision`. Trust these encodings only after S2's real fill.
+[V, S2 2026-10-07] Actual testnet 2+2 and 8+8 bulk provision succeeded, with initial and flipped-origin maker fills. Placement uses pricePrecision/sizePrecision as proposed. Market-buy quote uses **pricePrecision**, not ERC-20 quote decimals; minOut uses raw output-token decimals. Margin mode requires quote deposit before the buy and credits output to margin. Receipt-backed findings and gas shapes are in [SMART-CONTRACTS](../technical/SMART-CONTRACTS.md).
 
 [V] Permissionless factory simulation: `cast call 0x7EFbE105Ca7415dE98F96622173458ac1c054630 "deployProxy(uint8,address,address,uint96,uint32,uint32,uint96,uint96,uint256,uint256,uint96)(address)" 1 "$NATIVE_SENTINEL" 0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC 10000000000 100000000 1 100000000 79228162514264337593543950335 30 0 30 --from "$RANDOM_SENDER" --rpc-url https://testnet-rpc.monad.xyz` returned a market address, exit 0. NATIVE_SENTINEL is Solidity `address(0)`; the sender was a fresh random EOA. This is eth_call only, not a deployed market or a funded transaction; final parameters remain S2-owned.
 
@@ -78,7 +78,7 @@ getMarketParams() view returns(uint32,uint96,address,uint256,address,uint256,uin
 
 [V] Live corroboration: `cast logs --from-block 110527910 --to-block 110528009 --address 0x065c9d28e428a0db40191a54d33d5b7c71a9c394 0xf16924fba1c18c108912fcacaac7450c98eb3f2d8c0a3cdf3df7066c08f21581 --rpc-url https://rpc.monad.xyz --json` returned one Trade. Transaction `0x5f9b46d4eca1d67bfcbb0148462e9d560a33edff32b971c41aa7318bc1905001`, block 110527924, has **one topic** and **256 data bytes**. `cast abi-decode "f()(uint40,address,bool,uint256,uint96,address,address,uint96)" "$DATA"` decoded price 33364000000000000, beyond uint32. No participant addresses are needed in configuration.
 
-[U] **S2** supplies a receipt proving our own testnet `FlipOrderCreated` to `Trade` to `FlippedOrderCreated` lifecycle. The seven hash calculations above verify ABI signatures, not an observation of all seven live event types today.
+[V, S2] Our provision receipt `0x2adc195bf81514bbb045bfc72196a65b24bc15a5e8802ca5b752d79efa0a6b59` created four flip orders. Initial sell `0x2cd0db5af73081ec5d124530ccdb3affa243894429bef9fee9b608a5668f270b` filled ID1 and created ID5; buy `0x67da3e57a50aa7b40b7726a66f11be18a64b9fd6bf8bf5244c87b8a799be1d24` filled flipped-origin ID5 and created ID6. Trade.isBuy is the **taker** side: invert it for maker inventory views. Flip sizes compound price ratio; a partial fill can leave both linked members active.
 
 ## Deployment checks
 
@@ -134,10 +134,10 @@ cast call 0x699abc15308156e9a3ab89ec7387e9cfe1c86a3b "bestBidAsk()(uint256,uint2
 
 ## Findings
 
-[U] **S1 pending funding:** broadcast AUSD faucet supply/cadence proof. Today's successful simulations do not settle usable supply; see [AUSD](ausd.md).
+[V] **S1 PASS:** successful explicit-gas receipt delivered 10,000 AUSD; global 60-second faucet cooldown and immediate refusal were observed. Role supply transfers are distinct from faucet mints; see [AUSD](ausd.md).
 
-[U] **S2 pending funding:** deploy our testnet MON-AUSD market, fund MarginAccount, place 2 buys + 2 sells, observe an actual flip fill, validate encodings/flags and measure gas. Individual flip-order calls are the approved fallback if bulk provisioning fails.
+[V] **S2 PASS:** deployed our native MON-AUSD at `0xD9F66B3bdBb1741f33e01fA3Acb514623e0a60Bc`, block68940637, code141bytes. Independent getMarketParams readback agrees with the manifest. Passive provisioning, both trading modes, raw-token minOut, linked-pair cancel, withdrawals and maximum ladder have public receipts. Cancel one ID per linked pair: supplying both reverted OrderAlreadyFilledOrCancelled in simulation, while deduplicated cancellation succeeded.
 
-[U] **S3 pending funding:** measure bot inventory to move the deployed book approximately ±3% and support player drips; no budget is invented from an empty mainnet book.
+[V, S3] Actual deployed-book reads at block68947216 found 2.2409591305 MON of bid depth and approximately 0.06 AUSD of ask depth within ±3%; available inventory exceeds this observed depth. Sparse price levels do not guarantee an exact ±3% landing. One real player drip pays 0.5 MON +10 AUSD and costs 108,502 declared gas across two receipts; twenty payouts require 10 MON +200 AUSD plus 0.221344080 MON gas at the observed 102 gwei. Reserve-preserving and block-spaced emptying budgets are distinct; see the live blocker register.
 
-[U] **S5 pending funding:** index our deployed market and DiskRegistry v2 and observe event-to-feed latency. Target is within ten seconds; hosting/free-tier suitability is not yet proven. No playable market deployment address is asserted before S2.
+[V, S5 PASS] Self-hosted HyperIndex indexed the real market/registry from block68939801. Initial HyperSync-only fresh-fill latency16.620s failed and remains recorded. Pinned alpha live-RPC ingestion then exposed three sells and native-card flipped buy `0x10883c2ff43adb087f22c17fd798e1b5024219f18ccb17aa72fb4b6f418022aa` within564–570ms after observed receipts, sampled300ms. Client/indexer/worker SCORE all equal0.000002997833732854715AUSD for disk0x0179524E6CaCD825Dc1Ea6E9B538550159a7C824. Public `native-counter-*.json`, `indexer-native-observations.json` and `native-score-parity.json` contain real timestamps/rows; local proof is not public-host uptime.

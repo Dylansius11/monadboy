@@ -49,11 +49,13 @@ cast call 0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C "token()(address)" --rpc-ur
 
 [V] `cast sig "MaxFrequencyExceeded()"` returns `0x20e5bc67`, the error selector to recognize when decoding a faucet refusal.
 
-[U] **S1** owns the approved specification's `MaxFrequencyExceeded()` finding and the unknown request window. The required random-recipient simulation did **not** reproduce that revert on 2026-10-05: `cast call FAUCET "requestFunds(address)" "$RECIPIENT" --rpc-url https://testnet-rpc.monad.xyz` returned `0x`, exit 0. A distinct random-sender plus random-recipient scenario using `--from "$SENDER"` also returned `0x`, exit 0. FAUCET is the full checked faucet address above; recipients/sender were fresh random 20-byte values, not deployed contracts.
+[V, S1 on 2026-10-07 UTC] BOT's explicit-gas `requestFunds` transaction [0x80d2b84ddbe529a6f3692cf26f034054957b0c881a43a9278926512d4932737b](https://testnet.monadscan.com/tx/0x80d2b84ddbe529a6f3692cf26f034054957b0c881a43a9278926512d4932737b), block 68939636, emitted Transfer of raw `10000000000`: **10,000 AUSD**, independently establishing Monad supply rather than importing the Sepolia example.
 
-[V] These are observed successful **eth_call simulations only**: no transaction was broadcast and no token transfer persisted. No revert output can truthfully be recorded for those runs.
+[V] Immediate unsigned repeats using another sender and a new recipient both returned `MaxFrequencyExceeded()`. Readback was `faucetDripAmount=10000000000`, `maxAmountToOwn=100000000000`, `maxDripFrequency=60`, with one global `lastDripTimestamp`. A repeat simulation after the window succeeded. This is a global60second cooldown, not per-role allowance; a simulation is not another grant. Public timestamped evidence is in external `s1-immediate-refusals.json` / `s1-faucet-configuration.json`.
 
-[U] **S1 pending funding:** broadcast from the funded operations wallet with explicit gas, record receipt and actual token balance delta, then measure cadence. Simulation success does not settle usable supply. On `MaxFrequencyExceeded()`, the worker top-up job backs off rather than claiming a faucet payout.
+[V] BOT transferred 1,000 AUSD each to DRIP and DEPLOYER from its held faucet supply. These role transfers are not faucet payouts. The worker later delivered an actual fresh-player 0.5 MON / 10 AUSD drip and refused the repeat with HTTP 409; both transfer receipts and ledger state are recorded externally. Top-up code simulates before signing and applies hourly exponential backoff on the observed refusal.
+
+[V] The worker's actual DRIP top-up [0xc3849d522ea973d2a17638059b2000273f04ea38285a679d129f9e8789fa68a4](https://testnet.monadscan.com/tx/0xc3849d522ea973d2a17638059b2000273f04ea38285a679d129f9e8789fa68a4), block68945959, transferred10,000AUSD from the faucet, not the zero address. `worker-faucet-topup-proof.json` records the successful200,000gas receipt. `funded-drip-proof.json` records frequency-limited health and retryInMs3548614 without another broadcast.
 
 ## Why MONADBOY quotes in AUSD
 
