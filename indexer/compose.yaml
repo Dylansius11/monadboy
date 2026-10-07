@@ -1,0 +1,69 @@
+name: monadboy-indexer
+services:
+  postgres:
+    image: postgres:17.5
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${ENVIO_PG_PASSWORD:?Set ENVIO_PG_PASSWORD in ignored .env}
+      POSTGRES_DB: monadboy
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d monadboy"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  graphql:
+    image: hasura/graphql-engine:v2.43.0
+    ports:
+      - "127.0.0.1:18880:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${ENVIO_PG_PASSWORD}@postgres:5432/monadboy
+      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET:?Set HASURA_GRAPHQL_ADMIN_SECRET in ignored .env}
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: public
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "false"
+      HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup,http-log,webhook-log,websocket-log
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1s bash -c ':> /dev/tcp/127.0.0.1/8080'"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  indexer:
+    image: monadboy-indexer-tools:local
+    build: .
+    depends_on:
+      graphql:
+        condition: service_healthy
+    volumes:
+      - .:/workspace/indexer
+      - ../packages/sdk/src/kuru:/workspace/packages/sdk/src/kuru:ro
+      - ../packages/sdk/src/markets.testnet.json:/workspace/packages/sdk/src/markets.testnet.json:ro
+      - ../packages/sdk/package.json:/workspace/packages/sdk/package.json:ro
+      - modules:/workspace/indexer/node_modules
+      - generated:/workspace/indexer/generated
+      - store:/workspace/indexer/.pnpm-store
+    environment:
+      ENVIO_API_TOKEN: ${ENVIO_API_TOKEN:-}
+      ENVIO_PG_HOST: postgres
+      ENVIO_PG_PORT: 5432
+      ENVIO_PG_USER: postgres
+      ENVIO_PG_PASSWORD: ${ENVIO_PG_PASSWORD}
+      ENVIO_PG_DATABASE: monadboy
+      ENVIO_PG_PUBLIC_SCHEMA: envio
+      ENVIO_INDEXER_HOST: 0.0.0.0
+      ENVIO_INDEXER_PORT: 9898
+      HASURA_GRAPHQL_ENDPOINT: http://graphql:8080/v1/metadata
+      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
+      HASURA_SERVICE_HOST: graphql
+      HASURA_SERVICE_PORT: 8080
+      TUI_OFF: "true"
+      LOG_LEVEL: info
+volumes:
+  postgres:
+  modules:
+  generated:
+  store:

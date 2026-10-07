@@ -1,0 +1,49 @@
+type Market {
+  id: ID!
+  lastPrice: Float!
+  volume24h: Float!
+  updatedAt: BigInt!
+}
+
+type Order {
+  id: ID!
+  market: String! @index
+  orderId: BigInt!
+  owner: String! @index
+  price: Float!
+  flipPrice: Float!
+  size: BigInt!
+  isBuy: Boolean!
+  isFlipped: Boolean!
+  active: Boolean!
+  pairedOrderId: String!
+}
+
+type Fill {
+  id: ID!
+  market: String! @index
+  order: Order
+  maker: String! @index
+  taker: String!
+  price: Float!
+  size: Float!
+  isBuy: Boolean!
+  originKnown: Boolean!
+  isFlippedOrder: Boolean!
+  flipPrice: Float
+  block: BigInt!
+  tx: String!
+  at: BigInt! @index
+  realizedSpread: Float
+}
+
+type Disk {
+  id: ID!
+  score: Float!
+  fills: Int!
+  lastFillAt: BigInt!
+  saves: Int!
+  scoreComplete: Boolean!
+  lastSaveBlock: BigInt!
+  lastSaveLogIndex: Int!
+}

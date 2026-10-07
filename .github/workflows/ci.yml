@@ -61,3 +61,24 @@ jobs:
       - name: formatting
         run: forge fmt --check
         working-directory: contracts
+
+  indexer:
+    name: indexer
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ENVIO_PG_PASSWORD: ci-only-not-used
+      HASURA_GRAPHQL_ADMIN_SECRET: ci-only-not-used
+    defaults:
+      run:
+        working-directory: indexer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build pinned Linux tooling
+        run: docker compose build indexer
+      - name: Install locked indexer dependencies
+        run: docker compose run --rm --no-deps --entrypoint sh indexer -c "pnpm install --frozen-lockfile"
+      - name: Generate real handler types
+        run: docker compose run --rm --no-deps --entrypoint node indexer node_modules/envio/bin.mjs codegen
+      - name: Check projections
+        run: docker compose run --rm --no-deps --entrypoint sh indexer -c "pnpm typecheck && pnpm test"

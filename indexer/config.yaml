@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: monadboy
+field_selection:
+  transaction_fields:
+    - hash
+address_format: lowercase
+contracts:
+  - name: DiskRegistry
+    events:
+      - event: DiskErased(address indexed disk)
+      - event: DiskSaved(address indexed disk, uint64 updatedAt, bytes32 sealedHash, uint8 difficulty, bool godMode, bytes12 tag)
+  - name: OrderBook
+    events:
+      - event: OrderCreated(uint40 orderId, address owner, uint96 size, uint32 price, bool isBuy)
+      - event: FlipOrderCreated(uint40 orderId, uint40 flippedId, address owner, uint96 size, uint32 price, uint32 flippedPrice, bool isBuy)
+      - event: FlippedOrderCreated(uint40 orderId, uint40 flippedId, address owner, uint96 size, uint32 price, uint32 flippedPrice, bool isBuy)
+      - event: FlipOrderUpdated(uint40 orderId, uint96 size)
+      - event: FlipOrdersCanceled(uint40[] orderIds, address owner)
+      - event: OrdersCanceled(uint40[] orderIds, address owner)
+      - event: Trade(uint40 orderId, address makerAddress, bool isBuy, uint256 price, uint96 updatedSize, address takerAddress, address txOrigin, uint96 filledSize)
+chains:
+  - id: 10143
+    start_block: 68939801
+    rpc:
+      - url: https://testnet-rpc.monad.xyz
+        for: live
+        initial_block_interval: 100
+        interval_ceiling: 100
+        polling_interval: 1000
+    contracts:
+      - name: DiskRegistry
+        address: 0xbfc885C572Cb1121FC4e4e82434279c4B4302714
+      - name: OrderBook
+        address: 0xD9F66B3bdBb1741f33e01fA3Acb514623e0a60Bc
