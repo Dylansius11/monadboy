@@ -84,7 +84,7 @@ const row = (overrides: Record<string, unknown> = {}) => ({
   observedScore: 1.25,
   damage: 0.5,
   net: 0.75,
-  valuationWindow: 'position-lifetime',
+  valuationWindow: 'disk-lifetime-cash-flows',
   fills: 3,
   secondsInRange: 90,
   timeCoverage: 'sampled-only',

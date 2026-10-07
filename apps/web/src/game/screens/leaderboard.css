@@ -1,6 +1,5 @@
-/* S9, the leaderboard. Landscape is a table of one-line rows; a native
-   portrait viewport turns each row into a card with its own labels. Both come
-   from the same markup: only this file decides which one is drawn. */
+/* Compact landscape cards keep full-precision figures on their own row.
+   Native portrait stacks the equally weighted figures with label/value pairs. */
 
 .lb-scroll {
   flex: 1;
@@ -22,8 +21,10 @@
 
 .lb-row {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1.2fr) repeat(3, minmax(0, 1fr)) 32px 44px 40px;
-  grid-template-areas: 'rank who score damage net fills range tx';
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-areas:
+    'rank who who who who fills fills range range range tx tx'
+    'score score score score damage damage damage damage net net net net';
   align-items: center;
   column-gap: 4px;
   min-height: 24px;
@@ -31,16 +32,6 @@
   border: 1px solid var(--color-edge-soft);
   background: var(--color-panel);
   cursor: pointer;
-}
-
-.lb-row.lb-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  min-height: 16px;
-  border-color: transparent;
-  background: var(--color-screen);
-  cursor: default;
 }
 
 .lb-row.lb-selected {
@@ -66,8 +57,8 @@
 
 .lb-figure { white-space: nowrap; }
 
-/* The per-cell labels exist for the portrait card; the landscape table has a header row. */
-.lb-label { display: none; }
+/* Each figure keeps its label when the full-precision row reflows. */
+.lb-label { display: block; }
 
 .lb-tx a {
   text-decoration: underline;
@@ -84,18 +75,24 @@
   .lb-scroll { padding-right: 4px; }
   .lb-list { gap: 8px; }
 
-  .lb-row.lb-head { display: none; }
   .lb-row {
     grid-template-columns: 36px repeat(3, minmax(0, 1fr));
     grid-template-areas:
       'rank who who who'
-      '. score damage net'
+      '. score score score'
+      '. damage damage damage'
+      '. net net net'
       '. fills range range'
       '. tx tx tx';
     row-gap: 8px;
     padding: 12px;
   }
-  .lb-label { display: block; }
+  .lb-score, .lb-damage, .lb-net {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    align-items: baseline;
+    column-gap: 8px;
+  }
   /* One size for SCORE, DAMAGE and NET at every width, so none outweighs another. */
   .lb-figure { font-size: 16px; line-height: 20px; }
   .lb-tx a, .lb-tx > span { display: flex; min-height: 44px; align-items: center; }

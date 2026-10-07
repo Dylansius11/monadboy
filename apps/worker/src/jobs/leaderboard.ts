@@ -19,13 +19,23 @@ export type DiskFills = {
   holdings: Holdings | null
   deposit: Deposit | null
 }
+export type IndexerObservation = {
+  status: 'not-configured' | 'live' | 'offline'
+  checkedAt: number | null
+  throughBlock: number | null
+  headBlock: number | null
+  lagBlocks: number | null
+  lastError: string | null
+}
 export type FillSnapshot = {
   status: 'complete' | 'partial' | 'no-market-configured' | 'unavailable'
   at: number
   disks: DiskFills[]
+  source?: 'envio' | 'direct-logs'
+  indexer?: IndexerObservation
 }
-// Phase 6 reads Trade logs directly; Phase 8 swaps in Envio behind this same interface.
-export type FillSource = { read: () => Promise<FillSnapshot> }
+// Optional fixed cursor keeps indexer fills, basis and chain valuation on one block.
+export type FillSource = { read: (throughBlock?: bigint) => Promise<FillSnapshot> }
 
 export const WINDOWS = ['24h', '7d', 'all'] as const
 export type LeaderboardWindow = (typeof WINDOWS)[number]
@@ -46,7 +56,7 @@ export type LeaderboardRow = {
   observedScore: number
   damage: number | null
   net: number | null
-  valuationWindow: 'position-lifetime'
+  valuationWindow: 'disk-lifetime-cash-flows'
   fills: number
   secondsInRange: number
   timeCoverage: 'sampled-only'
@@ -106,7 +116,7 @@ export function createLeaderboardJob({
           observedScore,
           damage: valuation?.damage ?? null,
           net: valuation?.net ?? null,
-          valuationWindow: 'position-lifetime',
+          valuationWindow: 'disk-lifetime-cash-flows',
           fills: fills.length,
           secondsInRange,
           timeCoverage: 'sampled-only',
@@ -126,6 +136,8 @@ export function createLeaderboardJob({
           source: 'chain-fills-and-mid-samples',
           status: data.status,
           at: data.at,
+          fillSource: data.source ?? 'direct-logs',
+          indexer: data.indexer ?? null,
           window,
           rows,
         }),
@@ -141,7 +153,7 @@ export function createLeaderboardJob({
 
 export function leaderboardSection(
   db: Database,
-  source: 'direct-logs' | 'not-configured',
+  source: 'direct-logs' | 'not-configured' | (() => 'envio' | 'direct-logs' | 'not-configured'),
   now: () => number,
 ): () => HealthSection {
   return () => {
@@ -152,7 +164,7 @@ export function leaderboardSection(
       .get()
     return {
       value: {
-        source,
+        source: typeof source === 'function' ? source() : source,
         computedAt: row?.computed_at ?? null,
         ageMs: row?.computed_at == null ? null : now() - row.computed_at,
       },

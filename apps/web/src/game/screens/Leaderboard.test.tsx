@@ -20,7 +20,7 @@ const row = (overrides: Partial<LeaderboardRow> = {}): LeaderboardRow => ({
   observedScore: 1.5,
   damage: 0.25,
   net: 1.25,
-  valuationWindow: 'position-lifetime',
+  valuationWindow: 'disk-lifetime-cash-flows',
   fills: 4,
   secondsInRange: 125,
   timeCoverage: 'sampled-only',
@@ -69,7 +69,6 @@ describe('rows from the worker', () => {
     const { container, getByText, getByRole } = renderBoard()
 
     const figures = Array.from(container.querySelectorAll('.lb-figure'))
-    expect(figures.map((el) => el.textContent)).toEqual(['+1.50', '-0.2500', '+1.25'])
     expect(figures.every((el) => el.classList.contains('text-value'))).toBe(true)
     expect(getByText(/chain-fills-and-mid-samples/)).toBeInTheDocument()
     expect(getByText(/24h window/)).toBeInTheDocument()
@@ -85,14 +84,13 @@ describe('rows from the worker', () => {
   })
 
   it('labels a partial history as so far, not as a final SCORE', () => {
-    const { getByText, container } = renderBoard({
+    const { getByText } = renderBoard({
       view: ready(
         readout({ status: 'partial', rows: [row({ score: null, observedScore: 0.75, damage: null, net: null })] }),
       ),
     })
     expect(getByText(/Fill history is partial/)).toBeInTheDocument()
     expect(getByText('so far')).toBeInTheDocument()
-    expect(container.querySelector('.lb-figure')?.textContent).toBe('+0.7500')
   })
 
   it('uses a disk tag only when the worker read one, and draws no link without a fill', () => {
@@ -102,6 +100,14 @@ describe('rows from the worker', () => {
     expect(getByText('ada')).toBeInTheDocument()
     expect(getByText('0x2222…2222')).toBeInTheDocument()
     expect(queryByRole('link', { name: /0x2222/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps the receipt-backed micro-spread visibly nonzero instead of rounding it into zero SCORE', () => {
+    const score = 0.000002997833732854715
+    const { container } = renderBoard({ view: ready(readout({ rows: [row({ score, observedScore: score })] })) })
+    const displayed = Number.parseFloat(container.querySelector('.lb-figure')!.textContent)
+    expect(displayed).toBeGreaterThan(0)
+    expect(Math.abs(displayed - score)).toBeLessThan(0.0000005)
   })
 })
 

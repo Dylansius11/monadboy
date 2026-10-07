@@ -156,7 +156,7 @@ const leaderboardRow = z.object({
   observedScore: finite,
   damage: nonNegative.nullable(),
   net: finite.nullable(),
-  valuationWindow: z.literal('position-lifetime'),
+  valuationWindow: z.literal('disk-lifetime-cash-flows'),
   fills: z.number().int().min(0),
   secondsInRange: nonNegative,
   timeCoverage: z.literal('sampled-only'),

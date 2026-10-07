@@ -82,7 +82,7 @@ test('a known flipped maker fill values SCORE, DAMAGE and NET and counts sampled
     secondsInRange: 10,
     lastFillTx: tx('1'),
     timeCoverage: 'sampled-only',
-    valuationWindow: 'position-lifetime',
+    valuationWindow: 'disk-lifetime-cash-flows',
   })
 })
 

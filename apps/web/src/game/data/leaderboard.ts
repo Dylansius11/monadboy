@@ -31,7 +31,7 @@ export function cleanTag(tag: string | null): string | null {
  * zero. Signed explicitly so the sign survives a grayscale screenshot.
  */
 export function quoteAmount(amount: number, sign: 'plus-minus' | 'minus' | 'none'): string {
-  const magnitude = Math.abs(amount).toFixed(Math.abs(amount) >= 1 ? 2 : 4)
+  const magnitude = Math.abs(amount).toFixed(Math.abs(amount) >= 1 ? 2 : 6)
   if (sign === 'none') return magnitude
   if (sign === 'minus') return amount === 0 ? magnitude : `-${magnitude}`
   return amount < 0 ? `-${magnitude}` : amount > 0 ? `+${magnitude}` : magnitude

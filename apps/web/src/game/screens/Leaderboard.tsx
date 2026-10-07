@@ -14,7 +14,6 @@ import {
 import { utcStamp } from '../data/provenance'
 import { Panel, PixelText } from '../../ui'
 import { describeReadState } from './ReadState'
-import type { ReactNode } from 'react'
 import type { TextTone } from '../../ui'
 import type { ReadView } from '../../lib/worker/queries'
 import type {
@@ -143,7 +142,6 @@ export function Leaderboard({ window, onWindowChange, view, now, onBack }: Leade
         <Rows
           rows={rows}
           current={current}
-          partial={data.status !== 'complete'}
           rowRefs={rowRefs}
           onSelect={setSelected}
         />
@@ -279,29 +277,17 @@ function StateBody({
 function Rows({
   rows,
   current,
-  partial,
   rowRefs,
   onSelect,
 }: {
   rows: Array<LeaderboardRow>
   current: number
-  partial: boolean
   rowRefs: { current: Array<HTMLLIElement | null> }
   onSelect: (index: number) => void
 }) {
   return (
     <div className="lb-scroll">
       <ol className="lb-list" aria-label="Leaderboard rows">
-        <li className="lb-row lb-head" aria-hidden="true">
-          <HeadLabel area="rank">#</HeadLabel>
-          <HeadLabel area="who">Disk</HeadLabel>
-          <HeadLabel area="score">{partial ? 'Score so far' : 'Score'}</HeadLabel>
-          <HeadLabel area="damage">Damage</HeadLabel>
-          <HeadLabel area="net">Net</HeadLabel>
-          <HeadLabel area="fills">Fills</HeadLabel>
-          <HeadLabel area="range">In range</HeadLabel>
-          <HeadLabel area="tx">Last fill</HeadLabel>
-        </li>
         {rows.map((row, index) => (
           <Row
             key={row.disk}
@@ -317,20 +303,12 @@ function Rows({
       </ol>
       <PixelText as="p" role="micro" tone="dim">
         TESTNET quote units, read from chain fills and never reported by players.
+        SCORE uses the selected fill window. NET and DAMAGE use signed lifetime
+        margin cash flows, not the card's private per-run history.
         IN RANGE counts sampled prices only; a gap in samples is unknown time,
         not time in range.
       </PixelText>
     </div>
-  )
-}
-
-function HeadLabel({ area, children }: { area: string; children: ReactNode }) {
-  return (
-    <span className={`lb-${area}`}>
-      <PixelText role="micro" tone="dim" upper>
-        {children}
-      </PixelText>
-    </span>
   )
 }
 
