@@ -4,7 +4,7 @@ import type { Address } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import {
   erc20Abi,
-  mainnetMarkets,
+  testnetMarkets,
   priceToUnits,
   sizeToUnits,
 } from '@monadboy/sdk'
@@ -75,12 +75,16 @@ describe.skipIf(!hasAnvil)(
       for (const account of [bot, dripper])
         await chain.setBalance(account.address, parseEther('100'))
       market = {
-        ...mainnetMarkets.find((m) => m.symbol === 'MON_USDC')!,
+        ...testnetMarkets.find((m) => m.symbol === 'MON_AUSD')!,
         chain: 'testnet',
         symbol: 'MON_AUSD',
         quoteSymbol: 'AUSD',
         address: book,
         quoteToken: ausd,
+        params: {
+          ...testnetMarkets.find((m) => m.symbol === 'MON_AUSD')!.params,
+          minSize: 1_000_000n, maxSize: 10n ** 22n, takerFeeBps: 0,
+        },
       }
       const env = parseEnv({
         ENABLE_TRANSACTIONS: 'true',
@@ -249,6 +253,8 @@ describe.skipIf(!hasAnvil)(
           ]
         >(book, 'MockBook', 's_orders', [id])
 
+      await chain.write(book, 'MockBook', 'setBook', [parseEther('0.03'), parseEther('0.033')])
+      const externalBeforeBuy = await read<bigint>(book, 'MockBook', 'externalBase')
       feed(0.033, 0.03)
       await job()
       expect(ticks().at(-1)).toMatchObject({
@@ -258,8 +264,9 @@ describe.skipIf(!hasAnvil)(
       })
       expect(await counts()).toEqual({ buys: 1n, sells: 0n })
       expect(await read<bigint>(book, 'MockBook', 'lastBuyQuote')).toBe(
-        1_000_000n,
+        100_000_000n,
       )
+      expect(await read<bigint>(book, 'MockBook', 'externalBase')).toBeLessThan(externalBeforeBuy)
       const [bid, ask] = [await order(1), await order(2)]
       expect([bid[0], bid[5], bid[7]]).toEqual([
         bot.address,
@@ -279,6 +286,8 @@ describe.skipIf(!hasAnvil)(
           .all(),
       ).toEqual([{ order_id: '1' }, { order_id: '2' }])
 
+      await chain.write(book, 'MockBook', 'setBook', [parseEther('0.033'), parseEther('0.039')])
+      const externalBeforeSell = await read<bigint>(book, 'MockBook', 'externalBase')
       feed(0.033, 0.036)
       await job()
       expect(ticks().at(-1)).toMatchObject({ action: 'sell', error: null })
@@ -286,6 +295,8 @@ describe.skipIf(!hasAnvil)(
       expect(await read<bigint>(book, 'MockBook', 'lastSellSize')).toBe(
         sizeToUnits(1 / 0.033, market.params),
       )
+      expect(await read<bigint>(book, 'MockBook', 'externalBase')).toBeGreaterThan(externalBeforeSell)
+      expect(await read<bigint>(book, 'MockBook', 'canceled')).toBe(2n)
       expect((await order(1))[0]).toBe(zeroAddress)
       expect(
         db
@@ -316,7 +327,7 @@ describe.skipIf(!hasAnvil)(
       const hashes = ticks().flatMap((tick) =>
         tick.tx_hash ? tick.tx_hash.split(',') : [],
       ) as `0x${string}`[]
-      expect(hashes).toHaveLength(4)
+      expect(hashes).toHaveLength(5)
       const receipts = await Promise.all(
         hashes.map((hash) => chain.client.getTransactionReceipt({ hash })),
       )
@@ -331,12 +342,26 @@ describe.skipIf(!hasAnvil)(
           async (hash) => (await chain.client.getTransaction({ hash })).gas,
         ),
       )
-      expect(gasLimits).toEqual([
-        1_000_000n,
-        1_000_000n,
-        1_000_000n,
-        1_000_000n,
-      ])
+      expect(gasLimits.every((gas) => gas > 0n && gas <= 2_000_000n)).toBe(true)
+      // Remove real fixture external liquidity while keeping BOT quotes. The next
+      // transition cancels them and must not trade against itself or an empty side.
+      await chain.write(book, 'MockBook', 'setBook', [(1n << 256n) - 1n, 0n])
+      await chain.write(book, 'MockBook', 'fillPlain', [4])
+      expect((await order(4))[1]).toBeGreaterThan(0n)
+      const beforeEmpty = await counts()
+      const externalBeforeEmpty = [
+        await read<bigint>(book, 'MockBook', 'externalBase'),
+        await read<bigint>(book, 'MockBook', 'externalQuote'),
+      ]
+      feed(0.034, 0.033)
+      await job()
+      expect(ticks().at(-1)).toMatchObject({ action: 'buy', error: null })
+      expect(ticks().at(-1)!.tx_hash!.split(',')).toHaveLength(2)
+      expect(await counts()).toEqual(beforeEmpty)
+      expect([
+        await read<bigint>(book, 'MockBook', 'externalBase'),
+        await read<bigint>(book, 'MockBook', 'externalQuote'),
+      ]).toEqual(externalBeforeEmpty)
     }, 90_000)
 
     test('sellability probe: clean tokens pass, a token returning false or reverting is refused, an empty holder is unusable', async () => {

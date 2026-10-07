@@ -193,6 +193,36 @@ test('every tick is a row: the action, price context, hashes and no error on suc
   })
 })
 
+test('tick context remains the evaluated price when the sampler advances during signing', async () => {
+  const run = harness({
+    ...funded,
+    execute: async () => {
+      run.mid.targetMid = 0.04
+      run.mid.testnet.mid = 0.039
+      return [tx('a')]
+    },
+  }, 0.029)
+  await run.job()
+  expect(run.db.query('SELECT source_mid, testnet_mid_before FROM mirror_ticks').get()).toEqual({
+    source_mid: 0.03, testnet_mid_before: 0.029,
+  })
+})
+
+test('the signing guard refuses a source paused while a transition awaits', async () => {
+  const run = harness({
+    ...funded,
+    execute: async (_action, _target, assertSource) => {
+      run.mid.status = 'paused'
+      await assertSource()
+      throw new Error('Must not reach signing')
+    },
+  }, 0.029)
+  await run.job()
+  expect(run.db.query('SELECT tx_hash, error FROM mirror_ticks').get()).toEqual({
+    tx_hash: null, error: 'Error: Source unavailable before mirror signing',
+  })
+})
+
 test('hold and paused ticks are recorded without calling the executor to execute', async () => {
   let executed = 0
   const executor = {
@@ -232,6 +262,20 @@ test('an executor failure is stored on the tick row with the URL stripped, and t
     { action: 'buy', tx_hash: null, error: 'Error: POST <url> refused' },
   ])
   expect(state.lastError).toBe('Error: POST <url> refused')
+})
+
+test('a confirmed take survives a failed quote refresh in the SQL ledger', async () => {
+  const hash = tx('a')
+  const { db, job } = harness({
+    ...funded,
+    execute: async () => {
+      throw Object.assign(new Error('Quote preflight refused'), { hashes: [hash] })
+    },
+  }, 0.029)
+  await job()
+  expect(db.query('SELECT tx_hash, error FROM mirror_ticks').get()).toEqual({
+    tx_hash: hash, error: 'Error: Quote preflight refused',
+  })
 })
 
 test('a failed or stale testnet read holds the tick instead of seeding quotes', async () => {
