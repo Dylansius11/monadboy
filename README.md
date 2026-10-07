@@ -131,6 +131,14 @@ bun run verify
 forge test
 ```
 
+[V, 2026-10-07] A fresh local clone of `7268a17` installed832packages with
+`bun install --frozen-lockfile` and passed `bun run verify`: web551, SDK153,
+worker133 tests, all three typechecks and ESLint. No private environment,
+generated indexer runtime or dependency directory was copied into that clone.
+The separately locked Linux indexer also passed clean-volume install/codegen,
+typecheck and four native projection tests. These local checks do not establish
+physical-device support, public hosting, remote CI or continuous mirror economics.
+
 The guard is available now. For explicit files:
 
 ```sh

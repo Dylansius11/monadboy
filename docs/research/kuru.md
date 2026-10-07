@@ -134,7 +134,7 @@ cast call 0x699abc15308156e9a3ab89ec7387e9cfe1c86a3b "bestBidAsk()(uint256,uint2
 
 ## Findings
 
-[V] **S1 PASS:** successful explicit-gas receipt delivered 10,000 AUSD; global 60-second faucet cooldown and immediate refusal were observed. Role supply transfers are distinct from faucet mints; see [AUSD](ausd.md).
+[V] **S1 PASS:** successful explicit-gas receipt delivered10,000AUSD; global60second faucet cooldown and immediate refusal observed. Role transfers are distinct from faucet grants; successful faucet Transfer comes from the faucet, not the zero address. See [AUSD](ausd.md).
 
 [V] **S2 PASS:** deployed our native MON-AUSD at `0xD9F66B3bdBb1741f33e01fA3Acb514623e0a60Bc`, block68940637, code141bytes. Independent getMarketParams readback agrees with the manifest. Passive provisioning, both trading modes, raw-token minOut, linked-pair cancel, withdrawals and maximum ladder have public receipts. Cancel one ID per linked pair: supplying both reverted OrderAlreadyFilledOrCancelled in simulation, while deduplicated cancellation succeeded.
 
