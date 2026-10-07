@@ -68,6 +68,8 @@ export default [
       'contracts/**',
       'dist/**',
       'apps/*/dist/**',
+      'indexer/generated/**',
+      'indexer/.pnpm-store/**',
       'apps/web/src/routeTree.gen.ts',
     ],
   },
