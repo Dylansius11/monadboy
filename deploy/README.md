@@ -47,15 +47,18 @@ address. Fix the web hostname before the first production passkey.
 tracker, leaderboard) and `/v1/health` reports the mirror and drip as disabled. To enable
 sends, set it to `true` together with distinct `BOT_PRIVATE_KEY` and `DRIP_PRIVATE_KEY`
 (`cast wallet new`, funded by the owner), a stable `DRIP_IP_SALT` of at least 32
-characters, and `MARKETS_JSON` once the testnet market exists. At start the worker
-refuses to sign unless the RPC reports chain 10143 and every configured contract has
-bytecode. Never use these keys on mainnet.
+characters. The checked-in verified testnet manifest is the default; set `MARKETS_JSON`
+and an explicit start block for a custom deployment. At start the worker refuses to
+sign unless the RPC reports chain10143 and every configured contract has bytecode.
+Never use these keys on mainnet.
 
-[U, S2] `GAS_MARKET_ORDER`, `GAS_BATCH_UPDATE` (1,000,000 each), `GAS_ERC20` (100,000)
-and `GAS_FAUCET` (200,000) are conservative defaults, not measured limits. Replace them
-with limits taken from spike S2 receipts before live enablement. Native MON transfers use
-the 21,000 protocol constant. Every write declares its gas, and nothing estimates at send
-time, because Monad charges the limit: <https://docs.monad.xyz/developer-essentials/gas-pricing>.
+[V, S2] `GAS_MARKET_ORDER` and `GAS_BATCH_UPDATE` default to 2,000,000 as bounded
+estimation/declared-budget ceilings, not constant paid limits. Each mirror call simulates,
+estimates with that ceiling, adds 20% headroom and refuses an over-budget result before
+signing. `GAS_ERC20=87502` and `GAS_FAUCET=156720` come from successful receipts;
+native transfers use 21,000. Scope and receipt hashes live in SDK `gas-limits.ts` and
+[SMART-CONTRACTS](../docs/technical/SMART-CONTRACTS.md). Monad bills the declared limit:
+<https://docs.monad.xyz/developer-essentials/gas-pricing>.
 
 [V] Reserve-balance rule: <https://docs.monad.xyz/developer-essentials/reserve-balance>.
 Each treasury key sends through one queue that waits until the head is at least three
@@ -77,11 +80,21 @@ The worker therefore runs one HyperSync chunk at a time, waits out a 429 using
 The mainnet MON_USDC source pauses immediately for an empty/crossed book or relative
 spread `(ask - bid) / mid > 2%`. This fixed operator maximum is user-approved policy,
 not measured calibration. Transport failures retain the three-failure pause. Testnet
-book observations expire after 30 seconds; mirror freshness is checked after inventory
-reads. Tracker rows older than 45 minutes become stale and non-playable.
+book observations expire after 30 seconds. Source validity/freshness is rechecked after
+every signing-path await, including treasury queue spacing and gas estimation. Owned
+plain quotes are canceled before taker execution to prevent self-taking; only authoritative
+live price-point membership counts as resting inventory. Tracker rows older than
+45 minutes become stale and non-playable.
 
 Top-three maker concentration is bounded at 1, preserving its mathematical ratio
 despite floating-point summation order. The strict web `[0,1]` schema is unchanged.
+
+Set `ENVIO_GRAPHQL_URL` to the read-only HyperIndex endpoint for indexed leaderboard fills.
+The adapter validates chain10143/start coverage and freezes one processed cursor for fills,
+cash flows and chain holdings. `/v1/health` reports indexed lag/provenance; an actual local
+GraphQL outage switched to direct logs, and restart restored indexed reads with SCORE parity.
+Leaderboard NET/DAMAGE disclose signed disk-lifetime margin cash flows; they do not expose
+or pretend to reconstruct the browser's private per-run basis.
 
 For a safe isolated local run, use an unused loopback port and a separate SQLite path:
 
@@ -117,5 +130,10 @@ and 24-hour uptime remain B2/B3 gates.
 
 The isolated read-only worker served all seven live markets with authenticated complete
 HyperSync trade coverage. One recorded snapshot contained 21,668 trades; later counts
-advance with the head. No mirror/drip/fill broadcast was observed. Full evidence and
-remaining funded checks live in BUILD-PLAN and the external progress log.
+advance with the head. Subsequent funded proof recorded real drips, S2 flip fills and
+worker transactions. The original ten-minute mirror run self-took its own quotes and
+cost 2.990181918 MON, so it is not external-player-fill or production-economics proof.
+One corrected bounded transition canceled live owned quotes and filled DEPLOYER/native-card
+makers; subsequent target quote preflight honestly refused a crossing third-party bid,
+without broadcasting a revert. Continuous final-strategy alignment/operating cost remains
+an acceptance gate. Full receipts and remaining checks live in BUILD-PLAN and the external log.

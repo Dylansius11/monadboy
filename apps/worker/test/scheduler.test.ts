@@ -83,3 +83,23 @@ test('stop prevents further scheduled runs', async () => {
   expect(seen).toBeGreaterThan(1)
   expect(runs).toBe(seen)
 })
+
+test('stop also refuses refresh-triggered one-shot work while allowing an in-flight run to settle', async () => {
+  const scheduler = createScheduler(quiet)
+  let finish = () => {}
+  let runs = 0
+  const work = scheduler.runOnce({
+    name: 'in-flight', intervalMs: 5, timeoutMs: 1000,
+    run: () => new Promise<void>((resolve) => { finish = resolve }),
+  })
+  scheduler.stop()
+  await scheduler.runOnce({
+    name: 'late-refresh', intervalMs: 5, timeoutMs: 1000,
+    run: async () => { runs++ },
+  })
+  expect(runs).toBe(0)
+  expect(scheduler.status['in-flight'].running).toBe(true)
+  finish()
+  await work
+  expect(scheduler.status['in-flight'].running).toBe(false)
+})

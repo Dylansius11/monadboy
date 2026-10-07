@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import type { Address, PublicClient } from 'viem'
-import { ausdFaucetAbi, erc20Abi } from '@monadboy/sdk'
+import { ausdFaucetAbi, erc20Abi, nativeTransferGas } from '@monadboy/sdk'
 import type { Market } from '@monadboy/sdk'
 import type { WorkerEnv } from './env'
 import type { Logger } from './logger'
@@ -13,8 +13,6 @@ import type { MirrorExecutor } from './jobs/mirror'
 import { createDripService } from './routes/drip'
 import type { DripChain, DripService } from './routes/drip'
 
-// Plain native transfer: 21000 is the protocol constant, not a measured estimate.
-const NATIVE_TRANSFER_GAS = 21_000n
 export const TESTNET_CHAIN_ID = 10143
 const PER_IP_DAILY = 3
 
@@ -100,7 +98,7 @@ export async function createOperations({
             dripper.wallet.sendTransaction({
               to,
               value: amount,
-              gas: NATIVE_TRANSFER_GAS,
+              gas: nativeTransferGas,
               nonce,
             }),
           )

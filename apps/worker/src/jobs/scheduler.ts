@@ -29,6 +29,7 @@ export function createScheduler({
   let stopped = false
 
   async function runOnce(job: JobSpec): Promise<void> {
+    if (stopped) return
     const entry = (status[job.name] ??= {
       runs: 0,
       failures: 0,

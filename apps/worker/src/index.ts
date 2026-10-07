@@ -10,6 +10,7 @@ import type { HealthSections, RouteModule } from './app'
 import { createBirthResolver } from './chain/market-births'
 import { createBookReader } from './chain/l2-book'
 import { createDirectFillSource } from './chain/fill-source'
+import { createIndexedFillSource } from './chain/indexed-fill-source'
 import {
   createHypersyncFetcher,
   createRpcFetcher,
@@ -99,13 +100,20 @@ const tracker = createTrackerSnapshot({
   testnetMarkets: markets,
   sourceSymbol: SOURCE_MARKET,
 })
-const fills = createDirectFillSource({
+const directFills = createDirectFillSource({
   db,
   client: testnet,
   markets,
   margin: env.TESTNET_MARGIN_ADDRESS,
   registry: env.TESTNET_REGISTRY_ADDRESS,
   startBlock: env.TESTNET_START_BLOCK,
+})
+const fills = createIndexedFillSource({
+  url: env.ENVIO_GRAPHQL_URL,
+  client: testnet,
+  markets,
+  startBlock: env.TESTNET_START_BLOCK,
+  direct: directFills,
 })
 
 const scheduler = createScheduler()
@@ -201,15 +209,12 @@ const sections: HealthSections = {
   drip: () => ({ value: ops.dripStatus }),
   leaderboard: leaderboardSection(
     db,
-    markets.length ? 'direct-logs' : 'not-configured',
+    () => fills.state.status === 'live' ? 'envio' : markets.length ? 'direct-logs' : 'not-configured',
     now,
   ),
-  // Envio is wired in Phase 8; the URL is only reported, never queried.
   envio: () => ({
-    value: {
-      status: env.ENVIO_GRAPHQL_URL ? 'configured-unqueried' : 'not-configured',
-      lagMs: null,
-    },
+    value: { ...fills.state },
+    amber: fills.state.status === 'offline' ? 'indexer-offline' : undefined,
   }),
 }
 const routes: RouteModule[] = [
@@ -242,10 +247,16 @@ log('worker.started', {
 scheduler.start(jobs)
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.on(signal, () => {
+  process.once(signal, () => {
     scheduler.stop()
-    void server.stop(true)
-    // In-flight reads may still touch SQLite; closing the process closes it.
-    process.exit(0)
+    // Keep already-broadcast receipts and SQLite updates observable before exit.
+    // stop() prevents new job ticks; the current bounded RPC/receipt work may finish.
+    void (async () => {
+      while (Object.values(scheduler.status).some((job) => job.running))
+        await Bun.sleep(100)
+      await server.stop(true)
+      db.close()
+      process.exit(0)
+    })()
   })
 }

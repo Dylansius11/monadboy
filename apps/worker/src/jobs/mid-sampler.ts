@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import type { Address } from 'viem'
 import { bestBidAsk1e18, kuruOrderbookAbi, mainnetMarkets } from '@monadboy/sdk'
 import type { Market } from '@monadboy/sdk'
-import { log } from '../logger'
+import { describeError, log } from '../logger'
 import type { Logger } from '../logger'
 import type { HealthSection } from '../app'
 
@@ -140,13 +140,14 @@ export function createMidSampler({
         mid,
         sampledAt: at,
       })
-    } catch {
+    } catch (cause) {
       state.consecutiveFailures++
       if (state.consecutiveFailures >= PAUSE_AFTER_FAILURES)
         state.status = 'paused'
       logger('mid.source-failed', {
         failures: state.consecutiveFailures,
         state: state.status,
+        error: describeError(cause),
       })
     }
     if (market && testnet) {
@@ -160,9 +161,9 @@ export function createMidSampler({
         }
         if (mid !== null)
           insert.run(state.testnet.at, `testnet:${market.symbol}`, mid)
-      } catch {
+      } catch (cause) {
         state.testnet = { ...state.testnet, status: 'unavailable', mid: null }
-        logger('mid.testnet-failed', { market: market.symbol })
+        logger('mid.testnet-failed', { market: market.symbol, error: describeError(cause) })
       }
     }
     if (now() - prunedAt > 3_600_000) {

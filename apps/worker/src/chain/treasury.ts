@@ -139,7 +139,7 @@ export function createTreasury({
         })
         if (receipt.status !== 'success') {
           nonces.reset()
-          throw Object.assign(new Error('Treasury transaction reverted'), {
+          throw Object.assign(new Error(`Treasury transaction reverted: ${hash}`), {
             blockNumber: receipt.blockNumber,
           })
         }
