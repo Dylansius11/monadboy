@@ -1,6 +1,6 @@
 # MONADBOY smart contracts
 
-Labels: **[V]** verified with the linked source or exact command; **[I]** inference or intended integration; **[U]** unresolved, with its settling spike. DiskRegistry v2 is implemented and locally verified, but not deployed. Deployment rows remain empty until evidence exists.
+Labels: **[V]** verified with the linked source or exact command; **[I]** inference or intended integration; **[U]** unresolved, with its settling spike. DiskRegistry v2 is deployed on Monad testnet with a confirmed receipt and exact runtime-artifact match. Market execution evidence is recorded separately.
 
 ## 0. Never trust a published address
 
@@ -27,7 +27,7 @@ Require a successful exit and non-empty bytecode: `0x` alone fails. Use a full 0
 | AUSD token | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` | 5,937 | `cast code 0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC --rpc-url https://testnet-rpc.monad.xyz` |
 | AUSD faucet | `0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C` | 1,200 | `cast code 0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C --rpc-url https://testnet-rpc.monad.xyz` |
 
-[V] Published role sources: [Kuru contract addresses](https://docs.kuru.io/contracts/Contract-addresses), [Agora contract deployments](https://docs.agora.finance/developer/contract-deployments.md). [U, S1] Faucet cadence and usable testnet USDC supply remain unresolved; deployed token code does not imply a usable supply source. Do not infer Monad faucet output from a different chain's observed mint amount.
+[V] Published role sources: [Kuru contract addresses](https://docs.kuru.io/contracts/Contract-addresses), [Agora contract deployments](https://docs.agora.finance/developer/contract-deployments.md). S1 established10,000AUSD grants and a global60second cooldown. [U, S1] Usable testnet USDC supply remains unresolved; token code alone does not establish supply.
 
 ## 1. DiskRegistry v2 specification
 
@@ -88,18 +88,20 @@ cd ..
 bun packages/sdk/scripts/generate-disk-registry-abi.ts
 ```
 
-The generator reads `contracts/out/DiskRegistry.sol/DiskRegistry.json` and writes `packages/sdk/src/abi/disk-registry.ts`. [V] Generated and artifact ABI arrays match exactly (7 entries). No deployed registry address is asserted here.
+The generator reads `contracts/out/DiskRegistry.sol/DiskRegistry.json` and writes `packages/sdk/src/abi/disk-registry.ts`. [V] Generated and artifact ABI arrays match exactly (7 entries). The verified deployment is recorded in `packages/sdk/src/deployments.testnet.json`.
 
 ### Deployment command
 
-The deployment script reads `DEPLOYER_PRIVATE_KEY`; `contracts/.env.example` intentionally has no value. Only after funding is available, set that key, a measured testnet `DEPLOY_GAS_LIMIT` and current `DEPLOY_GAS_PRICE` in the environment and run from `contracts/`:
+The root command uses the existing compiled artifact and reads DEPLOYER credentials only in memory from the approved external operations file or environment. It verifies chain 10143, estimates the exact creation call, adds 20% headroom and sends only with `--broadcast`. Existing deployment config is checked against its receipt, creation input and runtime before reuse, preventing a duplicate deployment.
 
 ```sh
-forge script script/Deploy.s.sol:Deploy --rpc-url monad_testnet \
-  --gas-limit "$DEPLOY_GAS_LIMIT" --with-gas-price "$DEPLOY_GAS_PRICE" --broadcast
+bun scripts/deploy-registry.ts             # Read/estimate only; no signing
+bun scripts/deploy-registry.ts --broadcast # Explicit opt-in; reuses a valid deployment
 ```
 
-[U] This command has not been run: the operations wallets are unfunded. Deployment must record the code check, transaction and SDK deployment address after a successful broadcast.
+[V, 2026-10-07 UTC] Actual deployment used estimate **465,470**, explicit limit **558,564**, receipt gasUsed **558,564** and effective gas price **102,000,000,000 wei**, costing **0.056973528 MON**. The receipt gasUsed equals the billed limit here; do not interpret it as a standard-EVM execution-cost measurement. Native runtime is **1,885 bytes**, byte-for-byte identical to the artifact. The post-deployment default command returned `existing-deployment`, `broadcast:false`.
+
+[V] Source verification API returned MonadVision perfect match. Independent Sourcify address check returned chain 10143 status `perfect`. Monadscan's verification result failed with an unrelated-address message; its source verification is not claimed. Public responses are in the external handoff `registry-verification.testnet.json` and `registry-sourcify.testnet.json`.
 
 ## 2. Kuru surface we call
 
@@ -124,50 +126,59 @@ forge script script/Deploy.s.sol:Deploy --rpc-url monad_testnet \
 
 [V] `batchUpdate` arguments are buyPrices, buySizes, sellPrices, sellSizes, orderIdsToCancel, postOnly. `deployProxy` arguments are type, base, quote, sizePrecision, pricePrecision, tickSize, minSize, maxSize, takerFeeBps, makerFeeBps, kuruAmmSpread (SDK extraction above). [V] ERC-20 deposits transfer from the caller; native token deposits use `address(0)` plus `msg.value` ([MarginAccount](https://docs.kuru.io/contracts/MarginAccount)). Orders require prefunded margin.
 
-[I] Encoding: `priceUnits = price * pricePrecision`, integer and tickSize-aligned; `sizeUnits = base * sizePrecision`. `planLadder` emits 2..8 levels per side and `batchProvisionArgs` produces the arrays. [U, S2] Confirm these encodings, `provisionOrRevert`, `isMargin`, minimum-output units and zap funding behavior on testnet before depending on them. Single `addFlipBuyOrder` / `addFlipSellOrder` calls per level are the S2 fallback, not an alternate venue.
+[V, S2] Placement uses `price * pricePrecision`, tick-aligned, and `base * sizePrecision`, floored. Market-buy quote input also uses **pricePrecision**, not quote-token decimals. `isMargin=true` both debits and credits MarginAccount: deposit the total quote before the zap; approval alone is insufficient. `minAmountOut` is raw output-token units. Passive true-mode bulk provisioning succeeded; crossing true-mode simulation reverted ProvisionError while false-mode skipped it. Single-level fallback was not needed or measured.
 
 [V] The approved live ABI observation uses 1e18-scaled `bestBidAsk`, unlike encoded uint32 order prices; the empty-book sentinel is `(2^256-1, 0)` (commands and ABI evidence in [Kuru research](../research/kuru.md)). Never use the sentinel as a midpoint. [V] Live `Trade` is `Trade(uint40,address,bool,uint256,uint96,address,address,uint96)`; the OrderBook documentation's uint32 price and indexed fields disagree with that observation. Envio subscribes using SDK/live signatures, not the prose example.
 
 ### Explicit gas-limit table
 
-[V] Monad charges the declared limit, not gas used ([gas pricing](https://docs.monad.xyz/developer-essentials/gas-pricing)). No guessed numeric limit below is safe to commit as production configuration. Measure and record an explicit limit for each transaction shape; view reads do not spend player gas.
+[V] The successful S2 calls below used `ceil(estimate * 1.2)`. Receipt `gasUsed` equaled the billed declared limit, so it is not a separate execution-gas measure. These are **shape-specific samples**, not universal worst cases; larger traversals and quote replacement need a fresh bounded estimate. Full hashes/blocks are in `packages/sdk/src/gas-limits.ts` and external `market-funded-public.json`.
 
-| Transaction / view | Explicit gas value or handling | Status |
-|---|---|---|
-| `Router.deployProxy` | measured in spike S2 | [U, S2] |
-| AUSD approval | measured in spike S2 | [U, S2] |
-| `MarginAccount.deposit` ERC-20 | measured in spike S2 | [U, S2] |
-| `MarginAccount.deposit` native | measured in spike S2 | [U, S2] |
-| `batchProvisionLiquidity` 2+2 and maximum ladder | measured in spike S2 | [U, S2] |
-| `addFlipBuyOrder` | measured in spike S2 | [U, S2] |
-| `addFlipSellOrder` | measured in spike S2 | [U, S2] |
-| `batchCancelFlipOrders` | measured in spike S2 | [U, S2] |
-| `placeAndExecuteMarketBuy` | measured in spike S2 | [U, S2] |
-| `placeAndExecuteMarketSell` | measured in spike S2 | [U, S2] |
-| `batchUpdate` | measured in spike S2 | [U, S2] |
-| `batchWithdrawMaxTokens` | measured in spike S2 | [U, S2] |
-| `bestBidAsk` | Read-only `eth_call`; no transaction limit | [I] |
-| `getMarketParams`, `getL2Book`, `MarginAccount.getBalance` | Read-only `eth_call`; no transaction limit | [I] |
+| Transaction shape | Estimate | Declared limit | Receipt proof / scope |
+|---|---:|---:|---|
+| AUSD faucet | 130600 | 156720 | S1 successful 10,000 AUSD grant |
+| AUSD cold-recipient transfer | 72918 | 87502 | Role funding and actual fresh-player drip |
+| AUSD approval to MarginAccount | 71087 | 85305 | S2 approval receipt |
+| AUSD approval to market | 71099 | 85319 | Wallet-mode buy allowance, not margin allowance |
+| Router deployProxy | 1128859 | 1354631 | Our MON-AUSD deployment |
+| Margin deposit AUSD, first slot | 136602 | 163923 | Maker quote funding |
+| Margin deposit native, first slot | 79645 | 95574 | Maker base funding |
+| Margin deposit native, existing slot | 62578 | 75094 | Extra max-ladder base funding |
+| Flip provision 2+2 | 783232 | 939879 | Four resting flip orders |
+| Flip provision 8+8 | 2223979 | 2668775 | Sixteen resting flip orders |
+| Cancel four inputs / five linked active orders | 382011 | 458414 | One input per linked pair |
+| Cancel sixteen flip orders | 869091 | 1042910 | Maximum observed ladder |
+| Wallet buy, partial 0.01 AUSD, bounded estimate | 258383 | 310060 | Successful native payout |
+| Margin buy, partial 0.01 AUSD | 237627 | 285153 | Output credited to margin |
+| Wallet sell, initial full flip | 398362 | 478035 | Native input, value attached |
+| Margin sell, partial 0.1 MON | 226860 | 272232 | Margin input/output, value zero |
+| Plain batchUpdate, one bid + one ask, no cancellation | 547290 | 656748 | Quote replacement has a different shape |
+| Cancel two plain orders | 254240 | 305088 | Ordinary-order cancellation |
+| Full maker withdrawal, bounded estimate | 130672 | 156807 | 15.487279 MON + 1.016990 AUSD |
 
-DiskRegistry's local 1 KiB snapshot is recorded above; testnet save/deploy limits remain unmeasured until the funded deployment can run. [V] For low-balance undelegated EOAs, observe the k=3-block emptying rule or retain at least 10 MON ([reserve balance](https://docs.monad.xyz/developer-essentials/reserve-balance)); count prior sender transactions, including approvals, rather than spacing only value transfers.
+[V] Native transfer is the 21,000 protocol constant. Individual addFlip fallback gas remains unmeasured because bulk passed; no guessed limit is published. Default unbounded native-payout estimation produced one real wallet-buy declared limit of 21,491,618, costing 2.192145036 MON. Implementation trace reported 490,160 instruction gas; bounded unsigned estimates and a later successful receipt establish the safer path. The RPC estimator's internal cause remains unresolved; do not treat that anomalous billed receipt as an execution constant.
+
+`bestBidAsk`, `getMarketParams`, `getL2Book` and `MarginAccount.getBalance` are read-only `eth_call` paths, not transactions with a player-paid gas limit.
+
+DiskRegistry's local 1 KiB snapshot and actual testnet deployment limit are recorded above; browser saves estimate their exact sealed payload. [V] For low-balance undelegated EOAs, observe the k=3-block emptying rule or retain at least 10 MON ([reserve balance](https://docs.monad.xyz/developer-essentials/reserve-balance)); count approvals and all other sender transactions, not just value transfers.
 
 ## 3. Market parameters
 
-[I] These are MON-AUSD starting values, not claims of deployed state. [U, S2] Read back final `getMarketParams` values at deploy and record the deployment transaction. Native MON uses the `address(0)` sentinel; the AUSD token is the checked contract above.
+[V, 2026-10-07 UTC] `cast call <our-market> "getMarketParams()(uint32,uint96,address,uint256,address,uint256,uint32,uint96,uint96,uint256,uint256)" --rpc-url https://testnet-rpc.monad.xyz` independently read the following deployment state; `cast code` returned 141 bytes. Factory receipt additionally records type and AMM spread. Native MON is the address(0) sentinel.
 
-| Parameter | Starting value | Final value |
+| Parameter | Observed final value | Evidence |
 |---|---|---|
-| type | `1`, NATIVE_IN_BASE | recorded at deploy |
-| base | Native MON, `address(0)` | recorded at deploy |
-| quote | AUSD testnet | recorded at deploy |
-| pricePrecision | `1e8` | recorded at deploy |
-| sizePrecision | `1e10` | recorded at deploy |
-| tickSize | `1` | recorded at deploy |
-| minSize | Choose so one ladder level can be about 0.05 AUSD | recorded at deploy |
-| maxSize | Selected and validated in S2; SPEC gives no starting number | recorded at deploy |
-| takerFeeBps | `30` | recorded at deploy |
-| makerFeeBps | `0` | recorded at deploy |
-| kuruAmmSpread | Selected and validated in S2; SPEC gives no starting number | recorded at deploy |
+| type | `1`, NATIVE_IN_BASE | deployProxy args / MarketRegistered |
+| base | Native MON, `address(0)` | getMarketParams |
+| quote | AUSD testnet | getMarketParams, six decimals |
+| pricePrecision | `100000000` | getMarketParams / real order log |
+| sizePrecision | `10000000000` | getMarketParams / real fill size |
+| tickSize | `1` | getMarketParams |
+| minSize | `15000000000`, 1.5 MON | About 0.0495 AUSD at the explicit spike input 0.033; not a timeless minimum quote value |
+| maxSize | `79228162514264337593543950335` | getMarketParams, uint96 maximum |
+| takerFeeBps | `30` | getMarketParams |
+| makerFeeBps | `0` | getMarketParams |
+| kuruAmmSpread | `30` | deployProxy args / MarketRegistered |
 
 [U, S1] Deploy the type-0 AUSD-USDC EASY market only with a usable testnet USDC source. Otherwise EASY plays MON-AUSD with WIDE as default. [I] Fallback venue is the checked official testnet MON-USDC market if AUSD supply cannot be secured; do not mistake code existence for a live two-sided book. Show fees and TESTNET in the player confirmation.
 
@@ -177,8 +188,8 @@ Empty address, hash and block cells mean no deployment evidence yet, not a trunc
 
 | Deployment | Chain | Address | Tx hash | Block | Code bytes | Status |
 |---|---|---|---|---|---|---|
-| Our MON-AUSD market | Testnet [I] | | | | | awaiting funded spike S2 |
+| Our MON-AUSD market | Testnet [V] | `0xD9F66B3bdBb1741f33e01fA3Acb514623e0a60Bc` | `0xa7877c745f7d3f3011bd589e78095c3175c845d14f7b1689d41af8d9ca3a52bc` | 68940637 | 141 | live params, initial and flipped-origin fills confirmed |
 | Optional AUSD-USDC market | Testnet [I] | | | | | conditional on spike S1 supply |
-| DiskRegistry v2 | Testnet [I] | | | | | locally verified; awaiting funded deployment |
+| DiskRegistry v2 | Testnet [V] | `0xbfc885C572Cb1121FC4e4e82434279c4B4302714` | `0xaf7a396b8f73814ba6fac77829c73e632f4ec1c2e0dfa83cfa1e9f50354229af` | 68939801 | 1885 | confirmed, runtime match, MonadVision/Sourcify perfect source verification |
 
-[U, S3] Deployer, bot and drip funding must cover deployment, price-mirror inventory and 20 player drips. The current Phase 4 blocker is recorded in [BUILD-PLAN](BUILD-PLAN.md), not hidden by an empty deploy row.
+[V, S3] Actual DEPLOYER/BOT/DRIP funding50/80/20MON and measured receipts support the approved block-spaced twenty-player drip branch. Final continuous mirror alignment/cost remains B10; physical devices and public deployment remain B8/B2/B3. See [BUILD-PLAN](BUILD-PLAN.md) and [BLOCKERS](../BLOCKERS.md).
