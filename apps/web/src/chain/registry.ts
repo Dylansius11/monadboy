@@ -2,15 +2,17 @@ import { diskRegistryAbi, sealDisk } from '@monadboy/sdk'
 import {
   createPublicClient,
   createWalletClient,
-  http,
+  encodeFunctionData,
   keccak256,
   parseEventLogs,
   stringToHex,
 } from 'viem'
 import { CHAIN } from './config'
 import { CardError, meraCodeOf } from './errors'
+import { browserTransport, rememberSenderBlock, waitForSender, withSenderLock } from './sender'
+import { bufferedGas } from './gameplay'
 import type { DiskPlaintext } from '@monadboy/sdk'
-import type { Address, Hex, Log, LocalAccount } from 'viem'
+import type { Address, Hex, Log, LocalAccount, TransactionReceipt } from 'viem'
 import type { DiskLease } from './card'
 
 /** What the registry returns for one disk account. */
@@ -44,12 +46,13 @@ export interface RegistryChain {
   diskOf: (registry: Address, disk: Address) => Promise<RegistryRecord>
   estimateSave: (registry: Address, from: Address, args: SaveArgs) => Promise<bigint>
   /** Signs with the disk's own account and broadcasts with the explicit `gas`. Returns the hash. */
-  save: (registry: Address, account: LocalAccount, args: SaveArgs, gas: bigint) => Promise<Hex>
+  save: (registry: Address, account: LocalAccount, args: SaveArgs, gas: bigint, lease?: DiskLease) => Promise<Hex>
   receipt: (hash: Hex) => Promise<ChainReceipt>
 }
 
 export function createViemChain(rpcUrl: string): RegistryChain {
-  const client = createPublicClient({ chain: CHAIN, transport: http(rpcUrl) })
+  const client = createPublicClient({ chain: CHAIN, transport: browserTransport(rpcUrl) })
+  const confirmed = new Map<Hex, TransactionReceipt>()
   return {
     chainId: () => client.getChainId(),
     code: (address) => client.getCode({ address }),
@@ -63,18 +66,31 @@ export function createViemChain(rpcUrl: string): RegistryChain {
         functionName: 'save',
         args,
         account: from,
+        gas: 2_000_000n,
       }),
-    save(registry, account, args, gas) {
-      const wallet = createWalletClient({ account, chain: CHAIN, transport: http(rpcUrl) })
-      return wallet.writeContract({
-        address: registry,
-        abi: diskRegistryAbi,
-        functionName: 'save',
-        args,
-        gas,
+    async save(registry, account, args, gas, lease) {
+      return withSenderLock(account.address, async () => {
+      await waitForSender(client, account.address, lease)
+      lease?.assertLive()
+      const wallet = createWalletClient({ account, chain: CHAIN, transport: browserTransport(rpcUrl) })
+      const request = await wallet.prepareTransactionRequest({
+        account, to: registry, data: encodeFunctionData({ abi: diskRegistryAbi, functionName: 'save', args }), gas,
+      })
+      lease?.assertLive()
+      const signed = await wallet.signTransaction(request)
+      lease?.assertLive()
+      const hash = await client.sendRawTransaction({ serializedTransaction: signed })
+      const receipt = await client.waitForTransactionReceipt({ hash })
+      rememberSenderBlock(account.address, receipt.blockNumber)
+      confirmed.set(hash, receipt)
+      return hash
       })
     },
-    receipt: (hash) => client.waitForTransactionReceipt({ hash }),
+    async receipt(hash) {
+      const receipt = confirmed.get(hash) ?? await client.waitForTransactionReceipt({ hash })
+      confirmed.delete(hash)
+      return receipt
+    },
   }
 }
 
@@ -105,14 +121,8 @@ export async function verifyRegistry(chain: RegistryChain, address: Address): Pr
   return { address, chainId }
 }
 
-/**
- * Headroom over `eth_estimateGas` for the real `save` call. The chain bills the
- * limit, so it is kept small; it only absorbs the first-save versus overwrite
- * storage difference between estimating and inclusion. [INFERENCE] 10 percent
- * is a convention, not a measured testnet figure; tune it with the first
- * observed testnet save receipts.
- */
-export const GAS_HEADROOM_PERCENT = 10n
+/** Funded integration uses bounded estimates with ceil(estimate * 1.2), not unbounded native-payout estimates. */
+export const GAS_HEADROOM_PERCENT = 20n
 
 export interface SaveRequest {
   lease: DiskLease
@@ -146,6 +156,7 @@ export async function saveDisk(chain: RegistryChain, request: SaveRequest): Prom
   let funded: bigint
   try {
     funded = await chain.balance(lease.address)
+    lease.assertLive()
   } catch (error) {
     throw new CardError('REGISTRY_READ_FAILED', undefined, { cause: error })
   }
@@ -156,6 +167,7 @@ export async function saveDisk(chain: RegistryChain, request: SaveRequest): Prom
     registry: registry.address,
     disk: lease.address,
   })
+  lease.assertLive()
   const sealedHash = keccak256(sealed)
   const tag = stringToHex(request.tag ?? `DISK ${lease.slot}`, { size: 12 })
   const args: SaveArgs = [sealed, plaintext.difficulty, plaintext.godMode, tag]
@@ -163,16 +175,20 @@ export async function saveDisk(chain: RegistryChain, request: SaveRequest): Prom
   let gas: bigint
   try {
     const estimate = await chain.estimateSave(registry.address, lease.address, args)
-    gas = estimate + (estimate * GAS_HEADROOM_PERCENT) / 100n
+    lease.assertLive()
+    gas = bufferedGas(estimate, 2_000_000n)
   } catch (error) {
     throw new CardError('SAVE_COST_FAILED', undefined, { cause: error })
   }
 
   // The card may have left while the cost was being checked.
   lease.assertLive()
+  const chainId = await chain.chainId()
+  lease.assertLive()
+  if (chainId !== CHAIN.id) throw new CardError('WRONG_CHAIN', String(chainId))
   let txHash: Hex
   try {
-    txHash = await chain.save(registry.address, lease.account, args, gas)
+    txHash = await chain.save(registry.address, lease.account, args, gas, lease)
   } catch (error) {
     if (meraCodeOf(error)) throw error
     throw new CardError('SAVE_FAILED', undefined, { cause: error })
