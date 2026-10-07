@@ -6,28 +6,28 @@ This document owns external boundaries and their failure ladders. **[V]** means 
 
 | Boundary | Planned use | Evidence / unresolved dependency |
 |---|---|---|
-| Kuru testnet | Our MON-AUSD flip ladder, native re-arm, manual re-center and exit | [V] Required ABI/code evidence in [SMART-CONTRACTS](SMART-CONTRACTS.md); [U, S2] deploy, encodings and funded fills |
+| Kuru testnet | Our MON-AUSD flip ladder, native re-arm, manual re-center and exit | [V, S2] Actual deployment, encodings and funded initial/flipped fills in [SMART-CONTRACTS](SMART-CONTRACTS.md) |
 | Kuru mainnet reads | Pool Tracker market depth, age, concentration, volatility and source MON_USDC midpoint | [I] Read-only use; [V] Kuru [OrderBook](https://docs.kuru.io/contracts/OrderBook) and [market API](https://exchange.kuru.io/api/v3/exchangeInfo); live ABI is authoritative over prose |
 | Mera | Passkey PRF, per-disk EOAs and signing sessions | [V] [Mera guide](https://docs.monad.xyz/guides/mera); [U, S4] supported real-device create/restore |
-| Agora AUSD faucet | Ops top-up of bot/drip AUSD inventories; player receives testnet AUSD via worker | [V] [deployments](https://docs.agora.finance/developer/contract-deployments.md) and code checks; [U, S1] successful request cadence and USDC source |
-| Envio HyperIndex | S7 fills, S8 history and leaderboard SCORE from events | [V] [Monad support](https://envio.dev/chains/monad); [U, S5] our testnet sync within 10 s and hosting tier |
-| Hono worker on Bun + SQLite | Mid, health, tracker, drip and cached leaderboard | [I] Intended VPS service and endpoint contract, not a deployed service |
+| Agora AUSD faucet | Ops top-up of bot/drip AUSD inventories; player receives testnet AUSD via worker | [V, S1] 10,000 AUSD receipt, global 60-second cooldown and real drip/refusal; [AUSD research](../research/ausd.md) |
+| Envio HyperIndex | S7 fills, S8 history and leaderboard SCORE from events | [V, S5] Live-RPC observations 564–570 ms and exact client/indexer/worker SCORE parity; original 16.620 s miss retained |
+| Hono worker on Bun + SQLite | Mid, health, tracker, drip and cached leaderboard | [V] Actual local reads/drips/bounded trades; public VPS and final continuous mirror acceptance remain gated |
 | Mainnet RPC | Worker public-client reads only | [V] `https://rpc.monad.xyz`, chain 143 ([network facts](https://docs.monad.xyz/ai/current-facts.md)); provider capacity is not guaranteed |
-| DiskRegistry v2 | Save/erase ciphertext; three-slot stateless restore | [I] Contract specified in [SMART-CONTRACTS](SMART-CONTRACTS.md), deployment in Phase 5 |
+| DiskRegistry v2 | Save/erase ciphertext; three-slot stateless restore | [V] Testnet deployed, runtime/artifact matched and source verified; physical-device acceptance is separate |
 
 ## 2. Kuru testnet trading ladder
 
-[I] Only markets mapped to a checked testnet deployment are playable. The official MON-USDC testnet market is a fallback, not proof of a funded two-sided book. [U, S2] Test `batchProvisionLiquidity` and a real taker-generated flip before enabling play.
+Only markets mapped to a checked testnet deployment are playable. [V, S2] Our MON-AUSD batch provision and real taker-generated flipped fills have receipts. The official MON-USDC testnet market remains a supply fallback, not proof of a funded two-sided book.
 
 | Failure rung | Exact player copy | Fallback / recovery |
 |---|---|---|
 | Params unavailable, empty book or execution simulation fails | "MARKET UNAVAILABLE" | Disable confirmation; retain range input; never replace liquidity with fixtures |
 | Ladder below minimum after reducing outer levels | "AMOUNT TOO SMALL FOR THIS RANGE" | Let player change amount/range; do not silently change risk |
 | Approval, zap, deposit or provision transaction fails | "LOAD FAILED" and "WITHDRAW" | Keep per-step tx links; inspect wallet/margin state; recover accessible funds before retry |
-| Batch provision semantics fail S2 gate | "MARKET UNAVAILABLE" until proven | [U, S2] Try single `addFlipBuyOrder` / `addFlipSellOrder` per level; still require observed flip fill |
+| Batch provision simulation fails | "MARKET UNAVAILABLE" | Verified batch path remains atomic; do not silently switch to unproven individual orders |
 | Cancellation or withdrawal fails | "WITHDRAW FAILED" | Keep position/receipts visible; retry the failed exit step after reading chain state; no successful-results fiction |
 
-[I] Every confirmation includes the zap taker fee plus explicit transaction cost. WITHDRAW remains available after partial loading. Native flip re-arm is not a worker transaction. RE-CENTER costs cancel + withdraw + replan + provision and needs cost confirmation.
+Every confirmation includes the zap taker fee plus explicit transaction cost. Quote deposit precedes `isMargin=true` zap, because margin is both input and output. `quoteSize` uses market pricePrecision, while `minOut` uses raw output-token units. WITHDRAW remains available after partial loading. Native flips re-arm onchain; RE-CENTER costs cancel + withdraw + replan + provision and needs confirmation. Cancellation submits only one live representative per linked flip pair.
 
 ## 3. Kuru mainnet data ladder
 
@@ -59,11 +59,11 @@ This document owns external boundaries and their failure ladders. **[V]** means 
 
 ## 5. AUSD / Agora faucet ladder
 
-[V] Token and faucet have non-empty testnet code; exact checks are in [SMART-CONTRACTS](SMART-CONTRACTS.md). [U, S1] `requestFunds(address)` success cadence is unresolved; the approved `MaxFrequencyExceeded()` observation is not evidence of a working drip supply. Never infer Monad mint amounts from Sepolia behavior.
+[V, S1] Token/faucet code checks and a successful 10,000 AUSD grant are recorded in [SMART-CONTRACTS](SMART-CONTRACTS.md) and [AUSD research](../research/ausd.md). Its Transfer comes from the faucet, not the zero address. The observed 60-second cooldown is global: changing sender or recipient does not bypass it. Never infer Monad grant amounts from Sepolia behavior.
 
 | Failure rung | Exact player copy | Fallback / recovery |
 |---|---|---|
-| Faucet rate-limit or temporary refusal while treasury has inventory | No interruption to funded play | Ops top-up backs off on `MaxFrequencyExceeded`; worker uses held inventory, never promises an unconfirmed mint |
+| Faucet rate-limit or temporary refusal while treasury has inventory | No interruption to funded play | Ops top-up backs off on `MaxFrequencyExceeded`; worker uses held inventory, never promises an unconfirmed grant |
 | Bot/drip inventory below configured thresholds | "TESTNET SUPPLY LOW" | Health amber; inspect balances, refill via faucet only when available |
 | Fresh disk drip cannot be funded | "TESTNET SUPPLY UNAVAILABLE" | Keep disk/card accessible; do not enter a position or show imaginary balances |
 | S1 cannot obtain AUSD | "MARKET UNAVAILABLE" until fallback funded | Ask Monad/Agora for supply; otherwise official MON-USDC with testnet USDC |
@@ -73,7 +73,7 @@ This document owns external boundaries and their failure ladders. **[V]** means 
 
 ## 6. Envio failure ladder
 
-[I] Index market and registry events using live SDK ABI signatures. `Trade` computes realized spread only for flipped maker fills; leaderboard does not accept disk-submitted scores. [U, S5] Confirm hosted testnet eligibility and <=10 s synchronization; otherwise self-host on the VPS.
+[V, S5] The pinned local HyperIndex projects live SDK events from verified registry/market start blocks and computes flipped-maker spread through shared SDK `scoreFromFills`. Fresh real fills appeared within 564–570 ms of receipt observation; client/indexer/worker SCORE matched exactly. Unknown origins mark SCORE incomplete; disk-submitted scores are never accepted. Live RPC ingestion is selected for the pinned alpha runtime, with HyperSync backfill. Public hosting remains B3.
 
 | Failure rung | Exact player copy | Fallback / recovery |
 |---|---|---|
@@ -83,6 +83,8 @@ This document owns external boundaries and their failure ladders. **[V]** means 
 | History/cache cannot be refreshed | "HISTORY UNAVAILABLE" or "LEADERBOARD STALE" | Keep explicitly timestamped verified cache where available; no guessed rank or complete totals |
 
 The 200-block fallback is bounded. It cannot prove older history is empty; show unavailable/incomplete history rather than resetting SCORE to zero. `FillSource` lets worker aggregation use indexed fills or direct logs without two scoring definitions.
+
+[V] Stopping the actual GraphQL container produced S7 INDEXER OFFLINE and worker direct-log fallback; restarting restored indexed reads. A healthy cursor drives fills, balances and resting-order checks at the same block. Leaderboard SCORE uses the selected fill window; DAMAGE/NET use signed disk-lifetime margin cash flows, not the private per-run browser basis. Withdrawals must not clamp a negative cumulative token flow to zero.
 
 ## 7. Worker failure ladder
 
@@ -131,4 +133,4 @@ Use resources for evidence and reliability, not as new critical dependencies or 
 
 Restore must remain passkey -> derived disk addresses -> registry -> browser decrypt, even after clearing site data and with worker/Envio offline. This stateless path and a real flip fill on camera are never cut; see [BUILD-PLAN](BUILD-PLAN.md).
 
-[V, local browser/Anvil smoke 2026-10-06] Three isolated disk saves, matching DiskSaved receipts, profile update and discoverable passkey restore after clearing site data were exercised against an isolated local registry. Physical-phone and funded testnet acceptance remain B1/B8. Preference saves re-read the latest ciphertext and preserve private fields/history; the registry is last-writer-wins across devices, not a compare-and-swap store. A failed read/decryption is never an empty writable slot. Eject/expiry drops decrypted shelf state and invalidates pending operations.
+[V] Local Anvil and funded Monad testnet native-browser runs exercised encrypted saves, preference updates and discoverable restore after clearing site data. The funded restore recovered the same three addresses and first sealed run; a second sealed run was observed on the shelf, but its repeat stateless restore was not established after the owned virtual reader became unavailable. Physical-phone acceptance remains B8 and production hostname B2. Preference saves re-read latest ciphertext and preserve private fields/history; registry writes are last-writer-wins, not compare-and-swap. Failed read/decryption is never an empty writable slot. Eject/expiry drops pending operations and decrypted state.

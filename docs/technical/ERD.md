@@ -1,6 +1,6 @@
 # MONADBOY data model
 
-Chain state is truth. Envio is an event-derived read model; SQLite is a cache and operations ledger. Sealed disk contents are decrypted only on the player's device. Labels: **[V]** verified source/command; **[I]** inference or intended integration; **[U]** unresolved with its settling spike. The schemas below are the approved build contract, not tables already deployed.
+Chain state is truth. Envio is an event-derived read model; SQLite is a cache and operations ledger. Sealed disk contents are decrypted only on the player's device. Labels: **[V]** verified source/command; **[I]** inference or intended integration; **[U]** unresolved with its settling spike. Local self-hosted indexing, S5 latency/parity and actual outage recovery are verified; public hosting remains separate acceptance.
 
 ## 1. State boundaries
 
@@ -42,22 +42,22 @@ A missing or erased disk has zero metadata and empty `sealedData`. Empty sealed 
 | Margin balance | Disk address + token | Provisioning, valuation and withdrawal |
 | `Trade` log | Chain + block/log identity and transaction | SCORE, fill sound, history and leaderboard |
 
-[U, S2] Confirm actual order funding, price/size encoding, re-arm behavior and cancellation release on testnet. Deposited inventory and resting inventory must not be counted twice in valuation.
+[V, S2] Margin zap requires prior quote deposit, and linked-pair cancellation releases both members. Filled plain-order storage can retain owner/size: authoritative price-point membership, not storage size alone, determines resting inventory. Deposited and resting inventory must not be counted twice.
 
 ## 3. Envio HyperIndex entities
 
-[I] Index our testnet market(s) and DiskRegistry v2 from deployment blocks. [U, S5] Prove sync within 10 s and settle hosted versus self-hosted execution. [V] Envio documents Monad support ([chain page](https://envio.dev/chains/monad)); this does not prove our specific testnet pipeline is operating.
+[V] Local Docker HyperIndex `3.0.0-alpha.21` indexes our market and registry from block68939801. Read-only public GraphQL is `http://localhost:18880/v1/graphql`; `_meta` reports actual chain/start/processed blocks. Admin authentication remains server-side. Live-RPC S5 observations passed at564–570ms with exact client/indexer/worker SCORE parity; the earlier16.620second miss is retained in research.
 
-These are the exact approved entity fields. `Disk` here is an event-derived aggregate, **not** the Solidity struct and not private save JSON. Public difficulty/GOD MODE/tag can be read from registry state when needed rather than invented as extra entity fields.
+`indexer/schema.graphql` owns the implemented scalar types. `Disk` is an event-derived aggregate, **not** the Solidity struct or private save JSON. Registry state supplies public difficulty/GOD MODE/tag.
 
-| Entity | Fields |
+| Entity | Fields and units |
 |---|---|
-| `Market` | `id, lastPrice, volume24h` |
-| `Order` | `id, owner, price, flipPrice, size, isBuy, isFlipped, active` |
-| `Fill` | `id, order, maker, taker, price, size, isBuy, block, tx, realizedSpread` |
-| `Disk` | `id, score, fills, lastFillAt, saves` |
+| `Market` | `id, lastPrice, volume24h, updatedAt`; normalized price, quote volume, event timestamp seconds |
+| `Order` | `id, market, orderId, owner, price, flipPrice, size, isBuy, isFlipped, active, pairedOrderId`; raw size-precision integer, maker direction |
+| `Fill` | `id, market, order, maker, taker, price, size, isBuy, originKnown, isFlippedOrder, flipPrice, block, tx, at, realizedSpread`; normalized base size, maker direction, timestamp seconds |
+| `Disk` | `id, score, fills, lastFillAt, saves, scoreComplete, lastSaveBlock, lastSaveLogIndex`; score in quote units, timestamp seconds, last-save idempotency cursor |
 
-[I] Use market-qualified order identity when indexing multiple books, since numeric order IDs need not be globally unique. Fill identity must include log identity, not just a transaction hash, because one transaction can emit several fills. These are identity design choices, not added schema fields.
+Order identity is `<lowercase-market>_<orderId>`; Fill identity is `<chainId>_<block>_<logIndex>`, because one transaction can emit multiple fills. GraphQL exposes the nullable Order relation as `order_id`. Unknown order origin gives null spread and incomplete aggregate SCORE, never invented zero. Operational coverage/pair fields prevent ambiguous attribution and cancellation; they do not add a private identity store.
 
 ```mermaid
 erDiagram
@@ -87,7 +87,7 @@ erDiagram
     Address maker
     Address taker
     Decimal price
-    BigInt size
+    Decimal size
     Boolean isBuy
     BigInt block
     Hash tx
@@ -95,15 +95,17 @@ erDiagram
   }
 ```
 
-[I] Diagram types communicate semantics; actual GraphQL scalar choices are recorded when the schema is implemented. The owner/maker joins refer to disk addresses, not to a server account or passkey credential. `Market` is maintained per indexed book; market qualification lives in entity identity without changing the approved fields.
+Diagram types communicate semantics; the table and `indexer/schema.graphql` define actual scalars. Numeric GraphQL responses are stringified, including Float, to avoid client coercion surprises. Owner/maker joins refer to disk addresses, not server accounts or passkey credentials.
 
 ### Event projection
 
 Index `FlipOrderCreated`, `FlippedOrderCreated`, `FlipOrderUpdated`, `FlipOrdersCanceled`, `Trade`, `OrdersCanceled`, `DiskSaved`, `DiskErased` using live SDK signatures. [V] The approved live `Trade` signature is `Trade(uint40,address,bool,uint256,uint96,address,address,uint96)`, not the uint32-price prose example (ABI/log evidence in [Kuru research](../research/kuru.md)).
 
-`Trade` computes `Fill.realizedSpread` and `Disk.score` using `scoreCard`'s SCORE rule: sum `abs(flipPrice - price) * filledSize` for maker fills of orders identified by `FlippedOrderCreated`. Initial-order fills only change inventory. `DiskSaved` updates save aggregation; it never supplies a trusted score. S7 fill feed, S8 history and leaderboard SCORE use this projection.
+`Trade.isBuy` is taker-side; the projection inverts it for maker-side `Fill.isBuy`. Shared SDK `scoreFromFills` computes `Fill.realizedSpread` and `Disk.score`: sum `abs(flipPrice - price) * filledSize` only for orders identified by `FlippedOrderCreated`. Initial fills change inventory only. `DiskSaved` updates save aggregation idempotently; it never supplies trusted SCORE. `DiskErased` removes private registry bytes, not historical public fills/SCORE.
 
-[I] If Envio is unreachable, web reads the last 200 blocks of `Trade` via viem `getLogs` and displays "INDEXER OFFLINE". This is bounded live recovery, not a fabricated complete history; do not replace unseen older fills with zero or present incomplete totals as final.
+`Market.volume24h` expires older fills as of its latest processed trade; `updatedAt` exposes that timestamp. It is not a timer-refreshed present-time total on an idle market. Consumers read fills and chain state at one processed block and reject absent, wrong-chain, uncovered or excessively lagging metadata before claiming complete indexed history.
+
+[V] Actual GraphQL outage exercised web last200block `Trade` recovery with INDEXER OFFLINE and worker cached forward-log recovery; restarting restored indexed reads. Bounded web recovery cannot prove older history empty. Reject unseen history rather than invent a complete zero.
 
 ## 4. SQLite tables
 
@@ -119,7 +121,9 @@ Target: `apps/worker/src/db/schema.sql` with numbered migrations. Exact column s
 
 [I] Serialize integer token amounts losslessly (`mon_wei`, `ausd_units`); do not silently coerce them through JavaScript floating-point numbers. Store transaction hashes and timestamps so an operational row can be traced to its chain source. Worker endpoints validate with zod and never sign for a player.
 
-Drip policy: nonce 0 and MON balance below `DRIP_MON_THRESHOLD`; three requests per IP hash per 24 h; global daily cap; amounts from `DRIP_MON` and `DRIP_AUSD`. Record every attempt/status in `drips`. [U, S3] Exact MON budget depends on measured execution and inventory. [U, S1] Faucet cadence controls top-up backoff on `MaxFrequencyExceeded`.
+Drip policy: nonce0 and MON below `DRIP_MON_THRESHOLD`; three requests per IP hash per24h; global daily cap; amounts from `DRIP_MON` / `DRIP_AUSD`. Record every attempt/status. S3 measured the block-spaced twenty-player budget; S1 observed global faucet cooldown and worker backoff. See AUSD research and BLOCKERS for evidence.
+
+Leaderboard response `valuationWindow: "disk-lifetime-cash-flows"` identifies its public basis. Cumulative margin deposits minus withdrawals remain signed independently for base and quote. Clamp DAMAGE only after valuing those cash flows and current margin/resting inventory; do not clamp each token's cash flow. SCORE uses the requested24h/7d/all fill window, while NET/DAMAGE use lifetime cash flows. Browser results instead use the private sealed position basis. They are different scopes, disclosed in the UI, not interchangeable totals.
 
 ## 5. Sealed blob and key schema
 

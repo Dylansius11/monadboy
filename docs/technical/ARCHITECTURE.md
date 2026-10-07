@@ -1,6 +1,6 @@
 # MONADBOY architecture
 
-MONADBOY runs STAY IN RANGE on a testnet Kuru flip-order ladder. The tagline is "The handheld that plays your liquidity." Chain state is authoritative; Envio and SQLite are read models. This document describes the intended build, not deployed services.
+MONADBOY runs STAY IN RANGE on a testnet Kuru flip-order ladder. The tagline is "The handheld that plays your liquidity." Chain state is authoritative; Envio and SQLite are read models. Local services and testnet contracts have runtime evidence; VPS/HTTPS deployment remains gated by domain and access.
 
 Labels: **[V]** verified with the linked source or command; **[I]** inference or planned integration; **[U]** unresolved, with the settling spike named. Contract addresses and deployment evidence belong in [SMART-CONTRACTS](SMART-CONTRACTS.md); failure behavior belongs in [INTEGRATIONS](INTEGRATIONS.md).
 
@@ -44,69 +44,20 @@ flowchart LR
 
 ### Current tracked layout
 
-[V] Snapshot from `git ls-files`, 2026-10-05. This is the actual tree, separate from the intended system map above. [BUILD-PLAN](BUILD-PLAN.md) owns task status and completion proof.
+[V] Implemented boundaries below. [BUILD-PLAN](BUILD-PLAN.md) owns task status and completion proof; local execution is not public-deployment acceptance.
 
-```text
-apps/
-  web/
-    public/
-      fonts/
-      sprites/
-    src/
-      config/
-      console/
-      design/
-      game/
-      lib/
-      state/
-      styles/
-      test/
-      types/
-      ui/
-packages/
-  sdk/
-    scripts/
-    src/
-      abi/
-      kuru/
-contracts/
-  src/
-  test/
-  script/
-  lib/forge-std/
-scripts/
-  guard-forbidden.ts
-tools/
-  sprites/
-assets/
-  game-shell/
-  logo/
-  pixel/
-  raw/
-docs/
-  research/
-  technical/
-```
-
-| Tracked path | Current contents | Boundary |
+| Path | Owns | Boundary |
 |---|---|---|
-| `apps/web` | Toolchain, public assets, console, UI primitives, fixture game, session and range planner; screens/routes not yet tracked | No server secrets or worker imports |
-| `apps/web/src/console` | Shell, input, global key legend and fit scale | No money logic; lint/test enforce it |
-| `packages/sdk` | Chain config, typed ABIs, market catalog, encodings, ladder, valuation, seal and Mera derivation | No React/DOM; measured gas limits await S2 |
-| `contracts` | DiskRegistry v2, tests, gas snapshot, deploy script and pinned forge-std gitlink | No funds/admin; testnet broadcast not yet recorded |
-| `scripts` | Forbidden-content guard only | No secrets or unchecked deployment addresses |
+| `apps/web` | TanStack Start screens/routes, Mera sessions, registry sealing, player-signed Kuru transactions and read models | No ops secrets, worker imports or mainnet signing |
+| `apps/web/src/console` | Shell, input, contextual controls and portrait layout | No money logic; lint/test enforce it |
+| `apps/worker` | Hono REST, SQLite, mainnet tracker/source, testnet mirror/drip and leaderboard | Separate BOT/DRIP keys; never signs for players |
+| `packages/sdk` | Typed ABIs, deployment/market manifests, encodings, ladder, valuation, seal, Mera derivation and receipt-backed gas samples | No React/DOM; shared numeric definitions |
+| `contracts` | DiskRegistry v2, tests, gas snapshot and pinned forge-std | No funds/admin; registry receipt and source verified |
+| `indexer` | Pinned HyperIndex config/schema/projections and local Compose services | Public read-only GraphQL, server-only admin authentication, no self-reported SCORE |
+| `scripts` | Content guard, idempotent registry deployment and bounded network-semantic probes | No tracked secrets; deployment defaults to read-only verification |
 | `tools/sprites`, `assets`, `apps/web/public` | Art-processing tools, source art, runtime fonts/sprites | Runtime assets stay distinct from source art |
 | `docs` | Product/design/lessons, sourced research and technical contracts | BUILD-PLAN is the live checklist |
 | `.claude/skills`, `.githooks`, `.github`, `.vscode` | Tracked guidance, content hooks, CI and editor settings | No machine-local secret/config state |
-
-### Planned paths, not yet in the tracked tree
-
-| Path / addition | Intended owner | Completion gate |
-|---|---|---|
-| `apps/web/src/screens`, `apps/web/src/routes` | Screens, router and assembled browser surface | Phase 2 phone walkthrough; Phase 7 live signing/data |
-| `apps/worker` | Hono REST, mirror, tracker, drip ledger, leaderboard, health and SQLite; never signs for users | Phase 6 route/job and live-run evidence |
-| `indexer` | Envio configuration, schema and handlers; no self-reported SCORE | Phases 4/8 fresh-fill latency and SCORE parity |
-| `scripts/spikes` | Network-semantic probes and measured gas evidence | Phase 4 S1..S5 receipts/readbacks |
 
 Shared SDK names: `planLadder`, `batchProvisionArgs`, `scoreCard`, `rangeState`, `deriveSealKey`, `sealDisk`, `openDisk`, `diskAddresses`, `FillSource`, `decideMirrorAction`. Pure functions own arithmetic; the browser and worker own effects. No model is in any number's critical path.
 
@@ -135,7 +86,7 @@ Versions below are the approved toolchain targets. An exact version here is not 
 | Derivation | `@scure/bip32`, `@scure/bip39` | concrete versions pinned when installed; PLAN specifies no versions |
 | Worker HTTP | Hono | latest 4.x on Bun |
 | Worker database | `bun:sqlite` | bundled with Bun |
-| Indexer | Envio HyperIndex | latest; concrete version pinned when installed |
+| Indexer | Envio HyperIndex | 3.0.0-alpha.21, separate Linux package |
 | Contract tools | Foundry | 1.8.x |
 | Contract language | Solidity | 0.8.28 |
 
@@ -164,7 +115,7 @@ Each app has its own `.env.example` containing names and harmless defaults, neve
 | Worker | `BOT_PRIVATE_KEY` | Dedicated mirror signing key |
 | Worker | `DRIP_PRIVATE_KEY` | Separate drip signing key |
 | Worker | `SQLITE_PATH` | Cache and drip-ledger database |
-| Worker | `ENVIO_GRAPHQL_URL` | Leaderboard fills |
+| Worker | `ENVIO_GRAPHQL_URL` | Indexed fill/history read model; direct-log fallback when unhealthy |
 | Worker | `MARKETS_JSON` | Path to deployed market configuration |
 | Scripts / contracts | `DEPLOYER_PRIVATE_KEY` | Deployment key |
 
@@ -174,13 +125,13 @@ Generate ops keys with `cast wallet new`; keep them only in VPS/local `.env` fil
 
 [I] Web: TanStack Start Node server output on the VPS behind Caddy HTTPS, or a static/serverless host compatible with the chosen output. Decide at deployment. [V] Passkeys bind to the relying-party hostname ([Mera guide](https://docs.monad.xyz/guides/mera)); fix the production domain and `VITE_RP_ID` **before the first real passkey**. Development-tunnel passkeys are disposable, not production cards.
 
-[I] Worker: same VPS, systemd or pm2 with restart always and uptime monitoring of `/v1/health`. Operate continuously through Metropolis judging, 14 to 27 October. [U, S5] Use Envio hosted service only if its free tier covers the testnet workload; otherwise self-host with Docker Compose and Postgres.
+[V] Local indexer uses Docker Compose, Postgres17.5 and Hasura2.43.0 with server-only admin authentication. S5 fresh-fill observations passed at564–570ms with exact three-way SCORE parity; stopping/restarting GraphQL exercised direct-log recovery. [I] Public worker hosting uses restart-always service management and `/v1/health` monitoring continuously through judging,14 to27 October. Domain/VPS access, final continuous mirror economics and24-hour operational proof remain gates.
 
 [V] Mera supplies `createPasskeyWithPrfOutput`, `getPasskeyPrfOutput`, `createSecp256k1SigningSession` and `toViemAccount` from `@category-labs/mera/viem` ([guide](https://docs.monad.xyz/guides/mera)). Hold signing sessions while the console is on; end on eject, explicit EJECT CARD, or tab hidden for more than ten minutes. Only credential ID and transports persist locally. Account index 0 supplies the display-only card serial; indices 1, 2 and 3 identify the isolated disks.
 
 ## 6. Per-screen data flow
 
-[I] This table is the planned screen contract. "None" means no boundary operation for that screen, not a fabricated response. Envio's required testnet sync latency is [U, S5]; Kuru execution semantics are [U, S2]; real-device Mera support is [U, S4].
+This table is the screen boundary contract. "None" means no boundary operation, not a fabricated response. S2 execution semantics and S5 indexed latency/parity have receipt-backed evidence; physical-device Mera support remains [U, S4].
 
 | Screen | Reads | Writes / actions |
 |---|---|---|
@@ -189,16 +140,16 @@ Generate ops keys with `cast wallet new`; keep them only in VPS/local `.env` fil
 | S3 CARTRIDGE | Selected decrypted disk and session state | Select STAY IN RANGE or open leaderboard; locked COMING SOON remains locked. No boundary writes |
 | S4 DIFFICULTY | Decrypted disk preferences, shared SDK gates and validated worker counts | Re-read/decrypt latest disk, preserve name/notes/history, seal and save selected profile; proceed after a matching confirmed DiskSaved event. No Envio or Kuru transaction |
 | S5 POOL TRACKER | `GET /v1/tracker`, including mainnet SAFETY/HEAT inputs, timestamp and testnet playable mapping | Select only a PLAYABLE (TESTNET) market; MAINNET ONLY is read-only. Worker reads Kuru mainnet books/logs for snapshots; web performs no mainnet writes |
-| S6 SET RANGE | `GET /v1/mid?market=`, tracker volatility, testnet Kuru params, balances, allowance; `planLadder` and `batchProvisionArgs` | Explicit-gas approval if needed, market-buy zap, MarginAccount deposit, `batchProvisionLiquidity`, receipt IDs; `DiskRegistry.save` appends sealed run without blocking play |
+| S6 SET RANGE | `GET /v1/mid?market=`, tracker volatility, testnet Kuru params, balances, allowance; `planLadder` and `batchProvisionArgs` | Explicit-gas approval if needed, quote deposit, margin market-buy zap, `batchProvisionLiquidity`, receipt IDs; sealed save does not block play |
 | S7 IN RANGE | Poll `/v1/mid` every 5 s; `/v1/health`; Envio fills or last 200 blocks of `Trade` via viem; direct Kuru balances/resting orders for `scoreCard`; `rangeState` | Manual RE-CENTER cancels, withdraws, replans and provisions only after cost confirmation; WITHDRAW starts exit. Native flips re-arm onchain, not through worker signing |
-| S8 RESULTS | Cancellation/withdrawal receipts; Envio history or log fallback; valuation inputs and run timing | `batchCancelFlipOrders(allIds)` then `batchWithdrawMaxTokens` for native MON and AUSD; append run, seal and `DiskRegistry.save`; show each result's source/tx link |
+| S8 RESULTS | Cancellation/withdrawal receipts; Envio history or log fallback; valuation inputs and run timing | Re-read live orders, cancel one representative per linked flip pair, then `batchWithdrawMaxTokens` for native MON and AUSD; append run, seal and `DiskRegistry.save`; show each result's source/tx link |
 | LEADERBOARD | `GET /v1/leaderboard?window=24h|7d|all`; worker combines Envio fills through `FillSource` with `mid_samples` | No player write; worker refreshes its cache every 60 s. Never accept a self-reported SCORE |
 
 Restore is passkey -> three derived addresses -> registry reads -> local decrypt, with **no server or localStorage requirement**. A worker outage must not break it.
 
-[V, 2026-10-06 local proof] Native browser WebAuthn with a virtual PRF-capable authenticator created/restored the same three addresses. An isolated Anvil registry accepted three sealed disk saves and profile updates; clearing local/session storage, reloading and discoverable INSERT restored three disks and the NORMAL preference. Only credential metadata reappeared in localStorage. This is browser/contract logic proof, not supported-phone or funded Monad-testnet evidence (B1/B2/B8 remain open).
+[V] Native browser WebAuthn with a virtual PRF-capable authenticator restored the same three addresses after site-data clearing. Both isolated Anvil and funded Monad testnet accepted sealed saves. Funded S6 provision, flipped-maker fill, S8 exit and first-run stateless restore were observed. The second run was sealed and displayed on the shelf; its repeat restore was not established after the disposable reader became unavailable. Physical-phone acceptance remains B8. Virtual credentials were memory-only; loss of that reader is not an acceptable production recovery mechanism.
 
-Production routes never use a fixture response after missing configuration, failed reads or unavailable deployment. S6/S7/S8 explicitly show deployment/encoding prerequisites until funded S2 evidence exists. `/dev/passkey` is Vite-development middleware, outside the application route graph; it sends no transaction and creates disposable hostname-bound cards.
+Production routes never use fixture responses after missing configuration, failed reads or unavailable deployment. S2-backed configuration enables real S6-S8 execution; incomplete history and source failures remain visible. `/dev/passkey` is Vite-development middleware outside the application route graph; it creates disposable hostname-bound cards and sends no transaction.
 
 ## 7. Worker and transaction flow
 

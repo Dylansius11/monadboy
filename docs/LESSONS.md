@@ -4,6 +4,47 @@ Newest on top. Each entry: root cause, then the durable rule.
 
 ## Technical
 
+### 2026/10/07 — Preserve signed margin cash flows
+
+- **Cause:** Clamping cumulative base withdrawals above deposits to zero created phantom DAMAGE after a real zap/exit.
+- **Rule:** Keep each token's deposits-minus-withdrawals signed; clamp only final DAMAGE. Label public lifetime cash-flow accounting separately from private per-run basis.
+
+### 2026/10/07 — Keep small realized spread visible
+
+- **Cause:** Four decimals rounded a real0.0000029978AUSD SCORE to zero; six decimals then exceeded narrow phone columns.
+- **Rule:** Preserve six decimal precision below one quote unit and reflow equally weighted SCORE/DAMAGE/NET before reducing readability. Verify actual font geometry, not just formatted strings.
+
+### 2026/10/07 — Keep disposable authenticator lifetime explicit
+
+- **Cause:** The owned Chromium process ended while its virtual CTAP credential existed only in memory; onchain ciphertext cannot reconstruct a lost passkey.
+- **Rule:** Keep the same disposable reader alive through funded play, exit and stateless restore proof. Never export PRF/key material to preserve a test harness; production recovery requires the user's durable supported passkey.
+
+### 2026/10/07 — Measure indexed appearance, not later receipt collection
+
+- **Cause:** A real fresh fill appeared in GraphQL 16.620 seconds after its observed receipt; retrospective receipt collection cannot establish ingestion latency.
+- **Rule:** Start a read-only observer before the needed transaction, record immediate receipt observation and first GraphQL appearance, and preserve missed targets. Select runtime-supported live RPC ingestion separately from HyperSync backfill.
+
+### 2026/10/07 — Remove owned quotes before taking external liquidity
+
+- **Cause:** The mirror repeatedly took its own stale plain quotes; a later quote refusal also hid the successful preceding trade hash.
+- **Rule:** Cancel authoritative-live owned plain quotes before a taker, re-read remaining external liquidity, and preserve all confirmed partial hashes when a later step fails. Revalidate source freshness immediately before signing after every await.
+
+### 2026/10/07 — Prove live order membership
+
+- **Cause:** Filled plain orders retained positive size/owner in storage even though their price-point list was empty.
+- **Rule:** Verify linked membership from the same-block price-point head before cancellation or resting-inventory valuation; fail on inconsistent or cyclic links rather than invent holdings.
+
+### 2026/10/07 — Keep Kuru input scales and maker direction distinct
+
+- **Cause:** Market-buy quote input uses pricePrecision, not quote-token decimals; margin zap debits margin; Trade.isBuy describes the taker.
+- **Rule:** Use shared exact quote encoding, deposit quote before margin zap, express minOut in raw output-token units, and invert direction for maker accounting. Pin units to captured raw receipt bytes.
+
+### 2026/10/07 — Bound estimates before paying declared gas
+
+- **Cause:** An unbounded native-payout estimate declared21,491,618 gas and billed2.192145036 MON although a bounded equivalent succeeded near310,060 gas.
+- **Rule:** Simulate and freshly estimate within the measured shape's budget, add explicit headroom and refuse over-budget signing. Receipt gasUsed is Monad's billed declared limit, not an independent execution-gas measurement.
+
+
 ### 2026/10/07 — Recheck card ownership after every await
 
 - **Cause:** Eject during post-receipt refresh allowed a stale operation to return the previous card's saved disk.
