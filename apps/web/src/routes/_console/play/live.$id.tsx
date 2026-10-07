@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { USE_FIXTURES } from '../../../config/runtime'
-import { PrerequisiteGate } from '../../../game/screens/PrerequisiteGate'
+import { FundedGameplay } from '../../../game/screens/FundedGameplay'
 import { InRange } from '../../../game/screens/InRange'
 import { executablePool } from '../../../game/eligibility'
 import { useSession } from '../../../state/session'
@@ -60,21 +60,11 @@ function FixtureLive() {
   )
 }
 
-/**
- * Production has no real position execution yet (docs/BLOCKERS.md B1, B9), so
- * outside the opt-in fixture mode this route is a blocked state, not a
- * simulation. It never renders the fixture walk.
- */
 function Live() {
+  const { id } = Route.useParams()
   const navigate = useNavigate()
-  if (!USE_FIXTURES) {
-    return (
-      <PrerequisiteGate
-        screen="live"
-        backLabel="Back to tracker"
-        onBack={() => navigate({ to: '/play/tracker' })}
-      />
-    )
-  }
-  return <FixtureLive />
+  if (USE_FIXTURES) return <FixtureLive />
+  return <FundedGameplay id={id} stage="live"
+    onStage={(stage) => navigate({ to: stage === 'live' ? '/play/live/$id' : stage === 'results' ? '/play/results/$id' : '/play/range/$id', params: { id } })}
+    onBack={() => navigate({ to: '/disks' })} />
 }
