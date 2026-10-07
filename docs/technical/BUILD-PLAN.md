@@ -335,3 +335,4 @@ Production deploy needs the user's VPS access and fixed domain/subdomain; option
 Each bounded unit below uses the freshly verified assembled tree described above, plus its observed runtime evidence. No push; Dylan identity. Unchecked acceptance is retained rather than inferred from tests.
 - Encoding unit: raw funded FlipOrderCreated fixture, quote-input pricePrecision and maker direction; assembled SDK153tests and actual S2 receipt evidence.
 - sdk: pin Kuru encodings to funded receipt units — S2 raw provision receipt and maker/taker direction; SDK153 tests. Verified assembled web543/SDK153/worker133 plus build; Foundry17/snapshot and Linux indexer4.
+- sdk: publish measured shape-specific gas budgets — 18 successful receipt samples, 20% headroom; anomalous unbounded payout is not a constant. Verified assembled web543/SDK153/worker133 plus build; Foundry17/snapshot and Linux indexer4.
