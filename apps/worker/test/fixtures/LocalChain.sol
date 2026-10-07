@@ -78,6 +78,9 @@ contract MockBook {
         uint32 flippedPrice;
         bool isBuy;
     }
+    struct Point { uint40 head; uint40 tail; }
+    mapping(uint256 => Point) public s_buyPricePoints;
+    mapping(uint256 => Point) public s_sellPricePoints;
 
     uint256 public bid = type(uint256).max;
     uint256 public ask;
@@ -86,6 +89,9 @@ contract MockBook {
     uint256 public sells;
     uint96 public lastBuyQuote;
     uint96 public lastSellSize;
+    uint256 public externalBase = 100e18;
+    uint256 public externalQuote = 100e6;
+    uint256 public canceled;
     mapping(uint40 => Order) public s_orders;
 
     function setBook(uint256 bid_, uint256 ask_) external {
@@ -93,8 +99,16 @@ contract MockBook {
         ask = ask_;
     }
 
-    function bestBidAsk() external view returns (uint256, uint256) {
-        return (bid, ask);
+    function bestBidAsk() external view returns (uint256 bestBid, uint256 bestAsk) {
+        bestBid = bid;
+        bestAsk = ask;
+        for (uint40 id = 1; id < nextId; id++) {
+            Order memory order = s_orders[id];
+            if (order.size == 0 || !_linked(id)) continue;
+            uint256 price = uint256(order.price) * 1e10;
+            if (order.isBuy && (bestBid == type(uint256).max || price > bestBid)) bestBid = price;
+            if (!order.isBuy && (bestAsk == 0 || price < bestAsk)) bestAsk = price;
+        }
     }
 
     // MON base / 18 dp, AUSD quote / 6 dp, 1e8 price precision, 1e10 size precision, tick 1.
@@ -102,21 +116,48 @@ contract MockBook {
         return (1e8, 1e10, address(0), 18, address(0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC), 6, 1, 1e6, 1e22, 0, 0);
     }
 
-    function placeAndExecuteMarketBuy(uint96 quoteSize, uint256, bool, bool) external payable returns (uint256) {
+    function placeAndExecuteMarketBuy(uint96 quoteSize, uint256, bool, bool) external payable returns (uint256 output) {
+        _assertNoOwnOrders();
+        require(ask > 0, "no external ask");
+        uint256 quoteRaw = uint256(quoteSize) / 100;
+        output = quoteRaw * 1e30 / ask;
+        require(externalBase >= output, "external base");
+        externalBase -= output;
+        externalQuote += quoteRaw;
         buys++;
         lastBuyQuote = quoteSize;
-        return 0;
     }
 
-    function placeAndExecuteMarketSell(uint96 size, uint256, bool, bool) external payable returns (uint256) {
+    function placeAndExecuteMarketSell(uint96 size, uint256, bool, bool) external payable returns (uint256 output) {
+        _assertNoOwnOrders();
+        require(bid != type(uint256).max && bid > 0, "no external bid");
+        uint256 baseRaw = uint256(size) * 1e8;
+        output = baseRaw * bid / 1e30;
+        require(externalQuote >= output, "external quote");
+        externalQuote -= output;
+        externalBase += baseRaw;
         sells++;
         lastSellSize = size;
-        return 0;
+    }
+
+    function _assertNoOwnOrders() private view {
+        for (uint40 id = 1; id < nextId; id++)
+            require(s_orders[id].owner != msg.sender || !_linked(id), "self trade");
+    }
+
+    function batchCancelOrders(uint40[] calldata ids) external {
+        for (uint256 i; i < ids.length; i++) {
+            require(s_orders[ids[i]].owner == msg.sender, "owner");
+            _unlink(ids[i]);
+            delete s_orders[ids[i]];
+            canceled++;
+        }
     }
 
     function batchUpdate(uint32[] calldata buyPrices, uint96[] calldata buySizes, uint32[] calldata sellPrices, uint96[] calldata sellSizes, uint40[] calldata cancel, bool) external {
         for (uint256 i; i < cancel.length; i++) {
             require(s_orders[cancel[i]].owner == msg.sender, "owner");
+            _unlink(cancel[i]);
             delete s_orders[cancel[i]];
         }
         for (uint256 i; i < buyPrices.length; i++) _create(buyPrices[i], buySizes[i], true);
@@ -125,7 +166,34 @@ contract MockBook {
 
     function _create(uint32 price, uint96 size, bool isBuy) private {
         uint40 id = nextId++;
-        s_orders[id] = Order(msg.sender, size, 0, 0, 0, price, 0, isBuy);
+        Point storage point = isBuy ? s_buyPricePoints[price] : s_sellPricePoints[price];
+        s_orders[id] = Order(msg.sender, size, point.tail, 0, 0, price, 0, isBuy);
+        if (point.tail != 0) s_orders[point.tail].next = id;
+        else point.head = id;
+        point.tail = id;
         emit OrderCreated(id, msg.sender, size, price, isBuy);
+    }
+
+    function _linked(uint40 id) private view returns (bool) {
+        Order storage order = s_orders[id];
+        Point storage point = order.isBuy ? s_buyPricePoints[order.price] : s_sellPricePoints[order.price];
+        for (uint40 next = point.head; next != 0; next = s_orders[next].next)
+            if (next == id) return true;
+        return false;
+    }
+
+    function _unlink(uint40 id) private {
+        require(_linked(id), "not active");
+        Order storage order = s_orders[id];
+        Point storage point = order.isBuy ? s_buyPricePoints[order.price] : s_sellPricePoints[order.price];
+        if (order.prev == 0) point.head = order.next;
+        else s_orders[order.prev].next = order.next;
+        if (order.next == 0) point.tail = order.prev;
+        else s_orders[order.next].prev = order.prev;
+    }
+
+    // Model the real plain-order finding: matching removes membership but leaves s_orders size.
+    function fillPlain(uint40 id) external {
+        _unlink(id);
     }
 }

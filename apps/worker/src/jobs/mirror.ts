@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import type { Hex } from 'viem'
-import { SOURCE_STALE_MS, isSourcePaused, sourceAgeMs, testnetObservation } from './mid-sampler'
+import { SOURCE_FRESH_MS, SOURCE_STALE_MS, isSourcePaused, sourceAgeMs, testnetObservation } from './mid-sampler'
 import type { MidState } from './mid-sampler'
 import { describeError, log } from '../logger'
 import type { Logger } from '../logger'
@@ -82,8 +82,8 @@ export function decideMirrorAction(input: MirrorInput): MirrorAction {
 
 export type MirrorExecutor = {
   inventory: () => Promise<{ base: number; quote: number }>
-  // Takes liquidity toward the target (buy/sell), then refreshes resting quotes. Returns every tx hash.
-  execute: (action: MirrorAction, targetMid: number) => Promise<Hex[]>
+  // Cancel owned quotes, take only remaining external liquidity, then refresh.
+  execute: (action: MirrorAction, targetMid: number, assertSource: () => void | Promise<void>) => Promise<Hex[]>
 }
 export type MirrorState = {
   attempted: number
@@ -124,12 +124,16 @@ export function createMirrorJob({
     let action = idle('paused', 'not-evaluated')
     let hashes: Hex[] = []
     let error: string | null = null
+    let sourceMid = mid.targetMid
+    let testnetMid = mid.testnet.mid
     try {
       const inventory = await executor.inventory()
       const evaluatedAt = now()
       const testnet = testnetObservation(mid, evaluatedAt)
+      sourceMid = mid.targetMid
+      testnetMid = testnet.mid
       action = decideMirrorAction({
-        targetMid: mid.targetMid,
+        targetMid: sourceMid,
         sourceAgeMs: sourceAgeMs(mid, evaluatedAt),
         sourcePaused: isSourcePaused(mid, evaluatedAt),
         testnetMid: testnet.mid,
@@ -139,14 +143,21 @@ export function createMirrorJob({
         inventory,
       })
       if (action.kind !== 'paused' && action.kind !== 'hold')
-        hashes = await executor.execute(action, mid.targetMid ?? 0)
+        hashes = await executor.execute(action, sourceMid ?? 0, () => {
+          const checkedAt = now()
+          const age = sourceAgeMs(mid, checkedAt)
+          if (isSourcePaused(mid, checkedAt) || age === null || age > SOURCE_FRESH_MS)
+            throw new Error('Source unavailable before mirror signing')
+        })
     } catch (cause) {
       error = describeError(cause)
+      if (cause instanceof Error && 'hashes' in cause && Array.isArray(cause.hashes))
+        hashes = cause.hashes as Hex[]
     }
     insert.run(
       at,
-      mid.targetMid,
-      mid.testnet.mid,
+      sourceMid,
+      testnetMid,
       action.kind,
       action.notional,
       hashes.join(',') || null,
