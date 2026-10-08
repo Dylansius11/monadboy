@@ -28,8 +28,9 @@ export type { EngineStatus, MusicStatus } from './engine'
 export interface SoundApi {
   /** 0 to 1. The one slider scales the music and the effects together. */
   volume: number
+  /** Explicit adjustment clears mute; zero volume still silences output. */
   setVolume: (value: number) => void
-  /** Muting never changes `volume`; unmuting returns to it exactly. */
+  /** The M shortcut preserves `volume` so unmuting returns to it exactly. */
   muted: boolean
   toggleMute: () => void
   /** Fire and forget. Silent until the first trusted gesture, and when muted. */
@@ -98,7 +99,11 @@ function createPrefsStore(): PrefsStore {
  */
 export function SoundProvider({ children }: { children: ReactNode }) {
   const [store] = useState(createPrefsStore)
-  const prefs = useSyncExternalStore(store.subscribe, store.get, store.getServer)
+  const prefs = useSyncExternalStore(
+    store.subscribe,
+    store.get,
+    store.getServer,
+  )
   const [status, setStatus] = useState<EngineStatus>('locked')
   const [music, setMusic] = useState<MusicStatus>('idle')
   const engine = useRef<SoundEngine | null>(null)
@@ -110,7 +115,10 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setStatus('locked')
     setMusic('idle')
-    const created = createSoundEngine({ onStatus: setStatus, onMusic: setMusic })
+    const created = createSoundEngine({
+      onStatus: setStatus,
+      onMusic: setMusic,
+    })
     created.setLevel(outputGain(store.get()))
     engine.current = created
     return () => {
@@ -124,7 +132,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   }, [gain])
 
   const setVolume = useCallback(
-    (value: number) => store.set({ ...store.get(), volume: clampVolume(value) }),
+    (value: number) => store.set({ volume: clampVolume(value), muted: false }),
     [store],
   )
   const toggleMute = useCallback(() => {
@@ -140,7 +148,10 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [toggleMute])
 
-  const play = useCallback((effect: SoundEffect) => engine.current?.play(effect), [])
+  const play = useCallback(
+    (effect: SoundEffect) => engine.current?.play(effect),
+    [],
+  )
 
   const api = useMemo<SoundApi>(
     () => ({
@@ -160,6 +171,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
 
 export function useSound(): SoundApi {
   const api = useContext(SoundContext)
-  if (api === null) throw new Error('useSound must be used inside <SoundProvider>')
+  if (api === null)
+    throw new Error('useSound must be used inside <SoundProvider>')
   return api
 }

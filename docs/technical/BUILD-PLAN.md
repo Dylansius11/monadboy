@@ -17,7 +17,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 | 0 — Repo bootstrap             | DONE    | 2/2              | Maintain guard and commit discipline                                                | None                                        |
 | 1 — Docs first                 | DONE    | 4/4              | Keep docs aligned with implementation                                               | None                                        |
 | 2 — Frontend shell and screens | DONE    | 23/23            | Maintain the rendered and behavior checks                                           | None                                        |
-| 2b — Experience pass           | DONE    | 5/5              | Preserve portrait, help and native sound                                            | None for local experience work              |
+| 2b — Experience pass           | DONE    | 6/6              | Preserve portrait, help and native sound                                            | None for local experience work              |
 | 3 — Pure SDK                   | DONE    | 9/9              | Maintain receipt-backed units and shape-specific gas                                | None                                        |
 | 4 — Funded spikes              | DOING   | 5/6              | Record physical iPhone/Android S4 results                                           | B8                                          |
 | 5 — DiskRegistry v2            | DONE    | 6/6              | Preserve receipt/artifact identity and stateless device proof                       | B8 for physical restore, outside deployment |
@@ -376,3 +376,7 @@ Each bounded unit below uses the freshly verified assembled tree described above
 - spikes: retain bounded worker smoke and budget evidence — Real drip/refusal/faucet/budget evidence; signed smoke is time-bounded and final preview is read-only. Verified assembled web551/SDK153/worker133 plus build; Foundry17/snapshot and Linux indexer4.
 - docs: record funded acceptance and remaining honest gates — S1/S2/S3/S5 resolved; funded first-run restore and actual outage proof; B2/B3/B5/B8/B10 remain honest gates. Verified assembled web551/SDK153/worker133 plus build; Foundry17/snapshot and Linux indexer4.
 - Setup evidence: fresh-clone frozen install and full verify passed; final raw assembled output also reports551web tests, superseding the earlier543count recorded in commit proof bodies. No history rewrite; contract/indexer/build evidence unchanged.
+
+## Approved interface refinement checkpoints
+
+- [x] **2b.6** Make VOL the only visible sound control — two pre-fix regressions failed; consumer gain/remount, zero and reversible M pass. Native Edge slider/M recovery observed5 ->0 ->5 ->0; saved mute clears on explicit adjustment. Assembled verify web556/SDK153/worker133, build, Foundry17/snapshot passed. No physical speaker or B8 claim.

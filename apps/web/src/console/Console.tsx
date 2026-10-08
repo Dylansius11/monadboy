@@ -122,7 +122,7 @@ export function ConsoleBody({
   /** Context tools supplied by the application; the shell does not interpret them. */
   tools?: ReactNode
 }) {
-  const { volume, setVolume } = useSound()
+  const { volume, muted, setVolume } = useSound()
   return (
     <>
       <div className="lid">
@@ -152,10 +152,10 @@ export function ConsoleBody({
         <i className="screw br" />
 
         <div className="toprow">
-          <VolumeSlider value={volume} onChange={setVolume} />
+          <VolumeSlider value={muted ? 0 : volume} onChange={setVolume} />
           <MonadMark />
           <i className={powered ? 'led' : 'led is-off'} aria-hidden="true" />
-          {tools && <div className="console-tools">{tools}</div>}
+          {tools}
         </div>
 
         <div className="deck">
@@ -166,7 +166,6 @@ export function ConsoleBody({
           </div>
           <ActionButtons />
         </div>
-
       </div>
     </>
   )

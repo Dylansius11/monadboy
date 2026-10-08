@@ -3,7 +3,8 @@ import { Console } from '../console/Console'
 import { brand } from '../config/brand'
 import { PlayBackdrop } from '../scenery/PlayBackdrop'
 import { RuleBook } from '../game/help/RuleBook'
-import { SoundControls } from '../sound/SoundControls'
+import { useConsoleIntent } from '../console/useConsoleInput'
+import { useSound } from '../sound/SoundProvider'
 
 /**
  * The console shell, mounted ONCE for every screen underneath it.
@@ -22,9 +23,24 @@ export const Route = createFileRoute('/_console')({ component: Shell })
 function Shell() {
   const path = useRouterState({ select: (s) => s.location.pathname })
   return (
-    <Console wordmark={brand.CONSOLE_NAME} backdrop={<PlayBackdrop />}
-      tools={<><SoundControls boot={path === '/play' || path === '/play/'} /><RuleBook /></>}>
+    <Console
+      wordmark={brand.CONSOLE_NAME}
+      backdrop={<PlayBackdrop />}
+      tools={<ConsoleTools boot={path === '/play' || path === '/play/'} />}
+    >
       <Outlet />
     </Console>
   )
+}
+
+/** Hardware feedback only; fill and withdrawal sounds stay with game outcomes. */
+function ConsoleTools({ boot }: { boot: boolean }) {
+  const { play } = useSound()
+  useConsoleIntent((intent) => {
+    if (intent === 'A') play('confirm')
+    else if (intent === 'B') play('back')
+    else if (intent === 'START') play(boot ? 'boot' : 'confirm')
+    else play('move')
+  })
+  return <RuleBook />
 }

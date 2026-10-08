@@ -251,6 +251,13 @@ The city draws once per resize; only a small train moves by compositor transform
 Reduced motion freezes the train; hidden tabs pause it. No scenery implies a live fill or affects a game number.
 Phone chrome gives space to the game; the city remains in the margins.
 
+### Volume
+
+The shared VOL slider is the only visible sound control. Zero is exact silence.
+An explicit adjustment clears a stored mute; M still mutes/restores the saved level.
+While M-muted, the slider displays zero rather than a misleading nonzero level.
+No audio starts before a trusted gesture. Browser gain/state proof is not physical-speaker proof.
+
 ## 8. Verification contract
 
 Phase 2 palette checks compare CSS and TypeScript, contrast pairs, decorative exceptions, and grid constants.

@@ -63,20 +63,6 @@
   view-transition-name: console;
 }
 
-.console-tools { display: flex; align-items: center; gap: 8px; }
-.sound-toggle {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 2px solid var(--color-edge);
-  background: var(--color-panel);
-  color: var(--color-ink);
-  font: 11px/16px var(--font-pixel);
-  cursor: pointer;
-}
-.sound-toggle[aria-pressed='true'] { background: var(--color-sunk); }
-.sound-toggle:focus-visible { outline: 2px solid #85e6ff; outline-offset: 2px; }
-
 .lid,
 .base {
   position: relative;
