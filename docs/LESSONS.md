@@ -4,6 +4,12 @@ Newest on top. Each entry: root cause, then the durable rule.
 
 ## Technical
 
+### 2026/10/08 — Align the router's SSR query bridge
+
+- **Cause:** The security-required Start/router upgrade changed the server SSR interface while the old query bridge still called `isDehydrated()`. The public request returned200 but aborted its React boundary and fell back to client rendering.
+- **Rule:** Align SSR bridge and Query peer requirements during Start/router upgrades. Exercise a first direct data-route request and inspect browser plus server error logs; a green client suite and HTTP200 are not SSR acceptance.
+
+
 ### 2026/10/07 — Preserve signed margin cash flows
 
 - **Cause:** Clamping cumulative base withdrawals above deposits to zero created phantom DAMAGE after a real zap/exit.

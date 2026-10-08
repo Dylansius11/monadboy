@@ -72,7 +72,8 @@ Versions below are the approved toolchain targets. An exact version here is not 
 | Types | TypeScript | 6.0.3 |
 | Application | TanStack Start | 1.168.60 |
 | Routing | TanStack Router | 1.170.41 |
-| Server-state cache | TanStack Query | 5.101.4 |
+| Server-state cache | TanStack Query | 5.102.0 |
+| Router/query SSR bridge | `@tanstack/react-router-ssr-query` | 1.167.3 |
 | UI | React | 19.2.8 |
 | Build | Vite | 8.2.0 |
 | Vercel adapter | Nitro | 3.0.260903-beta |
