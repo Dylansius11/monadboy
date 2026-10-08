@@ -12,19 +12,19 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 
 **Latest integrated unit:** Funded testnet registry/market, browser gameplay, signed cash-flow accounting and local Envio cutover. Fresh assembled `bun run verify` passed web551 / SDK153 / worker133 tests, typecheck and lint; `bun run build` passed. Foundry17tests/snapshot and indexer4projection tests/typecheck passed. These checks cover the assembled working tree, not independent historical snapshots. Physical devices, production hosting and final continuous mirror acceptance remain open.
 
-| Phase | Status | Done/Total tasks | Next action | Blocker |
-|---|---|---|---|---|
-| 0 — Repo bootstrap | DONE | 2/2 | Maintain guard and commit discipline | None |
-| 1 — Docs first | DONE | 4/4 | Keep docs aligned with implementation | None |
-| 2 — Frontend shell and screens | DONE | 23/23 | Maintain the rendered and behavior checks | None |
-| 2b — Experience pass | DONE | 5/5 | Preserve portrait, help and native sound | None for local experience work |
-| 3 — Pure SDK | DONE | 9/9 | Maintain receipt-backed units and shape-specific gas | None |
-| 4 — Funded spikes | DOING | 5/6 | Record physical iPhone/Android S4 results | B8 |
-| 5 — DiskRegistry v2 | DONE | 6/6 | Preserve receipt/artifact identity and stateless device proof | B8 for physical restore, outside deployment |
-| 6 — Worker | DOING | 8/12 | Prove final continuous mirror alignment/cost and deploy | B10; B3 for VPS |
-| 7 — Web integration | DOING | 6/14 | Close partial-load recovery/audio boundary proof, then supported-phone/domain gates | B2 / B8; remaining runtime acceptance |
-| 8 — Envio indexer | DONE | 5/5 | Preserve indexed parity and outage recovery | Public hosting remains Phase9/B3 |
-| 9 — Deploy and submission | BLOCKED | 0/7 | Obtain fixed hostname and VPS access | B2 / B3; upstream live proof |
+| Phase                          | Status  | Done/Total tasks | Next action                                                                         | Blocker                                     |
+| ------------------------------ | ------- | ---------------- | ----------------------------------------------------------------------------------- | ------------------------------------------- |
+| 0 — Repo bootstrap             | DONE    | 2/2              | Maintain guard and commit discipline                                                | None                                        |
+| 1 — Docs first                 | DONE    | 4/4              | Keep docs aligned with implementation                                               | None                                        |
+| 2 — Frontend shell and screens | DONE    | 23/23            | Maintain the rendered and behavior checks                                           | None                                        |
+| 2b — Experience pass           | DONE    | 5/5              | Preserve portrait, help and native sound                                            | None for local experience work              |
+| 3 — Pure SDK                   | DONE    | 9/9              | Maintain receipt-backed units and shape-specific gas                                | None                                        |
+| 4 — Funded spikes              | DOING   | 5/6              | Record physical iPhone/Android S4 results                                           | B8                                          |
+| 5 — DiskRegistry v2            | DONE    | 6/6              | Preserve receipt/artifact identity and stateless device proof                       | B8 for physical restore, outside deployment |
+| 6 — Worker                     | DOING   | 8/12             | Prove final continuous mirror alignment/cost and deploy                             | B10; B3 for VPS                             |
+| 7 — Web integration            | DOING   | 6/14             | Close partial-load recovery/audio boundary proof, then supported-phone/domain gates | B2 / B8; remaining runtime acceptance       |
+| 8 — Envio indexer              | DONE    | 5/5              | Preserve indexed parity and outage recovery                                         | Public hosting remains Phase9/B3            |
+| 9 — Deploy and submission      | BLOCKED | 0/7              | Obtain fixed hostname and VPS access                                                | B2 / B3; upstream live proof                |
 
 ## Phase 0 — Repo bootstrap
 
@@ -34,6 +34,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 - [x] **0.2** Install staged-file and commit-message guards, including binary text handling — proof: `9b6a98f`, `9a6a360`, `b629e56`, `c628bc8`; PROGRESS records real rejected commits and final review PASS.
 
 **Acceptance**
+
 - Hooks reject prohibited tracked content and messages; allowed files pass.
 - Commits use Dylan's repo-local identity, no push or new remote, and heading-bounded work units.
 
@@ -49,6 +50,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 - [x] **1.4** Track approved skills, three project skills and wallet source lock — proof: `1df7117`, `972caf0`, `da7b24a`..`557a114`; PROGRESS records 228-file comparison and guard-clean annotations.
 
 **Acceptance**
+
 - Every required doc and skill exists; docs match approved product rules and each doc owns one subject.
 - Network statements carry sources / labels; recorded address checks identify chain and non-empty code, with no-code examples explicitly annotated.
 - Full-tree guard is clean; LESSONS uses dated cause/rule entries and root guidance stays concise.
@@ -84,6 +86,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 - [x] **2.12** Close the Phase 2 review — proof: M1 URL eligibility `0e4f1ac` (one rule in `game/eligibility.ts` for the tracker and the range/live/results routes; `/play/range/0x…ab` renders Pool not found); M5 single session writer `0e4f1ac`; routed walk and S2 TESTNET labels `29f74cd`; ladder error copy and fine dollars `e1b9665`; M2 AUTOPILOT copy without the unsourced fee, S6 inputs view, now-marker clearance `5e7f2e5`; S7/S8 inputs on START, sim constants, out-of-range copy `abd6c88`; M4 rationale comments `662282c`, `a6a8266`, `913bd96`, `36d4eb8`, `e5e7914`. Phone screenshots are 515x1144 px: 412x915 CSS at device scale 1.25.
 
 **Acceptance**
+
 - Node-runtime verify and guard pass; no imports of absent modules.
 - All eight screens render with sprites and unchanged visual constants; fixtures are visibly marked.
 - Keyboard / touch selections, no silent 320px clipping, screenshots compared to the earlier version; record any known dev warnings rather than hiding errors.
@@ -93,6 +96,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 **Accepted deviations (review M3, m1)** The screen, test and fix commits through `313b886` did not update this file in the same commit; `14e88be` recorded their status in one docs commit. `2bf5a63` (34 lines) and `14e88be` (28 lines) are under 50 lines, and `54ef7d3` (+206/-8) is over 250 because the typed route graph is one cycle. History is not rewritten for these.
 
 **Findings for later phases**
+
 - [V] Under the 8-level x 2% cap the SDK ladder clamps volatile pairs: with the MON_USDC fixture's daily volatility of 0.6, WIDE and TIGHT plan the same range (the clamp notice says so). [U, S2] Re-check with measured testnet volatility before tuning the cap.
 - [V] `RunSummary` does not keep the deposited amount, so S8 labels the amount as the current session's. Phase 7 sealed runs must record it per run.
 - [V] Fixture markets carry `network`; Phase 7 replaces it with registry-backed deployment eligibility.
@@ -126,6 +130,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 - [x] **3.6** Derive Mera card/disk accounts using supported path — proof: `b63cc10`; PROGRESS records derivation equality tests and coverage 100%.
 
 **Acceptance**
+
 - Arithmetic / boundary tests and authenticated seal/open replay protection pass; supported derivation equals the reference.
 - `bun run --cwd packages/sdk test:coverage` reports >=95% lines for kuru/* and seal; PROGRESS records 112 tests and 99.09% overall.
 - No ethers runtime import; concrete dependency pins. Default (a) preserves NET surplus and DAMAGE clamp, not a universal false identity.
@@ -145,6 +150,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 - [x] **4.5** S5: initialize testnet Envio spike for our market — proof: fresh native-card flipped buy `0x10883c2ff43adb087f22c17fd798e1b5024219f18ccb17aa72fb4b6f418022aa` and three fresh sells observed in public GraphQL564–570ms after receipt observation;300ms sampling gives observed upper bounds. Exact client/indexer/worker SCORE parity. Original16.620second miss retained.
 
 **Acceptance**
+
 - Each S1..S5 has a pass/fail line with actual evidence, not code existence.
 - markets.testnet.json contains verified deployed params/address; Phase 3 deferred gas and real-order proof are filled.
 - Device testing can proceed without funding; tunnel passkeys never become production cards.
@@ -165,6 +171,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 - [x] **5.4** Run Foundry contract tests in CI — proof: `d5b2926`; tracked .github/workflows/ci.yml defines the contract job.
 
 **Acceptance**
+
 - In contracts/: `forge test` and `forge snapshot --check` pass; SDK ABI equals generated artifact.
 - Testnet deployment has real code and a recorded receipt. Local contract proof alone does not complete this phase.
 
@@ -188,6 +195,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 - [ ] **6.9** Exercise ten-minute final live mirror, tracker and drip run — historical10minute self-taking run is not final acceptance. Corrected bounded transition exists; continuous drift/cost proof remains B10. Preview worker has signing disabled.
 
 **Acceptance**
+
 - Workspace verify and scoped route/job checks pass; live run proves drift control, source ages and refusal ledger.
 - Move scoring to packages/sdk and migrate web callers; do not duplicate scoring.
 - [V] PROGRESS records public RPC getLogs limit of 100 blocks; 24h tracker scan needs HyperSync/Envio or suitable RPC, not an assumed fast raw scan.
@@ -195,7 +203,6 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 **Proof to record** Commands, route outputs and SQL rows in external PROGRESS; measured mainnet inputs/calibration in research; bot/drip receipts and explicit gas in SMART-CONTRACTS.
 
 **2026-10-06 UTC review/runtime:** Authenticated HyperSync query HTTP 200, real book/log inputs and complete SQLite trade window; no broadcast jobs enabled. Expiry is evaluated after inventory awaits; tracker data over 45min cannot remain live/playable. Fresh mid/source reads, CORS allow/deny/preflight, strict invalid queries/bodies and disabled drip 503 observed. Leaderboard truthfully returned no-market-configured, so funded ranking/drip/mirror acceptance remains open. Original WSL systemd verification failed for missing Bun; only a temporary syntax copy passed. Caddy unavailable; target deployment/validation not claimed.
-
 
 ## Phase 7 — Web integration
 
@@ -211,12 +218,13 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 - [ ] **7.6** S7 InRange:5s mid polling, real fills, SCORE/DAMAGE and re-center/withdraw — real initial/flipped fills,0.000003SCORE, OUT OF RANGE sitting,0.062198MON re-center estimate/exit, and actual INDEXER OFFLINE/recovery observed. Re-center returns to S6 and requires a separate fresh confirmation. Remaining proof: actual fill-audio output and NAD-SENSE boundary transition; muted runtime is not audio proof.
 - [x] **7.7** S8 Results: cancel/withdraw, tx-linked result and sealed run — first exit cancel `0xaa74139691576737a3f5e9698e08285d749cb95c4c9e7f05b2209eeb49d1ca5f` / withdraw `0x7b19e8d6c67823cbd7ef746e0379c538759472be84f58bfc8c84ef80f0198c91`; sealed save `0x617e30e5ff6db8abb12b75da3040db0335afb8db859ee77a93d2545a32d332a1`. Eject/storage-clear/reload/discoverable INSERT restored same three addresses and first saved run. Second re-center exit/seal confirmed; shelf displayed two runs, but repeat restore unestablished after disposable reader unavailable.
 - [x] **7.8** Leaderboard screen — actual worker-backed phone/desktop renders with window/source/explorer links and six-decimal SCORE. Same16px SCORE/DAMAGE/NET; phone label/value separation8px, desktop figure cells145px with no text overflow. Both actual-font screenshots visually inspected; obsolete table header removed after compact-card cutover.
-- [ ] **7.9** Installable portrait PWA — proof required: manifest/icons from assets/logo, Lighthouse installability report and supported-phone standalone launch; B5 organizer text settles Agora qualification separately.
+- [ ] **7.9** Installable portrait PWA — proof required: manifest/icons from assets/logo, Lighthouse installability report and supported-phone standalone launch; this product gate remains required even though Agora is skipped ([SUBMISSIONS](../SUBMISSIONS.md)).
 - [x] **7.10a** Exclude fixtures from production gameplay routes — proof: production build deliberately supplied VITE_USE_FIXTURES=true; preview still showed real card-domain errors, actual worker/no-market reads and S6 deployment prerequisite, not simulated position. `/dev/passkey` returned 404; no test surface root.
 - [ ] **7.10b** Full production worker/chain/indexer path — funded native virtual-reader testnet/worker/indexer path observed. Production supported-phone/HTTPS acceptance remains B2/B8/B3. Landing development examples stay labeled.
 - [ ] **7.11** Record full real-phone play and stateless restore — proof required: HTTPS new card -> funded disk -> tracker/range -> explorer orders -> flipped fill/sound -> withdraw/results; clear site data -> INSERT CARD -> three locally decrypted disks without server restore.
 
 **Acceptance**
+
 - Full real-phone sequence and restore satisfy the evidence contract below; B2 fixes production rpId first.
 - Review all twelve product rules on every screen; every balance says TESTNET, every number has a source, DAMAGE equals SCORE's visual weight.
 - Signing stays in browser; no production fixture or server restore dependency.
@@ -226,7 +234,6 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 **Reachable integration proof:** Native WebAuthn virtual PRF reader and isolated Anvil proved three-slot seal/restore and profile preservation. Funded Monad testnet then proved two S6 provisions, maker flip, S8 exit, optional sealed saves and first-run discoverable restore without server/localStorage. Pending-operation eject/expiry regressions pass. Two-run shelf was observed before a later repeat restore stalled with the disposable authenticator unavailable; no production recovery claim is made from memory-only test credentials.
 
 **Production PWA proof:** Built preview manifest parsed without errors; native Chromium Page.getInstallabilityErrors returned an empty error list, with real 192/512/maskable icons. No service worker caches chain responses. Physical-phone standalone launch and Lighthouse report are not recorded, so 7.9 remains open. Live leaderboard no-market and retained OFFLINE state are rendered; no invented ranking or fill is claimed.
-
 
 ## Phase 8 — Envio indexer
 
@@ -239,6 +246,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 - [x] **8.4** Prove latency and SCORE parity — fresh sells/native-card buy observed564–570ms after receipt; client/indexer/worker SCORE exactly0.000002997833732854715AUSD. External `indexer-native-observations.json` / `native-score-parity.json`; original failed timing retained.
 
 **Acceptance**
+
 - S5 evidence passes on intended testnet; config uses live rather than prose event signatures.
 - Read-model lag/outage is visible; direct logs preserve play but do not count as successful Envio integration.
 
@@ -251,12 +259,13 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 - [ ] **9.1** Resolve VPS access and fixed production hostname — proof required: B2/B3 decisions, reachable SSH and final VITE_RP_ID recorded without secrets; optional RPC credentials never block public-RPC work.
 - [ ] **9.2** Deploy web/worker behind Caddy HTTPS and systemd — proof required: public phone page load, HTTPS /v1/health and service restart recovery.
 - [ ] **9.3** Rehearse on three fresh devices — proof required: iPhone, Android and desktop Chrome with Google Password Manager recordings, including a phone that never saw the app and stateless restore.
-- [ ] **9.4** Observe healthy worker for 24 hours — proof required: timestamped health samples and source/tick ages across 24h; operate through judging 14..27 October.
-- [ ] **9.5** Finalize README and clean-clone local setup — [V] fresh local clone of7268a17 installed832packages with `bun install --frozen-lockfile`; `bun run verify` passed web551/SDK153/worker133, typechecks and lint without copied env/generated/dependency directories. README addresses/code paths updated. Remaining proof: public screenshots/GIF, <=3-minute video and complete submission-facing package.
-- [ ] **9.6** Complete bounty mapping — proof required: each requirement -> actual code path -> video timestamp in README/research/bounties.md; B5 resolved before Agora eligibility claim.
-- [ ] **9.7** Check public submission package — proof required: publicly accessible repo/URL, MIT license, final address/tx/video links and AI-tool disclosure; submission receipt / checklist against Metropolis rules.
+- [ ] **9.4** Observe healthy worker for 24 hours — proof required: timestamped health samples and source/tick ages across 24h; operate through the confirmed judging period (Rules/dashboard dates conflict; see [SUBMISSIONS](../SUBMISSIONS.md)).
+- [ ] **9.5** Finalize README and clean-clone local setup — [V] fresh local clone of7268a17 installed832packages with `bun install --frozen-lockfile`; `bun run verify` passed web551/SDK153/worker133, typechecks and lint without copied env/generated/dependency directories. README addresses/code paths updated. Remaining proof: public screenshots/GIF, technical demo ≤3 minutes, separate pitch ≤2 minutes, logo ≤3 MB and complete package per [SUBMISSIONS](../SUBMISSIONS.md).
+- [ ] **9.6** Complete eligible bounty mapping — proof required: each requirement -> actual code path -> video timestamp in README/research/bounties.md; Agora is skipped (Mera + AUSD + Perpl required), not pending PWA qualification.
+- [ ] **9.7** Check public submission package against [SUBMISSIONS](../SUBMISSIONS.md) — proof required: public repo/live URL, MIT license, final address/tx/technical-demo/pitch links, logo, sponsor fields and AI-tool disclosure; saved submission receipt/checklist.
 
 **Acceptance**
+
 - Fresh-phone HTTPS works, worker health is green for 24h and clean-clone commands pass.
 - Non-negotiable real flip fill on camera and stateless restore have evidence; no fixture substitution.
 - Public submission contains actual links/addresses and qualifying bounty proof, not pending evidence slots.
@@ -275,13 +284,13 @@ Shared names are fixed: `planLadder`, `batchProvisionArgs`, `scoreCard`, `rangeS
 
 Each gate requires actual evidence, not declarations. S1/S2/S3/S5 have funded receipt/readback/latency/parity evidence; S4 remains physical-device gated. Preserve S5's original16.620second miss alongside live-RPC564–570ms passing observations. Receipts/logs, params, gas and device/indexer results belong in research and [SMART-CONTRACTS](SMART-CONTRACTS.md).
 
-| ID | Question | Pass condition | Fallback | Dependent work |
-|---|---|---|---|---|
-| S1 | AUSD testnet supply | Faucet `requestFunds` succeeds from our wallets at some cadence, or we hold >=1,000 AUSD | Ask Monad/Agora in Discord; else official MON-USDC testnet market with testnet USDC | Supply, drip, MON-AUSD execution; second market only if USDC source usable |
-| S2 | Flip ladder on Kuru testnet | Deploy our MON-AUSD market, deposit, `batchProvisionLiquidity` 2+2 levels; bot taker fill emits `Trade` + `FlippedOrderCreated`; encodings and `provisionOrRevert` documented | Single `addFlipBuyOrder` / `addFlipSellOrder` per level | Trusted encodings, explicit gas limits, playable market, real flip proof |
-| S3 | Testnet MON budget | Deployer + bot + drip wallets hold the lean budget: DEPLOYER 50 MON, BOT 80 MON of inventory, DRIP 20 MON for 20 player drips (about 150 MON total) | Shrink level sizes via `minSize` and ladder depth until the +/-3% move fits the inventory; ask Monad for a top-up only if the measured need is higher | Live mirror and fresh-disk onboarding |
-| S4 | Mera on real devices | iPhone Safari + Android Chrome create and restore on the dev tunnel hostname | Document supported authenticators; desktop must use GPM/iCloud/1Password | Passkey onboarding and stateless restore |
-| S5 | Envio on testnet | HyperIndex syncs our market events within 10 s | Self-host; else `getLogs` fallback only | S7 indexed fills, S8 history, Envio-driven leaderboard |
+| ID  | Question                    | Pass condition                                                                                                                                                                | Fallback                                                                                                                                              | Dependent work                                                             |
+| --- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| S1  | AUSD testnet supply         | Faucet `requestFunds` succeeds from our wallets at some cadence, or we hold >=1,000 AUSD                                                                                      | Ask Monad/Agora in Discord; else official MON-USDC testnet market with testnet USDC                                                                   | Supply, drip, MON-AUSD execution; second market only if USDC source usable |
+| S2  | Flip ladder on Kuru testnet | Deploy our MON-AUSD market, deposit, `batchProvisionLiquidity` 2+2 levels; bot taker fill emits `Trade` + `FlippedOrderCreated`; encodings and `provisionOrRevert` documented | Single `addFlipBuyOrder` / `addFlipSellOrder` per level                                                                                               | Trusted encodings, explicit gas limits, playable market, real flip proof   |
+| S3  | Testnet MON budget          | Deployer + bot + drip wallets hold the lean budget: DEPLOYER 50 MON, BOT 80 MON of inventory, DRIP 20 MON for 20 player drips (about 150 MON total)                           | Shrink level sizes via `minSize` and ladder depth until the +/-3% move fits the inventory; ask Monad for a top-up only if the measured need is higher | Live mirror and fresh-disk onboarding                                      |
+| S4  | Mera on real devices        | iPhone Safari + Android Chrome create and restore on the dev tunnel hostname                                                                                                  | Document supported authenticators; desktop must use GPM/iCloud/1Password                                                                              | Passkey onboarding and stateless restore                                   |
+| S5  | Envio on testnet            | HyperIndex syncs our market events within 10 s                                                                                                                                | Self-host; else `getLogs` fallback only                                                                                                               | S7 indexed fills, S8 history, Envio-driven leaderboard                     |
 
 **S3 measured MON budget:** Twenty0.5MON/10AUSD drips require10MON+200AUSD payouts and0.221344080MON gas at observed102gwei. DRIP20MON covers this under the approved undelegated>=3actualblocks exception; retaining10MON after all payouts would require20.221344080MON. Actual±3% book depth is2.2409591305MON bid/~0.06AUSD ask atblock68947216, covered by inventory but not a guarantee of exact sparse-book price movement. The150MON cap is funded; no new top-up is requested. Deployment/gas rows live in SMART-CONTRACTS; final mirror continuous operating economics remain B10.
 
@@ -289,16 +298,16 @@ S2 additionally records `isMargin`, minimum-output units, zap funding semantics,
 
 ## Phase evidence contract
 
-| Area | Evidence, not merely compilation |
-|---|---|
-| Market | Deployment receipt, `getMarketParams`, non-empty `cast code`, provision receipt with IDs, real bot-generated `Trade` and `FlippedOrderCreated` |
-| SDK | Arithmetic and boundary tests for ladder/valuation; authenticated seal/open replay protection; supported derivation equality |
-| Registry | Save/overwrite/erase/error tests, size boundary and gas snapshot; broadcast receipt and code check |
-| Worker | Actual `/v1/health`, ticks and source ages; testnet-vs-source drift; refusal ledger for repeated drip |
-| Web | Real device, not fixtures: new card -> funded disk -> tracker -> range -> orders -> flipped fill -> sound/SCORE -> withdraw -> results |
-| Restore | Clear site data or use a fresh device -> INSERT CARD -> passkey prompt -> three addresses -> registry reads -> local decrypted disks; no server restore dependency |
-| Envio | Fresh fill latency and SCORE equality for client/indexer/leaderboard on the same disk |
-| Deployment | HTTPS fixed domain, 24-hour healthy worker, three fresh-device rehearsals and clean-clone commands actually run |
+| Area       | Evidence, not merely compilation                                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Market     | Deployment receipt, `getMarketParams`, non-empty `cast code`, provision receipt with IDs, real bot-generated `Trade` and `FlippedOrderCreated`                     |
+| SDK        | Arithmetic and boundary tests for ladder/valuation; authenticated seal/open replay protection; supported derivation equality                                       |
+| Registry   | Save/overwrite/erase/error tests, size boundary and gas snapshot; broadcast receipt and code check                                                                 |
+| Worker     | Actual `/v1/health`, ticks and source ages; testnet-vs-source drift; refusal ledger for repeated drip                                                              |
+| Web        | Real device, not fixtures: new card -> funded disk -> tracker -> range -> orders -> flipped fill -> sound/SCORE -> withdraw -> results                             |
+| Restore    | Clear site data or use a fresh device -> INSERT CARD -> passkey prompt -> three addresses -> registry reads -> local decrypted disks; no server restore dependency |
+| Envio      | Fresh fill latency and SCORE equality for client/indexer/leaderboard on the same disk                                                                              |
+| Deployment | HTTPS fixed domain, 24-hour healthy worker, three fresh-device rehearsals and clean-clone commands actually run                                                    |
 
 [I] Every number exposes its input/source, every balance surface says TESTNET, DAMAGE has SCORE's visual weight, and no AI gates numeric display. Fixtures are test/dev-only and visibly marked while present; production acceptance uses real sources. A paused price source shows "PRICE FEED PAUSED"; indexer fallback shows "INDEXER OFFLINE".
 
@@ -316,7 +325,7 @@ Cut in this exact order, recording the decision and affected phase status in the
 
 **Never cut:** a real flip fill on camera, the stateless memory-card restore. Cutting GOD MODE polish never disables the honeypot/unsellable gate. Cutting the second market leaves EASY on MON-AUSD with WIDE default. No cut substitutes fixtures for real fills or creates a server-dependent memory card.
 
-A market/funding fallback is not a feature-completion claim. Maintain exact deployed configuration, supply assumptions and gate evidence. [U, organizer clarification during S4] Agora mobile-web/PWA qualification and requirement text remain unresolved; do not make an unverified bounty claim.
+A market/funding fallback is not a feature-completion claim. Maintain exact deployed configuration, supply assumptions and gate evidence. [V, authenticated dashboard 2026-10-08] Agora Mobile Trading requires Perpl and is skipped in the current Kuru-only scope; no PWA ruling is needed for that excluded bounty. Current requirements and unresolved organizer questions live in [SUBMISSIONS](../SUBMISSIONS.md).
 
 ## Open decisions
 
@@ -326,13 +335,14 @@ Keep `DAMAGE = max(0, SCORE - (V_now - V_hodl))` and `NET = V_now - V_hodl`. The
 
 ## Submission readiness
 
-Phase 9 fills README evidence slots with real deployed addresses/transaction hashes, a <=3-minute video, screenshots/GIF and bounty requirement -> code path -> timestamp mapping. Public repository, MIT licensing and AI-tool disclosure remain required delivery checks. The app and worker stay online through Metropolis judging, 14 to 27 October.
+Phase 9 fills README evidence slots with real addresses/transaction hashes, a ≤3-minute technical demo, a separate ≤2-minute pitch, logo ≤3 MB, screenshots/GIF and eligible bounty requirement -> code path -> timestamp mapping. Public repository, MIT license, AI disclosure and judge access remain required. [SUBMISSIONS](../SUBMISSIONS.md) owns the packaging checklist and unresolved judging-date conflict; do not switch hosting off based on the older 27 October date alone.
 
 Production deploy needs the user's VPS access and fixed domain/subdomain; optional provider credentials are not grounds to block public-RPC development. Never commit secrets. Contract address evidence uses `cast code <addr> --rpc-url <rpc>` with non-empty output on the intended chain; complete commands and code byte lengths live in SMART-CONTRACTS.
 
 ## Funded integration commit checkpoints
 
 Each bounded unit below uses the freshly verified assembled tree described above, plus its observed runtime evidence. No push; Dylan identity. Unchecked acceptance is retained rather than inferred from tests.
+
 - Encoding unit: raw funded FlipOrderCreated fixture, quote-input pricePrecision and maker direction; assembled SDK153tests and actual S2 receipt evidence.
 - sdk: pin Kuru encodings to funded receipt units — S2 raw provision receipt and maker/taker direction; SDK153 tests. Verified assembled web551/SDK153/worker133 plus build; Foundry17/snapshot and Linux indexer4.
 - sdk: publish measured shape-specific gas budgets — 18 successful receipt samples, 20% headroom; anomalous unbounded payout is not a constant. Verified assembled web551/SDK153/worker133 plus build; Foundry17/snapshot and Linux indexer4.

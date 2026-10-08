@@ -1,14 +1,14 @@
 # Metropolis bounty research
 
-Evidence checked 2026-10-05. **[V]** is an official published source; **[V secondary]** is an inspected participant transcription cited by the approved playbook; **[I]** is our feature mapping; **[U]** needs the named organizer-confirmation spike. Product scope is MONADBOY, STAY IN RANGE, Track 01 Onchain Finance & Trading.
+Evidence first checked 2026-10-05; authenticated dashboard and Rules v3.0 re-read 2026-10-08. [SUBMISSIONS](../SUBMISSIONS.md) owns current eligibility, exact response fields, contacts and packaging. **[V]** is an official published source; **[V secondary]** preserves older participant-transcription provenance; **[I]** is our feature mapping; **[U]** needs the named organizer or runtime proof. Product scope is MONADBOY, STAY IN RANGE, Track 01 Onchain Finance & Trading.
 
 ## Source authority
 
 [V] The [official Metropolis page](https://monad.xyz/developers/hackathons/metropolis) lists the five targeted bounty names and amounts. Some full requirements live in the signed-in [organizer platform](https://hackathon.monad.xyz/), not on that public page.
 
-[V secondary] Requirement quotes below preserve playbook section 4.1 wording. Mera and Envio wording is supported by the inspected [rules/dashboard transcription](https://github.com/precious-akpan/monad-metropolis-merchant-rails), [stateless-test issue](https://github.com/emmanuelist/curb/issues/40) and [Many Keys requirement evidence](https://github.com/mryavascann/kaskad/pull/5). These are secondary sources, not a claim that we read the binding dashboard ourselves.
+[V secondary] Earlier requirement quotes preserve the original research's participant-transcription provenance. The authenticated audit on 8 October corroborated the Mera and Envio requirements directly; current primary-source links and full submission fields are in [SUBMISSIONS](../SUBMISSIONS.md).
 
-[U] **Rules-confirmation spike:** re-read binding bounty terms in the signed-in dashboard before submission, including account-layer exclusivity. [I] Mera is our entire account layer; other embedded-wallet providers are not integrated.
+[V] No blanket exclusivity clause between Mera and other embedded-wallet providers was found in the audited pages or Rules. Mera must still be the entire account layer; we keep the approved Mera-only design. [U] Organizer clarification remains needed for the conflicting rubric/dates and controlled testnet bot demonstrations.
 
 ## Kuru: Next Consumer Trading App
 
@@ -50,9 +50,9 @@ Evidence checked 2026-10-05. **[V]** is an official published source; **[V secon
 
 [V] Amount: **$10,000** and public title “Best Mobile Trading App on Monad” appear on the [official page](https://monad.xyz/developers/hackathons/metropolis).
 
-[U] **Agora eligibility spike:** verbatim requirement text is unverified; organizer question pending. Ask for the exact requirement, whether responsive mobile web/PWA qualifies as a mobile app, and whether Mera onboarding is required. There is no fabricated requirement quote here.
+[V] The [authenticated bounty page](https://hackathon.monad.xyz/tracks/best-mobile-trading-app-on-monad-agora-onchain-trading-bount) requires Mera authentication, an AUSD balance and a trade through **Perpl**. Kuru-only execution is insufficient.
 
-[I] Candidate feature: portrait mobile-first MON-AUSD testnet trading with Mera onboarding and a standalone PWA shell. Qualification remains conditional. Cross-Border Payments is not targeted; no remittance flow is added to chase it.
+**Skipped for current scope.** No Perpl or remittance integration is added to chase this award. PWA qualification is irrelevant to the current submission while Perpl is absent; this is no longer an unresolved requirement-text spike.
 
 ## Envio: Best Use of Envio
 
@@ -66,15 +66,15 @@ Evidence checked 2026-10-05. **[V]** is an official published source; **[V secon
 
 ## Judging rubric
 
-[V secondary] Playbook section 1.1 transcribes Rules §5.2. The same rubric is present in the inspected [rules transcription](https://github.com/precious-akpan/monad-metropolis-merchant-rails). [U] **Rules-confirmation spike:** confirm these weights in the signed-in dashboard.
+[V] Rules v3.0 §5.2 was read directly on 8 October and retains the weights below. The track pages instead show 20/20/15/25/20 (Technical, Design, Originality, Founder/Market, Traction). [U] Ask the organizer which governs; preserve both rather than silently replacing the Rules rubric. See [SUBMISSIONS](../SUBMISSIONS.md).
 
-| Main-track criterion | Weight | Sponsor-bounty criterion | Weight |
-|---|---|---|---|
-| Product Quality & Completeness | 20% | Adherence to published bounty requirements | 40% |
-| Technical Excellence | 20% | Technical Implementation | 30% |
-| Monad Integration | 20% | Monad Integration | 20% |
-| Track Fit & Problem Relevance | 20% | Innovation | 10% |
-| Innovation & Impact | 20% | | |
+| Main-track criterion           | Weight | Sponsor-bounty criterion                   | Weight |
+| ------------------------------ | ------ | ------------------------------------------ | ------ |
+| Product Quality & Completeness | 20%    | Adherence to published bounty requirements | 40%    |
+| Technical Excellence           | 20%    | Technical Implementation                   | 30%    |
+| Monad Integration              | 20%    | Monad Integration                          | 20%    |
+| Track Fit & Problem Relevance  | 20%    | Innovation                                 | 10%    |
+| Innovation & Impact            | 20%    |                                            |        |
 
 [I] The evidence chain is requirement → operating feature → exact code path → video moment. A sponsor logo or unused package is not the evidence.
 
@@ -82,13 +82,13 @@ Evidence checked 2026-10-05. **[V]** is an official published source; **[V secon
 
 [I] These are approved feature mappings, not implemented-code or filmed-demo claims. Exact paths are filled as code lands; timestamps are filled before submission, after recording.
 
-| Requirement | MONADBOY feature | Code path | Video timestamp |
-|---|---|---|---|
-| Kuru: trading experience routed through its onchain order book | Real testnet flip ladder, taker fill, SCORE/DAMAGE, exit | filled as code lands | filled before submission |
-| Mera UX: entire account layer, no custody backend | INSERT MEMORY CARD and per-disk sessions | filled as code lands | filled before submission |
-| Mera UX: stateless test | Clear site data / fresh device, passkey, three disks return from chain | filled as code lands | filled before submission |
-| Mera Many Keys: non-wallet PRF material | Per-disk private AES-GCM save, ciphertext proof, passkey restore | filled as code lands | filled before submission |
-| Agora Mobile Trading: exact text unverified | Mobile-first AUSD trading; eligibility conditional | filled as code lands | filled before submission |
-| Envio: real onchain data driving a core feature | S7 feed, S8 history, derived leaderboard | filled as code lands | filled before submission |
+| Requirement                                                    | MONADBOY feature                                                       | Code path            | Video timestamp          |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------- | ------------------------ |
+| Kuru: trading experience routed through its onchain order book | Real testnet flip ladder, taker fill, SCORE/DAMAGE, exit               | filled as code lands | filled before submission |
+| Mera UX: entire account layer, no custody backend              | INSERT MEMORY CARD and per-disk sessions                               | filled as code lands | filled before submission |
+| Mera UX: stateless test                                        | Clear site data / fresh device, passkey, three disks return from chain | filled as code lands | filled before submission |
+| Mera Many Keys: non-wallet PRF material                        | Per-disk private AES-GCM save, ciphertext proof, passkey restore       | filled as code lands | filled before submission |
+| Agora Mobile Trading: Mera + AUSD + Perpl                      | Skipped: no Perpl trades in current Kuru-only scope                    | No eligibility claim | Not submitted            |
+| Envio: real onchain data driving a core feature                | S7 feed, S8 history, derived leaderboard                               | filled as code lands | filled before submission |
 
 [I] Never cut the real flip fill on camera or the stateless memory-card restore. Show TESTNET on every balance screen, explicit transaction links and honest losses. Bounty candidacy never turns testnet balances into real-money rewards.

@@ -39,31 +39,31 @@ The game makes market-making understandable, not profitable by assertion.
 Names live as tokens in `apps/web/src/config/brand.ts` (the web-local path is `src/config/brand.ts`).
 Product names in application copy resolve through that file rather than scattered literals.
 
-| Token | Value | Meaning |
-| --- | --- | --- |
-| `CONSOLE_NAME` | MONADBOY | The handheld platform |
-| `CARTRIDGE_01` | STAY IN RANGE | The playable range cartridge |
-| `ALERT_NAME` | NAD-SENSE | Edge warning, not a prediction |
-| `TAGLINE` | The handheld that plays your liquidity. | Product tagline |
+| Token          | Value                                   | Meaning                        |
+| -------------- | --------------------------------------- | ------------------------------ |
+| `CONSOLE_NAME` | MONADBOY                                | The handheld platform          |
+| `CARTRIDGE_01` | STAY IN RANGE                           | The playable range cartridge   |
+| `ALERT_NAME`   | NAD-SENSE                               | Edge warning, not a prediction |
+| `TAGLINE`      | The handheld that plays your liquidity. | Product tagline                |
 
 ### Vocabulary map
 
-| DeFi | MONADBOY | Implementation intent |
-| --- | --- | --- |
-| Connect wallet | INSERT MEMORY CARD | Mera passkey ceremony |
-| Account | Memory Card | 32-byte passkey PRF output [V: Mera guide](https://docs.monad.xyz/guides/mera) |
-| Portfolio | SAVE DISK, three slots | BIP-44 account indexes 1 through 3, isolated EOAs [V: derivation mechanism](https://docs.monad.xyz/guides/mera) |
-| Risk profile | DIFFICULTY | EASY Molandak, NORMAL Moyaki, HARD Mouch; GOD MODE modifier |
-| Screening | done by difficulty | Hard gates, then SAFETY and HEAT |
-| Pool discovery | POOL TRACKER | SAFETY x HEAT scatter of Kuru mainnet markets |
-| Price range | the ground the character stands on | Ladder of flip-order pairs |
-| In range | character runs, SCORE ticks on eligible fills | Mid inside the ladder |
-| Out of range | character sits, counter freezes | Mid outside the ladder |
-| Near the edge | NAD-SENSE | Mid within one step of an edge |
-| Impermanent loss | DAMAGE | HODL-relative accounting in section 7 |
-| Fees earned | SCORE | Realized flip spread, not projected yield |
-| Auto rebalance | AUTOPILOT | Native flip re-arming; manual re-centering has a visible cost |
-| Tick / bin step | never shown | Width and step are one coupled control |
+| DeFi             | MONADBOY                                      | Implementation intent                                                                                           |
+| ---------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Connect wallet   | INSERT MEMORY CARD                            | Mera passkey ceremony                                                                                           |
+| Account          | Memory Card                                   | 32-byte passkey PRF output [V: Mera guide](https://docs.monad.xyz/guides/mera)                                  |
+| Portfolio        | SAVE DISK, three slots                        | BIP-44 account indexes 1 through 3, isolated EOAs [V: derivation mechanism](https://docs.monad.xyz/guides/mera) |
+| Risk profile     | DIFFICULTY                                    | EASY Molandak, NORMAL Moyaki, HARD Mouch; GOD MODE modifier                                                     |
+| Screening        | done by difficulty                            | Hard gates, then SAFETY and HEAT                                                                                |
+| Pool discovery   | POOL TRACKER                                  | SAFETY x HEAT scatter of Kuru mainnet markets                                                                   |
+| Price range      | the ground the character stands on            | Ladder of flip-order pairs                                                                                      |
+| In range         | character runs, SCORE ticks on eligible fills | Mid inside the ladder                                                                                           |
+| Out of range     | character sits, counter freezes               | Mid outside the ladder                                                                                          |
+| Near the edge    | NAD-SENSE                                     | Mid within one step of an edge                                                                                  |
+| Impermanent loss | DAMAGE                                        | HODL-relative accounting in section 7                                                                           |
+| Fees earned      | SCORE                                         | Realized flip spread, not projected yield                                                                       |
+| Auto rebalance   | AUTOPILOT                                     | Native flip re-arming; manual re-centering has a visible cost                                                   |
+| Tick / bin step  | never shown                                   | Width and step are one coupled control                                                                          |
 
 The primary account flow uses INSERT CARD and NEW CARD.
 Words such as wallet, connect, seed phrase, and gas do not appear in its player copy.
@@ -92,12 +92,12 @@ The mascot is bound to difficulty.
 Molandak is EASY, Moyaki is NORMAL, and Mouch is HARD.
 GOD MODE modifies HARD; it does not introduce a fourth character.
 
-| Difficulty | Monanimal | Teaching role |
-| --- | --- | --- |
-| EASY | Molandak, armoured purple hedgehog | Fewer things can hurt you |
-| NORMAL | Moyaki, purple cat-fish with pink fins | Balanced exposure, riding the current |
-| HARD | Mouch, purple fly | More volatile conditions, fewer comfort checks |
-| GOD MODE | Mouch, red palette and skull | Explicit absence of comfort filters |
+| Difficulty | Monanimal                              | Teaching role                                  |
+| ---------- | -------------------------------------- | ---------------------------------------------- |
+| EASY       | Molandak, armoured purple hedgehog     | Fewer things can hurt you                      |
+| NORMAL     | Moyaki, purple cat-fish with pink fins | Balanced exposure, riding the current          |
+| HARD       | Mouch, purple fly                      | More volatile conditions, fewer comfort checks |
+| GOD MODE   | Mouch, red palette and skull           | Explicit absence of comfort filters            |
 
 Binding makes the character itself the risk profile.
 A player who identifies with Molandak has learned the safety preference without a risk questionnaire.
@@ -154,12 +154,12 @@ Hard gates decide eligibility. Scores rank only survivors.
 Thresholds live in `apps/web/src/config/thresholds.ts` and are re-measured against the Kuru snapshot in Phase 6.
 The depth floors below retain the tier shape; they are calibration targets, not verified liquidity measurements.
 
-| Tier | Required gates | SAFETY | HEAT |
-| --- | --- | --- | --- |
-| EASY | depth >= $250k; age >= 14d; strong quote; unsellable gate clean | >= 70 | <= 60 |
-| NORMAL | depth >= $75k; age >= 3d; strong or mid quote; gate clean | >= 50 | <= 80 |
-| HARD | depth >= $20k; age >= 6h; strong or mid quote; gate clean | >= 30 | <= 100 |
-| GOD MODE | unsellable gate clean, nothing else | raw, unranked | raw, unranked |
+| Tier     | Required gates                                                  | SAFETY        | HEAT          |
+| -------- | --------------------------------------------------------------- | ------------- | ------------- |
+| EASY     | depth >= $250k; age >= 14d; strong quote; unsellable gate clean | >= 70         | <= 60         |
+| NORMAL   | depth >= $75k; age >= 3d; strong or mid quote; gate clean       | >= 50         | <= 80         |
+| HARD     | depth >= $20k; age >= 6h; strong or mid quote; gate clean       | >= 30         | <= 100        |
+| GOD MODE | unsellable gate clean, nothing else                             | raw, unranked | raw, unranked |
 
 Strong quotes are `{USDC, AUSD, MON}`.
 Mid quotes are `{WETH, WBTC, cbBTC, XAUT}`.
@@ -400,19 +400,19 @@ Fixture fallback is restricted to tests and an explicit dev-only flag.
 Any fixture displayed on screen carries a visible FIXTURE marker, including failure and preview surfaces.
 The data adapter does not turn a live-source failure into an unmarked plausible number.
 
-| Screen | Purpose | Required content and actions |
-| --- | --- | --- |
-| S0 Boot | Establish the console | Logo, skippable boot after first view, sound respecting mute |
-| S1 Insert Memory Card | Create or restore identity | INSERT CARD, NEW CARD, passkey reader errors, eject; no account jargon |
-| S2 Save Disk select | Choose isolated progress | Three slots, name, character, last play, results with equal SCORE/DAMAGE, empty state, create, OPEN proof, SAVED TO CARD |
-| S3 Cartridge select | Choose activity | STAY IN RANGE, locked COMING SOON slot, Gallery and Leaderboard access |
-| S4 Difficulty | Choose the teaching profile | Bound animated mascots, plain-language tier, count of survivors, HARD GOD MODE gate |
-| S5 Pool Tracker | Inspect and choose a market | SAFETY x HEAT, pin shape and selection, source timestamp, gate boundary, raw inputs, PLAYABLE (TESTNET) / MAINNET ONLY |
-| S6 Set Range | Understand inventory and cost | AUSD amount, WIDE/TIGHT, advanced manual override, stepped chart, pixel level tiles, base/quote preview, slippage and cost, staged transaction links |
-| S7 In Range | Watch real position state | Monanimal, mid and ladder, fill feed, equal SCORE/DAMAGE, NET, NAD-SENSE, sit, RE-CENTER, WITHDRAW, health / indexer markers |
-| S8 Results | Understand the outcome | Equal SCORE/DAMAGE, NET, fills, time in range, evidence links, confirmed save, return path |
-| Gallery | Inspect the cast and expression | Monanimal sprite presentation, names, palettes; expression does not change difficulty |
-| Leaderboard | Compare measured runs | Disk tag, character, equal SCORE/DAMAGE, NET, fills, time in range, last-fill link, TESTNET and computation timestamp |
+| Screen                | Purpose                         | Required content and actions                                                                                                                         |
+| --------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S0 Boot               | Establish the console           | Logo, skippable boot after first view, sound respecting mute                                                                                         |
+| S1 Insert Memory Card | Create or restore identity      | INSERT CARD, NEW CARD, passkey reader errors, eject; no account jargon                                                                               |
+| S2 Save Disk select   | Choose isolated progress        | Three slots, name, character, last play, results with equal SCORE/DAMAGE, empty state, create, OPEN proof, SAVED TO CARD                             |
+| S3 Cartridge select   | Choose activity                 | STAY IN RANGE, locked COMING SOON slot, Gallery and Leaderboard access                                                                               |
+| S4 Difficulty         | Choose the teaching profile     | Bound animated mascots, plain-language tier, count of survivors, HARD GOD MODE gate                                                                  |
+| S5 Pool Tracker       | Inspect and choose a market     | SAFETY x HEAT, pin shape and selection, source timestamp, gate boundary, raw inputs, PLAYABLE (TESTNET) / MAINNET ONLY                               |
+| S6 Set Range          | Understand inventory and cost   | AUSD amount, WIDE/TIGHT, advanced manual override, stepped chart, pixel level tiles, base/quote preview, slippage and cost, staged transaction links |
+| S7 In Range           | Watch real position state       | Monanimal, mid and ladder, fill feed, equal SCORE/DAMAGE, NET, NAD-SENSE, sit, RE-CENTER, WITHDRAW, health / indexer markers                         |
+| S8 Results            | Understand the outcome          | Equal SCORE/DAMAGE, NET, fills, time in range, evidence links, confirmed save, return path                                                           |
+| Gallery               | Inspect the cast and expression | Monanimal sprite presentation, names, palettes; expression does not change difficulty                                                                |
+| Leaderboard           | Compare measured runs           | Disk tag, character, equal SCORE/DAMAGE, NET, fills, time in range, last-fill link, TESTNET and computation timestamp                                |
 
 ### Screen-specific honesty
 
@@ -426,14 +426,14 @@ Windows are 24h, 7d, and all; extra windows may be cut, not replaced with invent
 
 ### Sources the player can open
 
-| Visible number | Input-to-pixel chain |
-| --- | --- |
-| SAFETY / HEAT | mainnet book + Trade observations -> worker snapshot -> gates and weighted axes -> pin / breakdown |
-| Range low / high | source mid + volatility + budget + market params -> planLadder -> S6 tiles |
-| SCORE | Kuru maker Trade + flipped-order lineage -> FillSource -> scoreCard -> coin / total |
-| DAMAGE / NET | starting inventory + current mid + margin / resting inventory + SCORE -> scoreCard -> equal-weight card |
-| TIME IN RANGE | low/high + timestamped mids -> rangeState -> client timer or worker sample aggregation |
-| Save proof | sealed blob -> registry receipt -> ciphertext hash / explorer link |
+| Visible number   | Input-to-pixel chain                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| SAFETY / HEAT    | mainnet book + Trade observations -> worker snapshot -> gates and weighted axes -> pin / breakdown      |
+| Range low / high | source mid + volatility + budget + market params -> planLadder -> S6 tiles                              |
+| SCORE            | Kuru maker Trade + flipped-order lineage -> FillSource -> scoreCard -> coin / total                     |
+| DAMAGE / NET     | starting inventory + current mid + margin / resting inventory + SCORE -> scoreCard -> equal-weight card |
+| TIME IN RANGE    | low/high + timestamped mids -> rangeState -> client timer or worker sample aggregation                  |
+| Save proof       | sealed blob -> registry receipt -> ciphertext hash / explorer link                                      |
 
 These chains are implementation requirements, not claims that live integrations are complete.
 `FillSource` abstracts Envio and direct logs without changing the SCORE rule.
@@ -448,8 +448,8 @@ A builder asking where a number comes from must be able to follow the full sourc
 A phone review checks density, spacing, selection states, and legibility at a 412px viewport.
 Runtime proof belongs beside implementation; a documentation promise is not a passed scenario.
 
-The submission includes a public MIT repository, a public video no longer than three minutes, and chain evidence [V: rules transcription, secondary](https://github.com/precious-akpan/monad-metropolis-merchant-rails).
-Metropolis submission deadline: 13 October 2026, 11:59 PM ET, equivalent to 14 October 03:59 UTC / 10:59 WIB [V: same secondary source](https://github.com/precious-akpan/monad-metropolis-merchant-rails).
+The submission includes a public MIT repository, a technical demo no longer than three minutes, a separate team/problem pitch no longer than two minutes, a logo/graphic no larger than 3 MB, live product access and chain evidence [V: authenticated track deliverables, 2026-10-08](https://hackathon.monad.xyz/tracks/onchain-finance). [SUBMISSIONS](SUBMISSIONS.md) owns packaging, verified bounty requirements and organizer questions; Agora is skipped because it requires Perpl.
+Metropolis submission deadline: 13 October 2026, 11:59 PM ET, equivalent to 14 October 03:59 UTC / 10:59 WIB [V: Rules v3.0 §4.2, opened from the authenticated dashboard](https://hackathon.monad.xyz/dashboard).
 
 ### Build priorities
 
@@ -473,4 +473,4 @@ No predicted-return ranking or custom distribution sheet for the default player.
 - Re-measure thresholds against actual tracker snapshots and audit inventory / fill accounting.
 - Keep mainnet read-only; any real-money scope requires a separate approved product and safety decision.
 - Keep a locked COMING SOON slot without promising an unapproved game.
-CARTRIDGE_02: open, brainstorm pending
+  CARTRIDGE_02: open, brainstorm pending

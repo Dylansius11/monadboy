@@ -1,0 +1,176 @@
+# MONADBOY submission readiness
+
+Verified 8 October 2026 against the authenticated Metropolis dashboard: four primary tracks, all 21 sponsor bounties, Prizes, Resources and the Rules v3.0 modal (last updated 3 September). [V] is published requirement text, [I] is our feature mapping, [U] is an unresolved organizer ruling or runtime proof. Targeting a bounty is not proof of a qualifying product or award.
+
+This document owns submission packaging, current bounty eligibility and organizer questions. [PRD](PRD.md) owns product scope; [BUILD-PLAN](technical/BUILD-PLAN.md) owns implementation status; [BLOCKERS](BLOCKERS.md) owns external delivery gates. Tick submission boxes only against observed evidence. The final portal form, validation and character limits were not inspected: the audited account had no project. Sponsor response fields below were read on the official opportunity pages.
+
+## 1. Decision and deadline
+
+- Primary track: **01 — Onchain Finance & Trading**; STAY IN RANGE on Kuru flip orders.
+- Playable execution remains Monad testnet **10143**; mainnet tracker data is read-only context, not proof of mainnet trading.
+- Core targets: **Kuru Consumer Trading, Mera UX, Mera One Passkey Many Keys, Envio**. Feature fit is coherent; eligibility still requires the working evidence below.
+- **Agora is skipped.** Mobile Trading requires Mera + AUSD + **Perpl trades**; Kuru-only execution does not satisfy it. Payments/remittance and adding Perpl are outside current scope. Do not keep Agora as a conditional prize merely because the app is mobile-first.
+- Final deadline: **13 October 2026, 23:59 ET = 14 October, 03:59 UTC / 10:59 WIB**. Internal target: **13 October, 18:00 WIB**. Edits are allowed until the final deadline; late submissions are rejected.
+
+## 2. Submission package
+
+All four track pages share these deliverables; Rules §§4, 7 and 9 add code, documentation and provenance requirements.
+
+| Asset            | Requirement                                                                                                             | Proof before ticking                                        |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Logo/graphic     | JPG, JPEG, PNG or WEBP, maximum **3 MB**                                                                                | Correct format/size and accepted upload                     |
+| Public GitHub    | Public complete source under an OSI-approved license; this repo uses MIT                                                | Signed-out repo access, LICENSE, readable setup             |
+| Technical demo   | **Maximum 3 minutes**, public YouTube/Loom/Vimeo; operating product and Monad interactions, not slides/code walkthrough | Public link, duration and filmed tx hashes                  |
+| Pitch video      | **Maximum 2 minutes**; team, problem and why we are building it                                                         | Separate playable public link and duration                  |
+| Live product     | Deployed on Monad mainnet or testnet; our playable flow is testnet                                                      | HTTPS URL, supported-device/access instructions             |
+| Documentation    | Description, architecture, stack, setup/deployment                                                                      | README links and clean-clone proof                          |
+| Monad proof      | Contract addresses or tx hashes; integration purpose and why Monad                                                      | Intended network, explorer links, receipts/code             |
+| Build provenance | Attribution, AI disclosure, in-window history, declared pre-existing foundation                                         | README before/during-window account matching actual history |
+| Advertisement    | Optional, maximum **30 seconds**, not scored                                                                            | Only after required assets                                  |
+
+**No pitch deck requirement was found** in the track pages or Rules read. Track deliverables do require a pitch video. Optional sponsor clips have separate caps and do not replace either required primary video.
+
+- [ ] Describe the named first-user segment, range/flip-order loop, risk presentation and why Monad; label all balances TESTNET.
+- [ ] Confirm eligible team of 1–5, designated primary contact and one project per participant; no overlapping participation in another Metropolis submission.
+- [ ] Publish source, MIT license, external-code attribution and README architecture/setup/AI disclosure.
+- [ ] Identify any pre-existing components honestly and explain substantial functionality built during the window; a new repository alone is not evidence of original in-window work.
+- [ ] Fix the HTTPS domain/passkey relying-party ID and document supported authenticators and judge access.
+- [ ] Rehearse public create/play/fill/withdraw/restore with fresh devices and no team assistance.
+- [ ] Upload logo, technical demo and separate pitch; validate signed-out links/durations.
+- [ ] Submit only eligible bounties and complete their exact response fields.
+- [ ] Save the submission receipt/time and inspect the saved entry before the deadline.
+
+## 3. Bounty eligibility and prize amounts
+
+| Target                                      | Portal track              | Published award                        | Decision                                                                        |
+| ------------------------------------------- | ------------------------- | -------------------------------------- | ------------------------------------------------------------------------------- |
+| Track 01                                    | Onchain Finance & Trading | $30,000 pool; 3 × $10,000              | Primary category                                                                |
+| Build the Next Consumer Trading App on Kuru | Track 01                  | $5,000, single prize                   | Target; real Kuru execution plus demand/retention evidence                      |
+| Best Mera-Powered UX                        | All tracks                | $2,500, single prize                   | Target; signing-session and stateless tests                                     |
+| Mera: One Passkey, Many Keys                | All tracks                | $2,500, single prize                   | Target; non-account encrypted state, not just trading wallets                   |
+| Best Use of Envio                           | All tracks                | $1,000, single prize                   | Target; live indexed data drives gameplay/history/leaderboard                   |
+| Best Community Team Project                 | All tracks                | $5,000, single prize                   | Conditional on actual onboarded/selectable supporter affiliation                |
+| Best use of Nansen                          | All tracks                | $5,000 pool: $2,000/$1,500/$1,000/$500 | Stretch only if a core feature actually integrates a supported endpoint/MCP/CLI |
+| Grand Champion                              | Across all submissions    | $25,000                                | Separate judging decision, not a promised award                                 |
+
+[Prizes](https://hackathon.monad.xyz/prizes) explicitly permits main-track/sponsor stacking and multiple earned bounties. Sponsor terms govern awards; USD labels do not guarantee payment. Do not present pools as a single winner's prize.
+
+Not current targets: Agora (requires Perpl/payments), Kuru New Assets (existing pair/strategy is not a new asset class), Perpl/MetaMask/Cleanverse (different integrations), Aurora (requires actual cross-chain flow, not mocked), Qwen (Track 04), Hunyuan (Track 03). KIMI/Alchemy credit awards require meaningful integration; KIMI also requires a published article. No integration is added solely by this guide.
+
+No blanket exclusivity clause between Mera and other embedded-wallet providers was found in the pages/Rules read. Mera still must be the **entire account layer**, without seed phrase, wallet extension or custody backend; we keep the approved Mera-only design.
+
+## 4. Target requirements and exact sponsor response fields
+
+### Kuru Consumer Trading
+
+[V] A working focused spot product on Kuru, named user segment, evidence of demand/trading activity, acquisition/retention strategy and post-hackathon plan. Judges assess integration strength and founder/customer understanding, not only a successful order.
+
+Asked for at submission:
+
+> Clearly describe your target user segments
+>
+> Clearly describe case studies and/or research that shows evidence of demand.
+>
+> Clearly describe your roadmap for the product beyond the hackathon.
+>
+> Clearly describe your strategy for onboarding and retaining traders
+
+[I] Proof: real testnet flip ladder → bot taker fill → flipped-order event → SCORE/DAMAGE → cancel/withdraw. Show transaction links and inspectable numeric inputs, honest losses and the source-paused behavior. Distinguish real external user testing from team-controlled demo activity; do not describe testnet inventory as TVL or organic trading demand without qualification.
+
+### Mera UX
+
+[V] One-prompt passkey onboarding, scoped prompt-free signing sessions, clean session-expiry/re-prompt UX, real Monad transactions and a stateless test. Judges clear local storage or use a fresh device; identity/access reconstructs from passkey plus untrusted storage if used.
+
+Asked for at submission:
+
+> Describe how your project meaningfully integrates Mera as the entire account layer
+>
+> Submit an optional demo video (up to 2 mins) showing how Mera is integrated into your app, focusing on UX elements
+
+[I] Proof: INSERT CARD → first confirmed transaction; clear site data/fresh device → same derived disk addresses → registry read/decrypt → restored access. Measure taps/seconds and record devices/authenticators. Cached local state, a custody service or only same-browser restore does not establish this requirement.
+
+### Mera: One Passkey, Many Keys
+
+[V] At least one PRF namespace must do **non-account work**, demonstrated live. Salts must be genuinely namespaced, primitives used correctly and sensitive key material not persisted. The same passkey on a second device/fresh profile must reproduce keys or decrypt state.
+
+Asked for at submission:
+
+> Describe how your project meaningfully utilizes Mera in non-account work.
+>
+> Submit an optional demo video (up to 2 mins) showing how Mera is used where at least one PRF namespace does non-account work
+
+[I] Proof: PRF-derived per-disk encryption keys seal private save state; DiskRegistry stores ciphertext; a fresh-device passkey decrypts the same state. Multiple derived wallet accounts alone do **not** satisfy the bounty. Film ciphertext/hash and successful restore, never raw PRF output, encryption keys or credentials.
+
+### Envio
+
+[V] HyperIndex/HyperSync/HyperRPC powers a real feature; Cloud or self-hosted pipeline, public config/schema/handlers or HyperSync client code, an actual consumer and end-to-end live/correct data proof. Derived entities, useful aggregation and readable schema strengthen the entry.
+
+Asked for at submission:
+
+> Describe how your project meaningfully uses Envio's HyperIndex, HyperSync or HyperRPC to power real on-chain data in your app — not just installed, but actually driving a feature.
+>
+> Submit an optional demo video (up to 2 mins) showing the data flowing end to end through Envio's HyperIndex, HyperSync or HyperRPC.
+
+[I] Proof: fresh Kuru fill → indexed entity/query → SCORE history/leaderboard; reconcile client and indexer numbers for the same disk and measure event-to-query lag. A direct-log fallback is operationally useful but does not itself prove an Envio-powered feature.
+
+## 5. Demo, pitch and evidence checklist
+
+- [ ] Film INSERT CARD → difficulty/pool → range → real orders/flip fill → running/SCORE/DAMAGE → out-of-range sit → cancel/withdraw/results.
+- [ ] Include clear-storage/fresh-device memory-card restore and encrypted-state recovery; never substitute fixtures for live fills.
+- [ ] Prepare a separate ≤2-minute pitch: team, named first users, pain, what is new, why Monad/Kuru, actual user evidence and concrete acquisition/retention roadmap.
+- [ ] Map each eligible bounty in README: exact requirement → operating feature → actual code path → video timestamp.
+- [ ] Keep technical demo ≤3 minutes and optional Mera/Envio sponsor clips ≤2 minutes. Kuru asks written business responses, not a separate sponsor-video field on the page read.
+- [ ] Record actual deploy/fill/withdraw/save txs, source ages, indexer lag and restore devices; keep signed-out explorer links usable.
+- [ ] Disclose team-controlled/testnet bot activity separately from organic usage. Rules §§8.2/10.4 prohibit wash trading/fake volume and bot price manipulation; clarify controlled price-mirror demonstrations before making eligibility claims.
+
+Store chain evidence in [SMART-CONTRACTS](technical/SMART-CONTRACTS.md), live integration measurements in [research](research/) and implementation proof in BUILD-PLAN. This checklist does not declare those runtime gates complete.
+
+## 6. Organizer contacts and ready-to-send questions
+
+1. **Primary: [Metropolis Support Forum](https://hackathon.monad.xyz/support?tab=forum).** The portal provides categorized organizer/mentor support. Use Rules/eligibility if offered; keep the written response URL and ruling. No thread was posted by this documentation task.
+2. **Escalation: [Monad Developer Discord](https://discord.gg/monaddev).** Verified by [official Monad links](https://docs.monad.xyz/official-links); dashboard offers joining the developer server and obtaining the Metropolis role. Ask staff for the relevant organizer channel; no specific channel name or response-time promise is verified.
+3. **Public developer account: [DevNads / @monad_dev](https://x.com/monad_dev).** Official routing option, not proof of open DMs or an eligibility decision.
+4. `metropolis@hackathon.monad.xyz` is named for GitHub repository access in track deliverables, **not verified as a general support mailbox**.
+
+Ready-to-send product/build question (draft, not sent):
+
+> MONADBOY is a Track 01 Monad testnet app using Kuru flip orders and Mera passkeys. Any reused interface components are identified as pre-existing foundation; the trading engine, account/state-recovery layer, registry and data integration are built during the hackathon. We plan to disclose team-controlled testnet fills and a bot mirroring a public mainnet price, without claiming organic volume. Can you confirm how that demonstration should be presented under Rules §§8.2/10.4, and whether any additional foundation declaration is required under §4.1?
+
+Also obtain clarification on:
+
+- Rules §5.2's five equal 20% weights versus track pages' Technical 20%, Design 20%, Originality 15%, Founder/Market 25%, Traction 20%: which governs?
+- Rules §5.1 says judging 14–27 October/winners 3 November; dashboard says judging through 3 November/winners from 4 November: which hosting period applies?
+- If seeking Community Team, how should the actual affiliated onboarded group be recorded? Attending an event alone is not proof; the group must be selectable on the profile.
+
+Agora is excluded, so no PWA qualification ruling is needed to complete the current scope. Written rulings, not assumptions or informal sponsor-name drops, determine exceptions. Until dates are clarified, [I] plan hosting through 4 November rather than switching off after 27 October.
+
+## 7. Ruling and final-link record
+
+- [ ] Record question/thread URL, answer date, exact organizer ruling and resulting decision before changing eligibility status.
+- [ ] Record final project page, repo, live product, logo, technical demo, pitch and optional sponsor clips in README and the saved portal entry.
+- [ ] Record final submission timestamp/receipt and responsible primary contact; never include private keys or identity documents.
+
+No new organizer ruling or final submission receipt is asserted by this document.
+
+## 8. Rules, free resources and prize caveats
+
+[V] Rules §5.2: main-track Product Quality, Technical Excellence, Monad Integration, Track Fit and Innovation are each 20%; sponsor scoring is requirement adherence 40%, technical implementation 30%, Monad integration 20%, innovation 10%. The track-page rubric conflict is recorded in section 6. Prepare first-user, demand and retention evidence, not just a technically correct fill.
+
+Rules require public source throughout and after the event, accurate attribution and non-confidential review. Teams retain ownership; the organizer/sponsors receive promotional-use rights. Prize recipients may need KYC and are responsible for taxes; main prizes are USDC/equivalent within 30 days of the later of announcement or verification completion. Sponsor awards have separate terms. Testnet tokens have no real-money value.
+
+[Resources](https://hackathon.monad.xyz/resources) offers **one voucher per team per resource**: Quicknode Build 3 months (new accounts only), Tenderly Pro, Zerion API Builder 1 month, BlockVision Lite 2 months, Spectrum Business 2 months, Dwellir Developer 3 months. No voucher was claimed by this task. Winner services/rebates on Prizes are not extra cash; Envio's winner perk is two months Cloud hosting free and a third month at 50% off.
+
+## 9. Official source index
+
+- [Track 01 scope, rubric and shared deliverables](https://hackathon.monad.xyz/tracks/onchain-finance)
+- [Rules v3.0: Dashboard → VIEW THE RULES](https://hackathon.monad.xyz/dashboard)
+- [Kuru Consumer requirements](https://hackathon.monad.xyz/tracks/build-the-next-consumer-trading-app-on-kuru)
+- [Mera UX requirements](https://hackathon.monad.xyz/tracks/best-mera-powered-ux-on-monad)
+- [Mera non-wallet key-use requirements](https://hackathon.monad.xyz/tracks/mera-one-passkey-many-keys)
+- [Envio requirements](https://hackathon.monad.xyz/tracks/best-use-of-envio)
+- [Agora trading: Mera + AUSD + Perpl](https://hackathon.monad.xyz/tracks/best-mobile-trading-app-on-monad-agora-onchain-trading-bount)
+- [Community eligibility](https://hackathon.monad.xyz/tracks/best-community-team-project)
+- [Nansen feature requirements and prize split](https://hackathon.monad.xyz/tracks/best-use-of-nansen)
+- [Prizes and stacking](https://hackathon.monad.xyz/prizes), [participant resources](https://hackathon.monad.xyz/resources)
+
+Rules retain the equal-weight rubric; track pages conflict with it. Both were read directly. Dashboard links require login. Requirements are verified; product completion and organizer exceptions still require separate evidence.

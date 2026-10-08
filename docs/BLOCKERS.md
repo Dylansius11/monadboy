@@ -4,13 +4,13 @@ This is the repository's live blocker register. Update status and evidence when 
 
 Labels: **[V]** observed evidence; **[I]** intended behavior; **[U]** unresolved. An external gate blocks its dependent proof, not independent implementation.
 
-## Open gates
+## Current external gates
 
 | ID | Status | Owner | Blocks | Resolution |
 | --- | --- | --- | --- | --- |
 | B2 | OPEN | User | Production passkeys and public deployment | Choose the permanent app domain/subdomain before production card creation. |
 | B3 | OPEN | User | VPS worker/web deployment and uptime proof | Supply SSH host, user and auth method privately, plus installation permission. |
-| B5 | OPEN | User / organizers | Agora mobile bounty eligibility claim | Obtain the exact mobile-app requirement text. |
+| B5 | SKIPPED | User decision / verified requirement | No current submission gate | Agora requires Mera + AUSD + Perpl; current Kuru-only scope is excluded ([SUBMISSIONS](SUBMISSIONS.md)). |
 | B8 | OPEN | User: devices; lead: test surface | S4 supported-phone restore and standalone PWA launch acceptance | Exercise create/restore and standalone launch on iPhone Safari and Android Chrome over HTTPS. |
 | B10 | OPEN: bounded final mirror acceptance | Lead | Continuous healthy production mirror and operating budget | Original ten-minute run self-took BOT quotes; final correction has one external-maker transition, but target quote preflight refused a crossing third-party bid. Prove final-strategy alignment and cost before continuous enablement. |
 
@@ -43,9 +43,9 @@ Labels: **[V]** observed evidence; **[I]** intended behavior; **[U]** unresolved
 
 ## B5: mobile eligibility
 
-[U] The exact Agora "Best Mobile Trading App" requirements remain unconfirmed. A portrait PWA is in product scope; native store publication is not.
+[V, 2026-10-08] The [authenticated Agora trading page](https://hackathon.monad.xyz/tracks/best-mobile-trading-app-on-monad-agora-onchain-trading-bount) requires Mera authentication, an AUSD balance and at least one **Perpl** trade. The earlier requirement-text uncertainty is resolved.
 
-Close with the organizer's requirement text and a source link. Do not imply that installability alone qualifies for the bounty.
+**Skipped by scope decision:** current Kuru-only execution does not qualify. Do not add Perpl or block the current submission on a PWA eligibility reply. The portrait PWA remains product scope; packaging and current targets are in [SUBMISSIONS](SUBMISSIONS.md).
 
 ## B8: real-device passkey proof
 
