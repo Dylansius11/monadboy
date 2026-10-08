@@ -110,6 +110,8 @@ Each app has its own `.env.example` containing names and harmless defaults, neve
 | Web | `VITE_REGISTRY_ADDRESS` | DiskRegistry v2 checked for code on chain 10143 |
 | Web | `VITE_USE_FIXTURES` | Explicit development opt-in only; ignored by production builds |
 | Worker | `WORKER_PORT` | Hono listener |
+| Worker | `WORKER_BIND` | Loopback default; exact host bridge gateway for container Caddy, never a public interface |
+| Worker | `TRUSTED_PROXY_IP` | Optional exact IPv4 peer permitted to supply forwarded drip quota addresses; no CIDR or hostname trust |
 | Worker | `APP_ORIGIN` | Only allowed CORS origin |
 | Worker | `TESTNET_RPC_URL` | Bot, drip and testnet reads |
 | Worker | `MAINNET_RPC_URL` | Read-only tracker and price source |

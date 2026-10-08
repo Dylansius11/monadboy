@@ -209,7 +209,12 @@ const sections: HealthSections = {
   drip: () => ({ value: ops.dripStatus }),
   leaderboard: leaderboardSection(
     db,
-    () => fills.state.status === 'live' ? 'envio' : markets.length ? 'direct-logs' : 'not-configured',
+    () =>
+      fills.state.status === 'live'
+        ? 'envio'
+        : markets.length
+          ? 'direct-logs'
+          : 'not-configured',
     now,
   ),
   envio: () => ({
@@ -221,7 +226,7 @@ const routes: RouteModule[] = [
   midRoute(mid, now),
   trackerRoute(db, now),
   leaderboardRoute(db, now),
-  dripRoute(ops.drip),
+  dripRoute(ops.drip, env.TRUSTED_PROXY_IP),
 ]
 const app = createApp({
   origin: env.APP_ORIGIN,

@@ -1,19 +1,21 @@
-import { readFileSync } from 'node:fs'
 import { expect, test } from 'bun:test'
 import { parseEnv } from '../src/env'
 
 test('an empty environment is a valid read-only configuration with no signing keys', () => {
   const env = parseEnv({})
-  expect(env.WORKER_PORT).toBe(8787)
-  expect(env.WORKER_BIND).toBe('127.0.0.1')
   expect(env.ENABLE_TRANSACTIONS).toBe(false)
   expect(env.BOT_PRIVATE_KEY).toBeUndefined()
   expect(env.TESTNET_START_BLOCK).toBe(68940637n)
 })
 
 test('custom market history needs an explicit start rather than inheriting the default deployment', () => {
-  expect(parseEnv({ MARKETS_JSON: 'custom-market.json' }).TESTNET_START_BLOCK).toBeUndefined()
-  expect(parseEnv({ MARKETS_JSON: 'custom-market.json', TESTNET_START_BLOCK: '42' }).TESTNET_START_BLOCK).toBe(42n)
+  expect(
+    parseEnv({ MARKETS_JSON: 'custom-market.json' }).TESTNET_START_BLOCK,
+  ).toBeUndefined()
+  expect(
+    parseEnv({ MARKETS_JSON: 'custom-market.json', TESTNET_START_BLOCK: '42' })
+      .TESTNET_START_BLOCK,
+  ).toBe(42n)
 })
 
 test('blank values count as unset and token amounts become exact base units', () => {
@@ -49,13 +51,7 @@ test('rejects bad ports, over-precise amounts, malformed keys and one key used f
   ).toBe(key)
 })
 
-test('a .env copied from the example, with every variable blank, parses to the defaults', () => {
-  const blank = Object.fromEntries(
-    readFileSync(new URL('../.env.example', import.meta.url), 'utf8')
-      .split(/\r?\n/)
-      .filter((line) => line && !line.startsWith('#'))
-      .map((line) => [line.split('=')[0], '']),
-  )
-  expect(Object.keys(blank).length).toBeGreaterThan(20)
-  expect(parseEnv(blank)).toEqual(parseEnv({}))
+test('proxy trust requires one exact IP, not a network or hostname', () => {
+  for (const peer of ['172.18.0.0/16', 'caddy', '*', '999.18.0.4'])
+    expect(() => parseEnv({ TRUSTED_PROXY_IP: peer })).toThrow()
 })

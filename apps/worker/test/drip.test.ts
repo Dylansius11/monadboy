@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test'
 import { createApp } from '../src/app'
 import { clientIp, createDripService, dripRoute } from '../src/routes/drip'
 import type { DripChain, DripConfig, DripService } from '../src/routes/drip'
+import { parseEnv } from '../src/env'
 import { address, memoryDb, quiet, tx } from './helpers'
 
 const disk = address('1')
@@ -266,14 +267,22 @@ test('simultaneous requests for one address send once', async () => {
 })
 
 test('the peer address is only replaced by X-Forwarded-For when the peer is the local proxy', () => {
-  expect(clientIp('127.0.0.1', '203.0.113.9')).toBe('203.0.113.9')
-  expect(clientIp('::1', '198.51.100.1, 203.0.113.9')).toBe('203.0.113.9')
-  expect(clientIp('127.0.0.1', undefined)).toBe('127.0.0.1')
-  expect(clientIp('198.51.100.5', '203.0.113.9')).toBe('198.51.100.5')
-  expect(clientIp(undefined, '203.0.113.9')).toBe('unknown')
+  expect(clientIp('127.0.0.1', '203.0.113.9', undefined)).toBe('203.0.113.9')
+  expect(clientIp('::1', '198.51.100.1, 203.0.113.9', undefined)).toBe(
+    '203.0.113.9',
+  )
+  expect(clientIp('127.0.0.1', undefined, undefined)).toBe('127.0.0.1')
+  expect(clientIp('198.51.100.5', '203.0.113.9', undefined)).toBe(
+    '198.51.100.5',
+  )
+  expect(clientIp(undefined, '203.0.113.9', undefined)).toBe('unknown')
 })
 
-function http(service: DripService | undefined, peer = '127.0.0.1') {
+function http(
+  service: DripService | undefined,
+  peer = '127.0.0.1',
+  trustedProxyIp?: string,
+) {
   const seen: string[] = []
   const wrapped: DripService | undefined = service && {
     request: (input, ip) => {
@@ -286,7 +295,7 @@ function http(service: DripService | undefined, peer = '127.0.0.1') {
     version: '1',
     sections: {},
     jobs: () => ({}),
-    routes: [dripRoute(wrapped)],
+    routes: [dripRoute(wrapped, trustedProxyIp)],
   })
   const post = (body: string, headers: Record<string, string> = {}) =>
     app.request(
@@ -367,10 +376,42 @@ test('POST /v1/drip rejects malformed bodies without reaching the service', asyn
   expect(seen).toEqual(['127.0.0.1'])
 })
 
-test('requests from a non-proxy peer cannot claim another IP through the forwarded header', async () => {
-  const direct = http(setup().service, '198.51.100.5')
-  await direct.post(JSON.stringify({ address: disk }), {
+test('a configured Docker proxy keeps client quotas separate and still limits repeated requests', async () => {
+  const env = parseEnv({ TRUSTED_PROXY_IP: '172.18.0.4' })
+  const proxied = http(
+    setup({}, { ...config, perIpDaily: 1 }).service,
+    '172.18.0.4',
+    env.TRUSTED_PROXY_IP,
+  )
+  const first = await proxied.post(JSON.stringify({ address: disk }), {
     'X-Forwarded-For': '203.0.113.9',
   })
-  expect(direct.seen).toEqual(['198.51.100.5'])
+  const second = await proxied.post(JSON.stringify({ address: address('2') }), {
+    'X-Forwarded-For': '203.0.113.10',
+  })
+  const repeated = await proxied.post(
+    JSON.stringify({ address: address('3') }),
+    {
+      'X-Forwarded-For': '203.0.113.9',
+    },
+  )
+  expect([first.status, second.status, repeated.status]).toEqual([
+    200, 200, 429,
+  ])
+})
+
+test('another Docker peer cannot bypass a quota by spoofing forwarded clients', async () => {
+  const env = parseEnv({ TRUSTED_PROXY_IP: '172.18.0.4' })
+  const direct = http(
+    setup({}, { ...config, perIpDaily: 1 }).service,
+    '172.18.0.5',
+    env.TRUSTED_PROXY_IP,
+  )
+  const first = await direct.post(JSON.stringify({ address: disk }), {
+    'X-Forwarded-For': '203.0.113.9',
+  })
+  const second = await direct.post(JSON.stringify({ address: address('2') }), {
+    'X-Forwarded-For': '203.0.113.10',
+  })
+  expect([first.status, second.status]).toEqual([200, 429])
 })

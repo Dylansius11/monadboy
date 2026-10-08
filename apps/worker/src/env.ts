@@ -1,7 +1,12 @@
 import { z } from 'zod'
 import { parseUnits } from 'viem'
 import type { Address, Hex } from 'viem'
-import { boundedEstimateGasCap, measuredTestnetGas, rpcUrl, testnetMarkets } from '@monadboy/sdk'
+import {
+  boundedEstimateGasCap,
+  measuredTestnetGas,
+  rpcUrl,
+  testnetMarkets,
+} from '@monadboy/sdk'
 import deployments from '../../../packages/sdk/src/deployments.testnet.json'
 
 const optional = <T extends z.ZodType>(schema: T) => schema.optional()
@@ -27,6 +32,7 @@ const schema = z
     WORKER_PORT: z.coerce.number().int().min(1).max(65535).default(8787),
     WORKER_BIND: z.string().min(1).default('127.0.0.1'),
     APP_ORIGIN: z.url().default('http://localhost:3000'),
+    TRUSTED_PROXY_IP: optional(z.ipv4()),
     TESTNET_RPC_URL: z.url().default(rpcUrl('testnet', {})),
     MAINNET_RPC_URL: z.url().default(rpcUrl('mainnet', {})),
     BOT_PRIVATE_KEY: optional(key),
@@ -97,7 +103,9 @@ export function parseEnv(input: Record<string, string | undefined>): WorkerEnv {
     !parsed.MARKETS_JSON &&
     deployments.chainId === 10143 &&
     testnetMarkets.length === 1 &&
-    testnetMarkets[0].address.toLowerCase() === deployments.orderBook.address.toLowerCase()
-  ) parsed.TESTNET_START_BLOCK = BigInt(deployments.orderBook.blockNumber)
+    testnetMarkets[0].address.toLowerCase() ===
+      deployments.orderBook.address.toLowerCase()
+  )
+    parsed.TESTNET_START_BLOCK = BigInt(deployments.orderBook.blockNumber)
   return parsed
 }

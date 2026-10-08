@@ -180,18 +180,26 @@ const HTTP_STATUS: Record<DripStatus, 200 | 400 | 409 | 429 | 502 | 503> = {
   'send-failed': 502,
 }
 
-// The listener is loopback only. Behind Caddy the peer is 127.0.0.1 and Caddy
-// overwrites X-Forwarded-For with the real client; any other peer is used as is.
+// Host Caddy uses loopback; container Caddy must match one configured IPv4 peer.
+// Neither other bridge peers nor arbitrary clients may supply their own quota IP.
 export function clientIp(
   peer: string | undefined,
   forwarded: string | undefined,
+  trustedProxyIp: string | undefined,
 ): string {
-  if (peer === '127.0.0.1' || peer === '::1')
+  if (
+    peer === '127.0.0.1' ||
+    peer === '::1' ||
+    (trustedProxyIp !== undefined && peer === trustedProxyIp)
+  )
     return forwarded?.split(',').at(-1)?.trim() || peer
   return peer ?? 'unknown'
 }
 
-export function dripRoute(drip: DripService | undefined): RouteModule {
+export function dripRoute(
+  drip: DripService | undefined,
+  trustedProxyIp: string | undefined,
+): RouteModule {
   return (app) => {
     app.post('/v1/drip', async (c) => {
       const text = await c.req.text()
@@ -216,7 +224,7 @@ export function dripRoute(drip: DripService | undefined): RouteModule {
       }
       const result = await drip.request(
         parsed.data.address,
-        clientIp(peer, c.req.header('X-Forwarded-For')),
+        clientIp(peer, c.req.header('X-Forwarded-For'), trustedProxyIp),
       )
       return c.json(result, HTTP_STATUS[result.status])
     })
