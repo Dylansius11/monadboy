@@ -73,7 +73,7 @@ Every confirmation includes the zap taker fee plus explicit transaction cost. Qu
 
 ## 6. Envio failure ladder
 
-[V, S5] The pinned local HyperIndex projects live SDK events from verified registry/market start blocks and computes flipped-maker spread through shared SDK `scoreFromFills`. Fresh real fills appeared within 564–570 ms of receipt observation; client/indexer/worker SCORE matched exactly. Unknown origins mark SCORE incomplete; disk-submitted scores are never accepted. Live RPC ingestion is selected for the pinned alpha runtime, with HyperSync backfill. Public hosting remains B3.
+[V, S5] The pinned HyperIndex projects live SDK events from verified registry/market start blocks and computes flipped-maker spread through shared SDK `scoreFromFills`. Fresh real local fills appeared within564–570ms of receipt observation; client/indexer/worker SCORE matched exactly. Unknown origins mark SCORE incomplete; disk-submitted scores are never accepted. Live RPC ingestion is selected for the pinned alpha runtime, with HyperSync backfill. [V, 2026-10-08] Public read-only VPS GraphQL and persistent container-recreation recovery passed. The worker's separate maker-basis backfill remains partial; do not infer full worker coverage from GraphQL readiness.
 
 | Failure rung | Exact player copy | Fallback / recovery |
 |---|---|---|
@@ -98,7 +98,7 @@ The 200-block fallback is bounded. It cannot prove older history is empty; show 
 | Drip freshness/quota refusal | "TESTNET SUPPLY LIMIT" | Surface refusal without sending a duplicate funding transaction |
 | Whole worker unavailable | "SERVICE OFFLINE" | Mera + registry restore and user-signed cancellation/withdrawal remain independent of worker |
 
-[I] Fresh-disk drip requires nonce 0 and MON below threshold; quota is three per IP hash per 24 h plus global daily cap. SQLite stores the funding ledger, not user keys or plaintext disks. Worker restart-always hosting and `/v1/health` monitoring are planned, not deployed proof.
+[V] Fresh-disk drip requires nonce0 and MON below threshold; quota is three per IP hash per24h plus a global daily cap. SQLite stores the funding ledger, not user keys or plaintext disks. [V, 2026-10-08] Actual VPS restart-always worker and five-minute public HTTPS health sampling are running; restart preserved SQLite history. Public bring-up disables mirror/drip signing. Final continuous economics, complete maker basis and24-hour healthy uptime remain gates; [deployment evidence](../../deploy/README.md) owns the target record.
 
 ## 8. Mainnet RPC failure ladder
 
@@ -133,4 +133,4 @@ Use resources for evidence and reliability, not as new critical dependencies or 
 
 Restore must remain passkey -> derived disk addresses -> registry -> browser decrypt, even after clearing site data and with worker/Envio offline. This stateless path and a real flip fill on camera are never cut; see [BUILD-PLAN](BUILD-PLAN.md).
 
-[V] Local Anvil and funded Monad testnet native-browser runs exercised encrypted saves, preference updates and discoverable restore after clearing site data. The funded restore recovered the same three addresses and first sealed run; a second sealed run was observed on the shelf, but its repeat stateless restore was not established after the owned virtual reader became unavailable. Physical-phone acceptance remains B8 and production hostname B2. Preference saves re-read latest ciphertext and preserve private fields/history; registry writes are last-writer-wins, not compare-and-swap. Failed read/decryption is never an empty writable slot. Eject/expiry drops pending operations and decrypted state.
+[V] Local Anvil and funded Monad testnet native-browser runs exercised encrypted saves, preference updates and discoverable restore after clearing site data. The funded restore recovered the same three addresses and first sealed run; a second sealed run was observed on the shelf, but its repeat stateless restore was not established after the owned virtual reader became unavailable. Physical-phone acceptance remains B8; canonical production hostname/RP ID is now fixed as `monadboy-play.vercel.app`. Preference saves re-read latest ciphertext and preserve private fields/history; registry writes are last-writer-wins, not compare-and-swap. Failed read/decryption is never an empty writable slot. Eject/expiry drops pending operations and decrypted state.

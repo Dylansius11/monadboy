@@ -10,6 +10,9 @@ Pick a Monanimal, set your range, and watch a real testnet Kuru flip-order posit
 SCORE is realized flip spread. DAMAGE is equally visible. Every number has a source you can open.
 The app moves no real money; mainnet market data is read-only.
 
+**Live app:** [monadboy-play.vercel.app](https://monadboy-play.vercel.app).
+Read-only deployment; [remaining play/device gates](docs/BLOCKERS.md) stay explicit.
+
 Video: added before submission
 
 GIF: added before submission
@@ -63,7 +66,7 @@ The mirror targets Kuru mainnet MON/USDC and labels play `TESTNET BOOK, MAINNET 
 Source liveness was observed against real mainnet reads; the mirror pauses invalid/wide books. Final corrected-strategy continuous alignment and cost remain gated. USDC and AUSD are treated as one USD each [I], not measured parity.
 The worker never signs for a user. Chain is truth; Envio and SQLite are read models.
 The sealed disk lives onchain in DiskRegistry v2. Clearing site data must not remove the ability to restore with the same passkey.
-Real-device restore remains [U: S4/B8]. Local S5 indexing passed with fresh564–570ms observations and exact SCORE parity; public hosting remains B2/B3.
+Real-device restore remains [U: S4/B8]. Local S5 indexing passed with fresh564–570ms observations and exact SCORE parity. Public hosting/restart proof is recorded below; complete maker basis and final continuous mirror acceptance remain open.
 
 ## Why Monad
 
@@ -164,7 +167,8 @@ database only if measured capacity is insufficient. Public worker health:
 `https://monadboy-api.43.129.38.115.sslip.io/v1/health`; read-only GraphQL:
 `https://monadboy-data.43.129.38.115.sslip.io/v1/graphql`.
 The worker restarted with its SQLite history intact; indexer container recreation
-preserved an actual fill. Public role spoofing/mutations and admin paths are refused.
+preserved an actual fill. Spoofed roles cannot elevate; mutations are refused and
+administration paths return404.
 The browser signs for players, never the worker. This deployment is **read-only
 bring-up, not full judge-play acceptance**: mirror/drip are disabled, maker-basis
 backfill is partial, and physical-phone create/restore plus24-hour monitoring remain
