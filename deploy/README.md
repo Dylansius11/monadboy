@@ -5,6 +5,46 @@ with two dedicated testnet operations keys; its mainnet client is read-only. No 
 signs for a player. Nothing here is deployed yet: the VPS and hostname are still
 outstanding, so every command below is an instruction, not a record.
 
+## Selected hosting boundary
+
+- Frontend: Vercel, using a fixed production hostname rather than per-commit URLs.
+- Backend: this Bun worker on the VPS; SQLite remains its local cache and drip ledger.
+- Indexing: Envio, PostgreSQL and Hasura remain self-hosted on the VPS.
+- Local Docker proves integration only; it cannot supply public availability.
+- No Supabase project or second account/authentication layer is required.
+
+Keep frontend, worker and GraphQL origins distinct in configuration:
+
+1. Fix the Vercel production hostname before creating production cards.
+2. Set web `VITE_RP_ID` to that hostname, without a scheme or path.
+3. Set web `VITE_WORKER_URL` to the backend HTTPS origin.
+4. Set web `VITE_ENVIO_GRAPHQL_URL` to the public read-only GraphQL HTTPS endpoint.
+5. Set worker `APP_ORIGIN` to the exact Vercel HTTPS origin.
+6. Keep database passwords, Hasura admin authentication and operation keys server-only.
+
+Vercel hosts the frontend, not this continuously running Bun process. A successful
+web build does not prove Vercel deployment compatibility, public judge access,
+backend HTTPS or passkey restore on physical devices.
+
+Start public infrastructure read-only with `ENABLE_TRANSACTIONS=false`. Complete
+source/index coverage, HTTPS and service-restart checks before claiming health.
+Enable unattended signing only after B10's final mirror alignment/cost acceptance.
+Do not run a second signing worker against the same operations accounts.
+
+Before target deployment, obtain SSH host/port, user, private authentication method
+and installation permission. Inspect the VPS's capacity and existing services
+before allocating ports or installing Docker, Bun, Node, Caddy and service files.
+Private keys/passwords never belong in chat, tracked files or command arguments.
+
+SQLite and PostgreSQL require persistent storage and recoverable backups. A
+container recreation must not discard the drip ledger; an indexer rebuild needs
+time to recover coverage. Keep PostgreSQL and Hasura administration private;
+expose only the intended read-only GraphQL route through HTTPS.
+
+[V, local restart] Docker services became healthy, but the worker still refused
+incomplete indexed maker basis and served PARTIAL direct-log results. Check the
+worker's actual coverage and provenance, not just container health or HTTP200.
+
 ## Install
 
 1. Create the `monadboy` system user and `/opt/monadboy`. Install Bun at

@@ -154,6 +154,16 @@ Worker configuration and safety policy are documented in [deploy/README.md](depl
 Bot, drip, and deployer keys are distinct local / VPS secrets. Never put secret values in the browser or repository.
 Use HTTPS or localhost for passkeys [V: Mera guide](https://docs.monad.xyz/guides/mera); test supported authenticators before claiming restore works [U: S4].
 
+### Selected public hosting
+
+Frontend hosting is Vercel with a fixed production hostname. The worker, its
+SQLite ledger, Envio, PostgreSQL and Hasura target the VPS; Supabase is not required.
+The browser signs for players, never the worker. Backend and public read-only
+GraphQL endpoints need HTTPS and the exact frontend-origin configuration.
+Local Docker and the development preview are not public judge-access proof.
+Vercel deployment, target service recovery,24-hour monitoring and physical-phone
+create/restore remain acceptance gates. Keep the bot disabled until B10 passes.
+
 ### Local indexed history
 
 The indexer is a separate Linux package, not a Bun workspace. Create ignored `indexer/.env` from `.env.example`; choose local Postgres/Hasura admin secrets privately and use the existing authenticated HyperSync token for `ENVIO_API_TOKEN`. No admin secret belongs in a `VITE_` variable.
