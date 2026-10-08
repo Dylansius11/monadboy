@@ -17,7 +17,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 | 0 — Repo bootstrap             | DONE    | 2/2              | Maintain guard and commit discipline                                                | None                                        |
 | 1 — Docs first                 | DONE    | 4/4              | Keep docs aligned with implementation                                               | None                                        |
 | 2 — Frontend shell and screens | DONE    | 23/23            | Maintain the rendered and behavior checks                                           | None                                        |
-| 2b — Experience pass           | DONE    | 6/6              | Preserve portrait, help and native sound                                            | None for local experience work              |
+| 2b — Experience pass           | DONE    | 7/7              | Preserve portrait, help and native sound                                            | None for local experience work              |
 | 3 — Pure SDK                   | DONE    | 9/9              | Maintain receipt-backed units and shape-specific gas                                | None                                        |
 | 4 — Funded spikes              | DOING   | 5/6              | Record physical iPhone/Android S4 results                                           | B8                                          |
 | 5 — DiskRegistry v2            | DONE    | 6/6              | Preserve receipt/artifact identity and stateless device proof                       | B8 for physical restore, outside deployment |
@@ -380,3 +380,5 @@ Each bounded unit below uses the freshly verified assembled tree described above
 ## Approved interface refinement checkpoints
 
 - [x] **2b.6** Make VOL the only visible sound control — two pre-fix regressions failed; consumer gain/remount, zero and reversible M pass. Native Edge slider/M recovery observed5 ->0 ->5 ->0; saved mute clears on explicit adjustment. Assembled verify web556/SDK153/worker133, build, Foundry17/snapshot passed. No physical speaker or B8 claim.
+
+- [x] **2b.7** Replace obsolete fixture-only guidance with mode-aware actions — live card guide describes passkey restore/create and optional sealed saves; actual source, quote, fixed-range, fill and manual-exit boundaries are explicit. Fixture simulation remains opt-in and distinct. Native live guide inspected; assembled verify web556/SDK153/worker133, build and Foundry17/snapshot passed.

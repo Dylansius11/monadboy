@@ -1,4 +1,5 @@
 import { brand } from '../../config/brand'
+import { USE_FIXTURES } from '../../config/runtime'
 import { GAMEPAD_BUTTONS, INTENTS, intentFromKey } from '../../console/intents'
 import {
   DAMAGE_APR,
@@ -8,16 +9,8 @@ import {
 } from '../sim'
 import type { ConsoleIntent } from '../../console/intents'
 
-/**
- * What the rule book says. Pure data and pure functions, so the copy and the
- * routing are testable without a DOM.
- *
- * Every number comes from the module that owns it (sim.ts constants), and
- * every control line describes what the screen's own intent handler does. A
- * line here that disagrees with a screen is a bug in this file.
- */
-
-export type TopicId = 'testnet' | 'score' | 'recenter'
+export type TopicId =
+  'testnet' | 'score' | 'recenter' | 'fixture-score' | 'fixture-recenter'
 
 export interface Topic {
   heading: string
@@ -27,250 +20,377 @@ export interface Topic {
 export interface Guide {
   title: string
   summary: string
-  /** [button, what it does on this screen] */
+  /** Console button and its current-screen action, not a keyboard map. */
   keys: ReadonlyArray<readonly [string, string]>
   notes: ReadonlyArray<string>
   topics: ReadonlyArray<TopicId>
 }
+
+type ScreenGuide = Omit<Guide, 'topics'>
 
 const pct = (fraction: number, digits: number) =>
   `${(fraction * 100).toFixed(digits)}%`
 
 export const TOPICS: Record<TopicId, Topic> = {
   testnet: {
-    heading: 'TESTNET and FIXTURE',
+    heading: 'Testnet, not real money',
     lines: [
-      `TESTNET means every balance shown is testnet funds. No real money moves anywhere in ${brand.CONSOLE_NAME}.`,
-      'FIXTURE marks numbers that come from committed sample data or from the local simulation. They are not a live quote and not a chain fill.',
+      'Balances use TESTNET tokens. Live play can sign real testnet transactions; mainnet markets are read-only.',
+      'FIXTURE means opt-in sample data or local simulation, never a substitute for an unavailable live source.',
     ],
   },
   score: {
-    heading: 'SCORE and DAMAGE',
+    heading: 'SCORE, DAMAGE and NET',
     lines: [
-      'SCORE is fee income earned while price sits inside your range. DAMAGE is what the position loses, shown at the same size as SCORE and never hidden.',
-      'NET is what you keep. The inputs view prints DAMAGE = max(0, SCORE - NET), and a surplus above SCORE is preserved.',
-      `In the FIXTURE simulation SCORE accrues at ${pct(FEE_APR, 0)} a year while in range. DAMAGE accrues at ${pct(DAMAGE_APR, 0)} a year while out of range. One tick is ${STEP_SECONDS / 3_600} simulated hour.`,
+      'SCORE measures eligible realized flip spread, not promised income. DAMAGE shows the downside with equal weight.',
+      'NET is the difference from holding your starting inventory, not your account balance or guaranteed profit. DAMAGE = max(0, SCORE - NET).',
+      'Missing or incomplete measurements stay unavailable, not zero. Inputs and explorer links show the source of the numbers.',
     ],
   },
   recenter: {
-    heading: `Re-center and ${brand.AUTOPILOT_NAME}`,
+    heading: 'Your range and manual re-center',
     lines: [
-      'Re-centering moves your range to the current price. It is always manual: press A while OUT OF RANGE on the live screen.',
-      `It costs a swap. In the FIXTURE simulation that is ${pct(REBALANCE_COST_FRACTION, 2)} of your deposit, counted as DAMAGE. A real swap also pays slippage and gas.`,
-      `${brand.AUTOPILOT_NAME} re-arms your flip orders after every fill. It does not re-center the range and adds no fee. In this FIXTURE build the setting is displayed but the simulation does not use it, so it changes no numbers.`,
+      'Choose a deposit and range, get the actual quote, then review the separate testnet steps before confirming. Observed volatility is not a prediction.',
+      'Flip orders re-arm on fills. They do not move your range. OUT OF RANGE, review the exit cost, exit manually, then review and confirm a fresh ladder.',
+      'Re-centering can cost swaps, gas and slippage. A paused price feed is not a new measurement; withdrawal remains available.',
+    ],
+  },
+  'fixture-score': {
+    heading: 'Fixture simulation',
+    lines: [
+      `SCORE models in-range income at ${pct(FEE_APR, 0)} a year; DAMAGE models out-of-range loss at ${pct(DAMAGE_APR, 0)} a year. A tick is ${STEP_SECONDS / 3_600} simulated hour.`,
+      'These are simulation rules, not measured fills or returns. NET compares the simulated position with holding the starting inventory; SCORE and DAMAGE remain equally visible.',
+    ],
+  },
+  'fixture-recenter': {
+    heading: 'Fixture range and re-center',
+    lines: [
+      `A while OUT OF RANGE manually re-centers, charging ${pct(REBALANCE_COST_FRACTION, 2)} of the deposit as DAMAGE.`,
+      `${brand.AUTOPILOT_NAME} is displayed in fixture mode but does not change the simulation. No chain funds move.`,
     ],
   },
 }
 
-const GALLERY: Guide = {
-  title: 'Primitives gallery',
-  summary:
-    'A developer view of every interface part, at real size, on FIXTURE data.',
-  keys: [
-    ['Up / Down', 'Move the list cursor.'],
-    ['Left / Right', 'Change the character.'],
-    ['A', 'Toggle scanlines.'],
-    ['START', 'Switch the tab.'],
-  ],
-  notes: ['B and SELECT do nothing here.'],
-  topics: ['testnet'],
-}
-
-const FALLBACK: Guide = {
-  title: 'Console',
-  summary:
-    'The controls work the same on every screen. Open a screen to see its own guide.',
-  keys: [],
-  notes: [],
-  topics: ['testnet'],
-}
-
-/**
- * Keyed by route id with the pathless `/_console` layout stripped, so a guide
- * follows the URL a player sees. `/play/` is the boot screen.
- */
-const GUIDES: Record<string, Guide> = {
+/** These actions follow the actual route handlers; live is the default. */
+const GUIDES: Record<string, ScreenGuide> = {
   '/play/': {
     title: 'Power on',
-    summary: `${brand.CONSOLE_NAME} runs a short boot, then waits on the title. ${brand.CARTRIDGE_01} is the cartridge inside.`,
+    summary: `Start ${brand.CARTRIDGE_01} on ${brand.CONSOLE_NAME}.`,
     keys: [
-      ['START or A', `Continue to the ${brand.WALLET_UNIT} screen.`],
-      ['Any other button', 'Skip the boot animation.'],
+      ['START or A', `Continue to your ${brand.WALLET_UNIT}.`],
+      ['Other buttons', 'Skip the boot animation.'],
     ],
     notes: [
-      'The full boot plays once per browser session. Later visits, and reduced motion, open on the final frame.',
+      'The full boot plays once per browser session; reduced motion opens on the final frame.',
     ],
-    topics: ['testnet'],
   },
   '/card': {
     title: brand.WALLET_UNIT,
-    summary: `Your ${brand.WALLET_UNIT} holds your ${brand.SAVE_UNIT}s.`,
+    summary:
+      'INSERT CARD restores your existing passkey card. NEW CARD creates a different one.',
     keys: [
-      ['Up / Down', 'Move between INSERT CARD and NEW CARD.'],
+      ['Up / Down', 'Choose INSERT CARD or NEW CARD.'],
       [
-        'A',
-        `Insert the card and go to your ${brand.SAVE_UNIT}s. With a card already in, the first row reads CONTINUE.`,
+        'A or tap a row',
+        'Complete the reader prompt, then open your save disks. CONTINUE uses the inserted card.',
       ],
-      ['B', 'Back to the title.'],
+      ['B', 'Back to the title; cancel an active reader prompt.'],
     ],
     notes: [
-      'Sign-in is not wired yet. Both rows load the same committed FIXTURE card, so nobody is logged in and nothing is signed.',
+      'A failed restore does not create a new card. EJECT ends the local signing session, not the chain position.',
     ],
-    topics: ['testnet'],
   },
   '/disks': {
     title: `Select ${brand.SAVE_UNIT}`,
-    summary: `Each ${brand.SAVE_UNIT} keeps one run history bound to a difficulty.`,
+    summary:
+      'Select one of your three disk accounts. An empty slot can be funded, created and sealed to your card.',
     keys: [
-      ['Up / Down', 'Move between disks. Empty slots are skipped.'],
-      ['A', 'Open the highlighted disk. Its difficulty is applied, then cartridges open.'],
-      ['B', `Back to the ${brand.WALLET_UNIT}.`],
+      ['Up / Down or tap a slot', 'Select a disk or empty slot.'],
+      [
+        'A',
+        'Open a disk, create an empty one, or retry an unreadable slot. Follow the funding and save status.',
+      ],
+      ['START', 'Show the selected disk’s sealed proof.'],
+      ['B', 'Close proof, or return to your card.'],
     ],
     notes: [
-      'The disks and the card address are FIXTURE data. An empty slot cannot be opened because creating a disk is not wired yet.',
+      'Unreadable slots are not empty. Explorer links show confirmed accounts and saves; EJECT ends the local signing session.',
     ],
-    topics: ['testnet'],
   },
   '/cartridges': {
     title: 'Select cartridge',
-    summary: 'Pick the game to insert. Locked cartridges cannot be inserted.',
+    summary: 'Choose an unlocked cartridge. Open a saved disk first to play.',
     keys: [
-      ['Left / Right', 'Move between cartridges.'],
-      ['A', 'Insert the highlighted cartridge and choose a difficulty.'],
-      ['B', `Back to your ${brand.SAVE_UNIT}s.`],
+      ['Left / Right', 'Choose a cartridge.'],
+      [
+        'A or tap a cartridge',
+        'Insert it and choose a difficulty; without a disk, return to the disk shelf.',
+      ],
       ['START', 'Open the leaderboard.'],
+      ['B', 'Back to disks.'],
     ],
-    notes: [
-      'The cartridge list is FIXTURE data. Tapping an unlocked cartridge inserts it in one tap.',
-    ],
-    topics: ['testnet'],
+    notes: ['Locked cartridges cannot be inserted.'],
   },
   '/play/difficulty': {
     title: 'Choose your Monanimal',
-    summary:
-      'EASY, NORMAL and HARD each pair one Monanimal with its own pool filters, listed on the screen.',
+    summary: 'EASY, NORMAL and HARD apply the pool filters shown on screen.',
     keys: [
-      ['Left / Right', 'Pick the tier. It does not wrap.'],
-      ['Up / Down', 'On HARD only, move between the tier row and GOD MODE.'],
+      ['Left / Right', 'Choose a tier.'],
+      ['Up / Down on HARD', 'Choose the tier row or GOD MODE.'],
       [
         'A',
-        'On the tier row, confirm and open the pool tracker. On the GOD MODE row, turn it off, or start the confirm to turn it on.',
+        'Confirm and save preferences before opening the tracker, or change GOD MODE on its row.',
       ],
       ['B', 'Back to cartridges.'],
     ],
     notes: [
-      'The filter numbers are FIXTURE.',
-      'GOD MODE turns off every pool filter except the sellability check, which always stays on. Turning it on needs a deliberate spelling confirm: Left / Right pick a letter, A tries it, B erases a letter or cancels.',
+      'GOD MODE relaxes filters, never the sellability check. Enabling it needs a spelling confirm: Left / Right choose a letter, A tries it, B erases or cancels.',
+      'Pool counts come from the worker read. Unavailable inputs do not become fixture counts.',
     ],
-    topics: ['testnet'],
   },
   '/play/tracker': {
     title: 'Pool tracker',
     summary:
-      'A map of pools. Each pin is one pool: Safety runs left to right and Heat runs bottom to top.',
+      'Choose a pool on the worker’s map: Safety runs left to right, Heat bottom to top.',
     keys: [
-      ['D-pad', 'Move the cursor to the nearest pin in that direction.'],
-      ['SELECT', 'Cycle the map zoom through its three levels.'],
-      ['A', 'Open details for the highlighted pool.'],
-      ['B', 'Back to difficulty.'],
+      ['D-pad or tap a pin', 'Select a pool.'],
       [
-        'A in details',
-        'Play the pool, but only if it reads PLAYABLE and TESTNET. Setting the range opens next.',
+        'A',
+        'Open details; A in details plays only an executable TESTNET pool.',
       ],
-      ['B in details', 'Back to the map.'],
+      ['SELECT', 'Cycle the three map zoom levels.'],
+      ['B', 'Close details, or return to difficulty.'],
     ],
     notes: [
-      'Pin colours read Safe, Risky or Very risky. Details list every term behind Safety and Heat.',
-      'Pools marked MAINNET READ ONLY, BOOK TOO THIN or LOCKED BY FILTER cannot be played.',
-      'Fee income is an estimate from 24h volume and pool size. It is not a promise.',
-      'If every pool fails the filter the screen says Nothing passed. Press B and try an easier tier.',
-      'The pools are FIXTURE data.',
+      'MAINNET READ ONLY, thin books and failed filters cannot be played. If nothing passes, go back and try an easier tier.',
+      'Source and age describe the worker read. Offline or missing markets stay unavailable; no fixture map is substituted.',
     ],
-    topics: ['testnet'],
   },
   '/play/range/$id': {
     title: 'Set your range',
     summary:
-      'Choose how much to deposit and how wide the range is. The picture shows where your orders would sit.',
+      'Choose the amount and width, then review the actual quote before signing testnet steps.',
     keys: [
-      ['Up / Down', `Move between HOW MUCH, HOW WIDE and ${brand.AUTOPILOT_NAME}.`],
       [
-        'Left / Right',
-        `HOW MUCH steps the amount, capped by your TESTNET balance. HOW WIDE moves between WIDE, TIGHT and MANUAL, and WIDE and TIGHT apply at once. On ${brand.AUTOPILOT_NAME} it toggles.`,
+        'Up / Down; Left / Right',
+        'Choose amount or width, then adjust it. Amount presets and MAX are also available.',
       ],
-      ['A', 'Confirm and start the live screen. On the MANUAL chip it opens the range editor instead.'],
-      ['SELECT', 'Open the manual range editor.'],
-      ['START', 'Open the inputs view: the source and formula behind each number here. START or B closes it.'],
-      ['B', 'Back to the pool tracker.'],
+      ['SELECT or Manual', 'Show editable low and high prices.'],
+      [
+        'A',
+        'Get an actual quote, then confirm its steps. If orders already exist, open the position instead.',
+      ],
+      ['START', 'Inspect sources and inputs; START or B closes them.'],
+      ['B', 'Back to the tracker.'],
     ],
     notes: [
-      'Width is arithmetic from the pool 24h volatility. It is not a prediction.',
-      'YOU WILL HOLD shows what your deposit becomes. Part of your quote token is swapped first, and the swap cost shown is an estimate before slippage and gas.',
-      'In the manual editor, Up / Down pick START or END, Left / Right step that edge, A applies, SELECT returns to the suggested range and B cancels.',
-      'Every number is FIXTURE and TESTNET funds do not move here.',
+      'Deposit, margin swap and orders are separate transactions, not atomic. Review fees, minimum output and actual endpoints.',
+      'A paused source blocks new quotes. Confirmed partial funds can be withdrawn; missing card or disk prerequisites are shown explicitly.',
     ],
-    topics: ['testnet', 'recenter'],
   },
   '/play/live/$id': {
-    title: 'Live position',
+    title: 'Current position',
     summary:
-      'A simulated session over fixture data. The face, the banner and the numbers all report where price is against your range.',
+      'Follow actual orders and fills. Range status compares source price with your fixed edges; valuation uses the TESTNET book.',
     keys: [
       [
         'A',
-        'In range, jump (a visual only). OUT OF RANGE, re-center the range to the current price by hand, which costs a swap.',
+        'Jump visually in range. OUT OF RANGE, review exit costs, then explicitly exit to review a fresh range.',
       ],
-      ['SELECT', 'A FIXTURE demo control: nudge price toward the nearer edge to show OUT OF RANGE on demand.'],
-      ['START', 'Open the inputs view: sources, SCORE, DAMAGE and the formulas. START or B closes it.'],
-      ['B', 'Withdraw and go to the results.'],
+      ['B', 'Cancel and withdraw; successful receipts open results.'],
+      ['SELECT', 'Refresh the chain read, not the price.'],
+      ['START', 'Inspect sources and inputs; START or B closes them.'],
     ],
     notes: [
-      `${brand.ALERT_NAME} warns when price is close to the edge of your range. It measures distance to your edges and does not predict anything.`,
-      'If the price feed is not live, SCORE freezes, A and SELECT stop, and B still withdraws.',
-      'This is a simulation over FIXTURE data, not a chain position.',
+      `${brand.ALERT_NAME} means price is near an edge, not a prediction. A paused price feed does not prevent withdrawal.`,
+      'Incomplete history leaves SCORE, DAMAGE and NET unavailable. Time in range is sampled only while this tab is running.',
     ],
-    topics: ['testnet', 'score', 'recenter'],
   },
   '/play/results/$id': {
     title: 'Session over',
-    summary: 'The recorded result of the session you just finished.',
+    summary:
+      'Review confirmed exit receipts and measured results, with optional sealed history saved to your card.',
     keys: [
-      ['A or B', `Back to your ${brand.SAVE_UNIT}s.`],
-      ['START', 'Open the inputs view. It needs a finished session. START or B closes it.'],
+      ['A or B', 'Back to disks.'],
+      ['START', 'Inspect sources and inputs; START or B closes them.'],
+      ['Receipt links', 'Open actual exit steps in the explorer.'],
+      ['Retry save', 'Retry a failed optional sealed history save.'],
     ],
     notes: [
-      'TIME IN RANGE is the skill number: the share of ticks spent inside your range. It is FIXTURE, not a live leaderboard.',
-      'Rebalanced counts the times you pressed A out of range yourself.',
-      'The session is a FIXTURE simulation. Sealed saves are not wired yet.',
+      'A failed history save does not undo a confirmed exit. Missing history remains unavailable, not zero.',
+      'Without a confirmed exit, open the current position to cancel and withdraw.',
     ],
-    topics: ['testnet', 'score', 'recenter'],
   },
   '/leaderboard': {
     title: 'Leaderboard',
     summary:
-      'Compare TESTNET disk runs measured by the worker from chain fills and price samples. This screen never substitutes fixture rankings.',
+      'Compare TESTNET disk runs measured by the worker from chain fills and price samples.',
     keys: [
-      ['Left / Right', 'Choose 24h, 7d or All. The window does not wrap and is kept in the URL.'],
-      ['Up / Down', 'Move between the measured disk rows.'],
-      ['A', 'Open the highlighted disk’s last fill in the explorer, if one was read. If the worker read failed, retry it instead.'],
+      ['Left / Right or tap a window', 'Choose 24h, 7d or All.'],
+      ['Up / Down or tap a row', 'Select a measured disk.'],
+      [
+        'A',
+        'Open its last fill in the explorer, or retry a failed worker read.',
+      ],
       ['B', 'Back to cartridges.'],
     ],
     notes: [
-      'Tap a window to select it. Tap a disk row to highlight it, then use A LAST FILL to open its evidence.',
-      'SCORE is realized flip spread. DAMAGE is the loss compared with holding the starting inventory; NET is that holding-relative difference. SCORE and DAMAGE have equal visual weight.',
-      'The source, chain-read timestamp and computation age appear above the rows. STALE, OFFLINE and PARTIAL describe the actual read, not a new measurement.',
-      'With partial fill history, SCORE is only what was read so far, and NET and DAMAGE are not read. Missing measurements are shown as missing, not zero.',
-      'No configured market, no computed leaderboard or no disks produces an honest empty state. START and SELECT do nothing here.',
+      'Source, chain timestamp and computation age describe the actual read. STALE, OFFLINE and PARTIAL are not new measurements.',
+      'Partial fill history shows only observed SCORE; NET and DAMAGE stay unavailable. Empty and failed reads never substitute fixture rankings.',
     ],
-    topics: ['testnet'],
   },
-  '/gallery': GALLERY,
+  '/gallery': {
+    title: 'Primitives gallery',
+    summary:
+      'A developer view of interface parts at real size, using FIXTURE data.',
+    keys: [
+      ['Up / Down', 'Move the list cursor.'],
+      ['Left / Right', 'Change the character.'],
+      ['A', 'Toggle scanlines.'],
+      ['START', 'Switch the tab.'],
+    ],
+    notes: ['B and SELECT do nothing here.'],
+  },
 }
 
-/** The guide for a route id. Unknown routes get the controls-only fallback. */
-export function guideForRoute(routeId: string | undefined): Guide {
-  if (!routeId) return FALLBACK
-  return GUIDES[routeId.replace(/^\/_console(?=\/)/, '')] ?? FALLBACK
+/** Opt-in fixture routes deliberately describe simulation, not live actions. */
+const FIXTURE_GUIDES: Record<string, ScreenGuide> = {
+  '/card': {
+    ...GUIDES['/card'],
+    summary:
+      'FIXTURE mode loads a sample card; no passkey is created or restored.',
+    keys: [
+      ['Up / Down', 'Choose INSERT CARD or NEW CARD.'],
+      ['A or tap a row', 'Open the sample card and continue to fixture disks.'],
+      ['B', 'Back to the title.'],
+    ],
+    notes: [
+      'Both INSERT CARD and NEW CARD open the same committed fixture card. Nothing is signed.',
+    ],
+  },
+  '/disks': {
+    title: GUIDES['/disks'].title,
+    summary: 'Choose a committed FIXTURE disk and its saved difficulty.',
+    keys: [
+      ['Up / Down', 'Select an existing disk; empty slots are skipped.'],
+      ['A or tap a disk', 'Open it and continue to cartridges.'],
+      ['B', 'Back to the sample card.'],
+    ],
+    notes: [
+      'Empty slots cannot be created in fixture mode. These are not chain accounts or sealed saves.',
+    ],
+  },
+  '/cartridges': {
+    ...GUIDES['/cartridges'],
+    summary:
+      'Choose an unlocked sample cartridge and continue to fixture difficulty.',
+    keys: [
+      ['Left / Right', 'Choose a cartridge.'],
+      ['A or tap a cartridge', 'Insert it and choose a difficulty.'],
+      ['START', 'Open the live worker leaderboard, not fixture rankings.'],
+      ['B', 'Back to fixture disks.'],
+    ],
+    notes: [
+      'The cartridge shelf uses sample data; locked cartridges cannot be inserted.',
+    ],
+  },
+  '/play/difficulty': {
+    ...GUIDES['/play/difficulty'],
+    keys: GUIDES['/play/difficulty'].keys.map(
+      ([button, action]) =>
+        [
+          button,
+          button === 'A'
+            ? 'Confirm the tier and open the tracker, or change GOD MODE on its row.'
+            : action,
+        ] as const,
+    ),
+    notes: [
+      GUIDES['/play/difficulty'].notes[0],
+      'Pool filters and counts use committed FIXTURE data. No preferences are signed.',
+    ],
+  },
+  '/play/tracker': {
+    ...GUIDES['/play/tracker'],
+    summary:
+      'A FIXTURE pool map: Safety runs left to right, Heat bottom to top.',
+    notes: [
+      GUIDES['/play/tracker'].notes[0],
+      'All pools are sample data. Any displayed fee-income estimate is not a promise or chain fill.',
+    ],
+  },
+  '/play/range/$id': {
+    title: 'Set your fixture range',
+    summary: 'Choose a simulated deposit and range. No TESTNET tokens move.',
+    keys: [
+      ['Up / Down', `Choose HOW MUCH, HOW WIDE or ${brand.AUTOPILOT_NAME}.`],
+      ['Left / Right', 'Adjust the selected amount, width or setting.'],
+      [
+        'A',
+        'Start the simulation, or open the MANUAL range editor when selected.',
+      ],
+      [
+        'SELECT',
+        'Open the range editor: Up / Down choose an edge, Left / Right adjust, A applies, SELECT resets, B cancels.',
+      ],
+      ['START', 'Inspect fixture inputs; START or B closes them.'],
+      ['B', 'Back to the fixture tracker.'],
+    ],
+    notes: [
+      'Width uses sample volatility, not a prediction. Swap costs are simulated estimates.',
+    ],
+  },
+  '/play/live/$id': {
+    title: 'Fixture position',
+    summary: 'A local simulation over sample data, not a chain position.',
+    keys: [
+      [
+        'A',
+        'Jump visually in range; OUT OF RANGE, manually re-center with simulated swap cost.',
+      ],
+      ['SELECT', 'Nudge the sample price toward an edge for the demo.'],
+      ['START', 'Inspect fixture inputs; START or B closes them.'],
+      ['B', 'Finish the simulation and open results.'],
+    ],
+    notes: [
+      'When the feed is paused, SCORE freezes and A/SELECT stop; B still finishes the simulation.',
+    ],
+  },
+  '/play/results/$id': {
+    title: 'Fixture session over',
+    summary: 'Review the local simulation result, not a sealed chain save.',
+    keys: [
+      ['A or B', 'Back to fixture disks.'],
+      ['START', 'Inspect a finished session’s inputs; START or B closes them.'],
+    ],
+    notes: [
+      'Time in range is the share of simulated ticks inside the range. Rebalanced counts manual A presses out of range.',
+    ],
+  },
+}
+
+/** Unknown routes stay honest; fixture mode uses the same flag as the routes. */
+export function guideForRoute(
+  routeId: string | undefined,
+  fixtures = USE_FIXTURES,
+): Guide {
+  const route = routeId?.replace(/^\/_console(?=\/)/, '') ?? ''
+  const guide = fixtures && Object.hasOwn(FIXTURE_GUIDES, route)
+    ? FIXTURE_GUIDES[route]
+    : Object.hasOwn(GUIDES, route) ? GUIDES[route] : {
+      title: 'Console',
+      summary:
+        'Open a screen to see its actions. Controls explains the console buttons.',
+      keys: [],
+      notes: [],
+    }
+  return {
+    ...guide,
+    topics:
+      fixtures && route !== '/leaderboard'
+        ? ['testnet', 'fixture-score', 'fixture-recenter']
+        : ['testnet', 'score', 'recenter'],
+  }
 }
 
 export interface KeyMapRow {
