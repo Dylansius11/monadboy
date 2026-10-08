@@ -1,26 +1,58 @@
-/* The rule book. Scoped to .rulebook*: nothing here restyles a screen.
-
-   The dialog lives in the browser's top layer, so it is NOT inside the
-   console's scaled stage. It is real viewport pixels, which is the point:
-   Departure Mono is drawn at 11px (a multiple of its pixel grid) and 16px for
-   titles, at 360x640, 412x915 and a 480x320 desktop window alike. When the
-   content is taller than the window the DIALOG scrolls, so arrow keys, Space,
-   Page Up/Down and touch drag all work on whichever control has focus. */
+/* Scoped guide chrome. The body portal keeps the launcher and native dialog
+   in viewport pixels, outside the transformed handheld. */
 
 .rulebook-trigger {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 10;
   display: inline-flex;
   min-width: 44px;
   min-height: 44px;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  gap: 8px;
+  padding: 0 12px;
   border: 2px solid var(--color-edge);
-  background: var(--color-panel);
+  background: var(--color-sunk);
   box-shadow: var(--shadow-hard);
   color: var(--color-ink);
-  font: 16px/24px var(--font-pixel);
+  font: 11px/16px var(--font-pixel);
+  text-transform: uppercase;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+.rulebook-trigger:hover {
+  background: var(--color-panel);
+}
+
+.rulebook-trigger svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  stroke: currentColor;
+  color: var(--color-ink-dim);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.rulebook-label-phone {
+  display: none;
+}
+
+@media (max-width: 640px) and (orientation: portrait) {
+  .rulebook-trigger {
+    top: calc(4px + env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+  }
+
+  .rulebook-label-desktop {
+    display: none;
+  }
+  .rulebook-label-phone {
+    display: inline;
+  }
 }
 
 .rulebook-trigger:active {
@@ -32,6 +64,7 @@
    with a light gap between it and the control. */
 .rulebook-trigger:focus-visible,
 .rulebook-close:focus-visible,
+.rulebook-section-button:focus-visible,
 .rulebook:focus-visible {
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
@@ -117,6 +150,44 @@
   text-transform: uppercase;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+.rulebook-sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 12px 0;
+}
+
+.rulebook-section-button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px;
+  border: 1px solid var(--color-edge);
+  background: var(--color-panel);
+  color: var(--color-ink);
+  font: inherit;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.rulebook-section-button[aria-pressed='true'] {
+  background: var(--color-ink);
+  color: var(--color-panel);
+}
+
+.rulebook-close:active,
+.rulebook-section-button:active {
+  transform: translateY(1px);
+}
+
+@media (hover: hover) {
+  .rulebook-trigger:hover,
+  .rulebook-close:hover,
+  .rulebook-section-button:not([aria-pressed='true']):hover {
+    background: var(--color-sunk);
+  }
 }
 
 .rulebook-body {

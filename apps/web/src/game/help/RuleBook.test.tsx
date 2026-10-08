@@ -9,11 +9,13 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { act, fireEvent, render } from '@testing-library/react'
-import { ConsoleInputProvider, useConsoleIntent } from '../../console/useConsoleInput'
+import {
+  ConsoleInputProvider,
+  useConsoleIntent,
+} from '../../console/useConsoleInput'
 import { press } from '../../test/harness'
 import { RuleBook } from './RuleBook'
 import type { ConsoleIntent } from '../../console/intents'
-
 
 /** What a screen would hear. */
 const heard: Array<ConsoleIntent> = []
@@ -70,14 +72,32 @@ async function mount() {
   await act(async () => {
     await router.load()
   })
-  const dialog = () => view.container.querySelector('dialog')!
-  return { view, dialog }
+  const dialog = () => view.baseElement.querySelector('dialog')!
+  return { view, dialog, router }
 }
 
-function type(k: string, init: KeyboardEventInit = {}, target: EventTarget = window) {
+function type(
+  k: string,
+  init: KeyboardEventInit = {},
+  target: EventTarget = window,
+) {
   act(() => {
-    target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...init }))
-    target.dispatchEvent(new KeyboardEvent('keyup', { key: k, bubbles: true, cancelable: true, ...init }))
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: k,
+        bubbles: true,
+        cancelable: true,
+        ...init,
+      }),
+    )
+    target.dispatchEvent(
+      new KeyboardEvent('keyup', {
+        key: k,
+        bubbles: true,
+        cancelable: true,
+        ...init,
+      }),
+    )
   })
 }
 
@@ -88,7 +108,6 @@ describe('the rule book', () => {
 
     type('h')
     expect(dialog().open).toBe(true)
-    expect(dialog().textContent).toContain('Select SAVE DISK')
 
     press('A', 'B', 'START', 'SELECT', 'UP', 'DOWN')
     type('Escape')
@@ -101,7 +120,7 @@ describe('the rule book', () => {
     expect(heard).toEqual(['A'])
   })
 
-  it('toggles closed on a second H, and opens from the ? button', async () => {
+  it('toggles closed on a second H, and opens from the launcher', async () => {
     const { view, dialog } = await mount()
 
     fireEvent.click(view.getByRole('button', { name: /open the rule book/i }))
@@ -115,10 +134,22 @@ describe('the rule book', () => {
     const { dialog } = await mount()
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }))
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', shiftKey: true, bubbles: true }))
-      window.dispatchEvent(new KeyboardEvent('keyup', { key: '?', shiftKey: true, bubbles: true }))
-      window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Shift', bubbles: true }))
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }),
+      )
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: '?',
+          shiftKey: true,
+          bubbles: true,
+        }),
+      )
+      window.dispatchEvent(
+        new KeyboardEvent('keyup', { key: '?', shiftKey: true, bubbles: true }),
+      )
+      window.dispatchEvent(
+        new KeyboardEvent('keyup', { key: 'Shift', bubbles: true }),
+      )
     })
 
     expect(dialog().open).toBe(true)
@@ -138,6 +169,51 @@ describe('the rule book', () => {
     expect(heard).toEqual(['A'])
   })
 
+  it('switches guide sections without sending input or navigating, and reopens on this screen', async () => {
+    const { view, dialog, router } = await mount()
+    type('h')
+    expect(
+      view
+        .getByRole('button', { name: 'This screen' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true')
+    expect(view.queryByRole('table')).toBeNull()
+
+    const controls = view.getByRole('button', { name: 'Controls' })
+    controls.focus()
+    type('Enter', {}, controls)
+    fireEvent.click(controls)
+    expect(view.getByRole('table')).toBeTruthy()
+    expect(controls.getAttribute('aria-pressed')).toBe('true')
+
+    fireEvent.click(view.getByRole('button', { name: 'How to play' }))
+    expect(view.queryByRole('table')).toBeNull()
+    expect(dialog().open).toBe(true)
+    expect(router.state.location.pathname).toBe('/disks')
+    expect(heard).toEqual([])
+
+    fireEvent.click(view.getByRole('button', { name: 'Close' }))
+    type('h')
+    expect(
+      view
+        .getByRole('button', { name: 'This screen' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true')
+    expect(view.queryByRole('table')).toBeNull()
+  })
+
+  it('restores focus to the launcher when the modal closes', async () => {
+    const { view, dialog } = await mount()
+    const launcher = view.getByRole('button', { name: /open the rule book/i })
+    launcher.focus()
+    fireEvent.click(launcher)
+    view.getByRole('button', { name: 'Close' }).focus()
+
+    fireEvent(dialog(), new Event('cancel', { cancelable: true }))
+    expect(dialog().open).toBe(false)
+    expect(document.activeElement).toBe(launcher)
+  })
+
   it('stays shut while the player is typing in a field', async () => {
     const { view, dialog } = await mount()
 
@@ -146,4 +222,3 @@ describe('the rule book', () => {
     expect(dialog().open).toBe(false)
   })
 })
-

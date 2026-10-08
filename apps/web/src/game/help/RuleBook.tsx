@@ -1,26 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouterState } from '@tanstack/react-router'
 import { useConsoleInputLock } from '../../console/useConsoleInput'
 import { TOPICS, guideForRoute, keyMapRows } from './guides'
 import './help.css'
 
-/**
- * The rule book: a `?` button and a native modal dialog with the guide for the
- * screen the player is on, the laptop key map, and what TESTNET, FIXTURE,
- * SCORE and DAMAGE mean.
- *
- * Self-selecting: the guide follows the deepest matched route, so a screen
- * never has to register itself. Mounted inside the console's input provider
- * (it locks input while open) and inside the router, which the console shell
- * route already is.
- *
- * While open nothing reaches the game: the console input is locked, so no
- * keyboard, touch or gamepad press can advance a run or confirm a trade
- * behind the dialog. The native dialog supplies the focus trap, Escape to
- * close, and focus restoration.
- */
-
-/** `?` and H toggle the book, except while the player is typing. */
+/** H and ? toggle the book, except while the player is typing. */
 function isEditable(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
@@ -30,24 +15,36 @@ function isEditable(target: EventTarget | null): boolean {
   )
 }
 
+const SECTIONS = [
+  ['screen', 'This screen'],
+  ['play', 'How to play'],
+  ['controls', 'Controls'],
+] as const
+
+type GuideSection = (typeof SECTIONS)[number][0]
+
+/** Native modal focus and input isolation, with viewport-sized chrome. */
 export function RuleBook() {
   const routeId = useRouterState({
     select: (s) => s.matches[s.matches.length - 1]?.routeId,
   })
   const guide = guideForRoute(routeId)
-
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
   const [open, setOpen] = useState(false)
+  const [section, setSection] = useState<GuideSection>('screen')
   useConsoleInputLock(open)
 
   const dialogRef = useRef<HTMLDialogElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
   const titleId = useId()
   const screenId = useId()
+  const contentId = useId()
   const keysId = useId()
 
-  // Keep React's input lock in step with the native dialog. Escape announces
-  // cancellation before closing, so reconcile the lock in that transition
-  // rather than waiting for the queued close event.
+  // A portal escapes the scaled shell without losing its React input context.
+  // Wait for hydration so server and first client render agree.
+  useEffect(() => setPortalTarget(document.body), [])
+
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
@@ -60,7 +57,7 @@ export function RuleBook() {
     } else if (!open && dialog.open) {
       dialog.close()
     }
-  }, [open])
+  }, [open, portalTarget])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -68,13 +65,16 @@ export function RuleBook() {
       if (e.key !== '?' && e.key.toLowerCase() !== 'h') return
       if (isEditable(e.target)) return
       e.preventDefault()
+      setSection('screen')
       setOpen((current) => !current)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  return (
+  if (!portalTarget) return null
+
+  return createPortal(
     <>
       <button
         type="button"
@@ -82,14 +82,20 @@ export function RuleBook() {
         aria-label="Open the rule book"
         aria-haspopup="dialog"
         aria-keyshortcuts="? H"
-        onClick={() => setOpen(true)}
-        // Enter and Space on this button must open the book, not also press
-        // START or A on the screen underneath: the console listens on window.
+        onClick={() => {
+          setSection('screen')
+          setOpen(true)
+        }}
+        // The console listens on window; opening must not also press START/A.
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') e.stopPropagation()
         }}
       >
-        ?
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 5C9 3 5 3 3 4V19C6 18 9 18 12 20C15 18 18 18 21 19V4C19 3 15 3 12 5ZM12 5V20" />
+        </svg>
+        <span className="rulebook-label-desktop">Rule book</span>
+        <span className="rulebook-label-phone">Guide</span>
       </button>
 
       <dialog
@@ -97,6 +103,7 @@ export function RuleBook() {
         className="rulebook"
         aria-labelledby={`${titleId} ${screenId}`}
         onCancel={(e) => {
+          // Release the React input lock in the cancellation transition.
           e.preventDefault()
           setOpen(false)
         }}
@@ -106,8 +113,6 @@ export function RuleBook() {
           openerRef.current = null
           if (opener?.isConnected) opener.focus()
         }}
-        // Only a click on the backdrop lands on the dialog itself: the panel
-        // fills it edge to edge.
         onClick={(e) => {
           if (e.target === e.currentTarget) setOpen(false)
         }}
@@ -133,72 +138,98 @@ export function RuleBook() {
               </button>
             </header>
 
-            <div className="rulebook-body">
-              <p>{guide.summary}</p>
-
-              {guide.keys.length > 0 ? (
-                <dl className="rulebook-keys">
-                  {guide.keys.map(([button, effect]) => (
-                    <div key={button} className="rulebook-key">
-                      <dt>{button}</dt>
-                      <dd>{effect}</dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : null}
-
-              {guide.notes.length > 0 ? (
-                <ul className="rulebook-notes">
-                  {guide.notes.map((note) => (
-                    <li key={note}>{note}</li>
-                  ))}
-                </ul>
-              ) : null}
-
-              {guide.topics.map((id) => (
-                <section key={id} className="rulebook-topic">
-                  <h3>{TOPICS[id].heading}</h3>
-                  {TOPICS[id].lines.map((line) => (
-                    <p key={line}>{line}</p>
-                  ))}
-                </section>
+            <div
+              className="rulebook-sections"
+              role="group"
+              aria-label="Guide sections"
+            >
+              {SECTIONS.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="rulebook-section-button"
+                  aria-pressed={section === id}
+                  aria-controls={contentId}
+                  onClick={() => setSection(id)}
+                >
+                  {label}
+                </button>
               ))}
+            </div>
 
-              <section className="rulebook-topic">
-                <h3 id={keysId}>Keys</h3>
-                <table className="rulebook-map" aria-labelledby={keysId}>
-                  <thead>
-                    <tr>
-                      <th scope="col">Button</th>
-                      <th scope="col">Keyboard</th>
-                      <th scope="col">Gamepad</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {keyMapRows().map((row) => (
-                      <tr key={row.intent}>
-                        <th scope="row">{row.button}</th>
-                        <td>{row.keyboard.join(', ')}</td>
-                        <td>{row.gamepad.join(', ')}</td>
-                      </tr>
+            <div id={contentId} className="rulebook-body">
+              {section === 'screen' ? (
+                <>
+                  <p>{guide.summary}</p>
+                  {guide.keys.length > 0 ? (
+                    <dl className="rulebook-keys">
+                      {guide.keys.map(([button, effect]) => (
+                        <div key={button} className="rulebook-key">
+                          <dt>{button}</dt>
+                          <dd>{effect}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : null}
+                  {guide.notes.length > 0 ? (
+                    <ul className="rulebook-notes">
+                      {guide.notes.map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </>
+              ) : section === 'play' ? (
+                guide.topics.map((id) => (
+                  <section key={id} className="rulebook-topic">
+                    <h3>{TOPICS[id].heading}</h3>
+                    {TOPICS[id].lines.map((line) => (
+                      <p key={line}>{line}</p>
                     ))}
-                  </tbody>
-                </table>
-                <p>
-                  On a touch screen use the on-screen buttons. H or ? opens and
-                  closes this book. Escape is B, but while this book is open it
-                  closes the book.
-                </p>
-                <p>
-                  SELECT fires when Shift is released, and not at all when Shift
-                  is part of a combination such as Shift and / for ?. While the
-                  book is open no button reaches the game.
-                </p>
-              </section>
+                  </section>
+                ))
+              ) : (
+                <section className="rulebook-topic">
+                  <h3 id={keysId}>Keyboard and gamepad</h3>
+                  <table className="rulebook-map" aria-labelledby={keysId}>
+                    <thead>
+                      <tr>
+                        <th scope="col">Button</th>
+                        <th scope="col">Keyboard</th>
+                        <th scope="col">Gamepad</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {keyMapRows().map((row) => (
+                        <tr key={row.intent}>
+                          <th scope="row">{row.button}</th>
+                          <td>{row.keyboard.join(', ')}</td>
+                          <td>{row.gamepad.join(', ')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p>
+                    On a phone, use the on-screen buttons. H or ? toggles this
+                    guide; Escape closes it. No console input reaches the game
+                    while it is open.
+                  </p>
+                  <p>
+                    SELECT fires when Shift is released, unless it was part of a
+                    combination such as Shift + / for ?.
+                  </p>
+                  <p>
+                    M mutes or restores sound. The volume slider controls music
+                    and effects together; adjusting it clears mute, and zero
+                    stays silent.
+                  </p>
+                </section>
+              )}
             </div>
           </div>
         ) : null}
       </dialog>
-    </>
+    </>,
+    portalTarget,
   )
 }

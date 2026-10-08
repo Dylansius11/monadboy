@@ -258,6 +258,14 @@ An explicit adjustment clears a stored mute; M still mutes/restores the saved le
 While M-muted, the slider displays zero rather than a misleading nonzero level.
 No audio starts before a trusted gesture. Browser gain/state proof is not physical-speaker proof.
 
+### On-demand guide
+
+RULE BOOK is an unscaled viewport launcher at the desktop's upper right; portrait
+phones show GUIDE in the safe header. The native modal first shows current-screen
+actions. HOW TO PLAY and CONTROLS are explicit sections, not one long initial page.
+Live and opt-in fixture guidance stay distinct. Escape restores opener focus;
+keyboard, touch and gamepad input cannot reach the game while the guide is open.
+
 ## 8. Verification contract
 
 Phase 2 palette checks compare CSS and TypeScript, contrast pairs, decorative exceptions, and grid constants.
