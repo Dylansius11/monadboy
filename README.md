@@ -156,13 +156,13 @@ Use HTTPS or localhost for passkeys [V: Mera guide](https://docs.monad.xyz/guide
 
 ### Selected public hosting
 
-Frontend hosting is Vercel with a fixed production hostname. The worker, its
-SQLite ledger, Envio, PostgreSQL and Hasura target the VPS; Supabase is not required.
-The browser signs for players, never the worker. Backend and public read-only
-GraphQL endpoints need HTTPS and the exact frontend-origin configuration.
-Local Docker and the development preview are not public judge-access proof.
-Vercel deployment, target service recovery,24-hour monitoring and physical-phone
-create/restore remain acceptance gates. Keep the bot disabled until B10 passes.
+Frontend: **https://monadboy-play.vercel.app**. The persisted Vercel production domain
+matches the passkey RP ID; the default project domain redirects to it. Anonymous Edge
+rendered the public landing and portrait card and exercised START on2026-10-08.
+Worker/SQLite and Envio/PostgreSQL/Hasura target the VPS; SSH access is verified.
+Use a managed database only if measured VPS capacity is insufficient. The browser
+signs for players, never the worker. Backend HTTPS/recovery,24-hour monitoring and
+physical-phone create/restore remain gates. Keep unattended signing disabled until B10.
 
 ### Local indexed history
 

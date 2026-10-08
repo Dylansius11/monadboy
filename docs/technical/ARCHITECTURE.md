@@ -70,11 +70,12 @@ Versions below are the approved toolchain targets. An exact version here is not 
 | Install and scripts | Bun | 1.3 |
 | Vite / Vitest runtime | Node | 24 |
 | Types | TypeScript | 6.0.3 |
-| Application | TanStack Start | 1.168.34 |
-| Routing | TanStack Router | 1.170.18 |
+| Application | TanStack Start | 1.168.60 |
+| Routing | TanStack Router | 1.170.41 |
 | Server-state cache | TanStack Query | 5.101.4 |
 | UI | React | 19.2.8 |
 | Build | Vite | 8.2.0 |
+| Vercel adapter | Nitro | 3.0.260903-beta |
 | Tests | Vitest | 4.1.10 |
 | DOM test environment | jsdom | 30.0.1 |
 | CSS | Tailwind | 4.3.3 |
@@ -123,9 +124,9 @@ Generate ops keys with `cast wallet new`; keep them only in VPS/local `.env` fil
 
 ## 5. Hosting and session lifetime
 
-[I, user-selected hosting] Frontend: Vercel with one fixed production hostname. Backend: Bun/Hono worker with local SQLite and self-hosted Envio/PostgreSQL/Hasura on the VPS; no Supabase migration. Docker local development is not a public deployment. Vercel build/output compatibility and public access still require deployment proof. [V] Passkeys bind to the relying-party hostname ([Mera guide](https://docs.monad.xyz/guides/mera)); fix that hostname and `VITE_RP_ID` **before the first production card**. Development-tunnel passkeys are disposable.
+[V, 2026-10-08] Frontend: **https://monadboy-play.vercel.app**, persisted as the Vercel project's production domain, with `VITE_RP_ID=monadboy-play.vercel.app`. The requested `monadboy.vercel.app` was already assigned; the user approved the available alternative. The default project domain redirects to the canonical host with HTTP308. Nitro produces the Vercel deployment output; anonymous Edge rendered the landing at1440x900 and card at412x915 and exercised the START handoff. Production passkey-device acceptance is separate. [V] Passkeys bind to the relying-party hostname ([Mera guide](https://docs.monad.xyz/guides/mera)); development-tunnel passkeys are disposable.
 
-[V] Local indexer uses Docker Compose, Postgres17.5 and Hasura2.43.0 with server-only admin authentication. S5 fresh-fill observations passed at564–570ms with exact three-way SCORE parity; stopping/restarting GraphQL exercised direct-log recovery. [I] Public worker hosting uses restart-always service management and `/v1/health` monitoring through the confirmed judging period; retain hosting through4November pending the recorded organizer-date conflict. Fixed hostname/VPS access, final continuous mirror economics and24-hour operational proof remain gates. After a local restart, healthy containers alone did not establish complete maker-basis coverage: the read-only worker reported indexed coverage unavailable and an honest PARTIAL direct-log leaderboard.
+[I, user-selected hosting] Bun/Hono, persistent SQLite and Envio/PostgreSQL/Hasura target the VPS. SSH access is verified. After pausing only the three approved Mandate containers, the VPS had830MiB available RAM and12GiB free disk; the local indexing stack used about317MiB at startup. These observations support a bounded VPS deployment, not peak-load or24-hour acceptance. Move PostgreSQL to a managed service only if actual capacity fails. [V] Local Postgres17.5/Hasura2.43.0 indexing passed S5 fresh-fill observations at564–570ms with exact SCORE parity and outage recovery. Healthy containers alone do not prove complete maker-basis coverage: the read-only worker disclosed unavailable indexed coverage and a PARTIAL direct-log leaderboard. Public backend HTTPS/restart, final continuous mirror economics and24-hour proof remain gates; retain hosting through4November pending the organizer-date conflict.
 
 [V] Mera supplies `createPasskeyWithPrfOutput`, `getPasskeyPrfOutput`, `createSecp256k1SigningSession` and `toViemAccount` from `@category-labs/mera/viem` ([guide](https://docs.monad.xyz/guides/mera)). Hold signing sessions while the console is on; end on eject, explicit EJECT CARD, or tab hidden for more than ten minutes. Only credential ID and transports persist locally. Account index 0 supplies the display-only card serial; indices 1, 2 and 3 identify the isolated disks.
 

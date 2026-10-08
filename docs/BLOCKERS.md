@@ -8,8 +8,8 @@ Labels: **[V]** observed evidence; **[I]** intended behavior; **[U]** unresolved
 
 | ID | Status | Owner | Blocks | Resolution |
 | --- | --- | --- | --- | --- |
-| B2 | OPEN | User | Production passkeys and public deployment | Choose the permanent app domain/subdomain before production card creation. |
-| B3 | OPEN | User | VPS worker/web deployment and uptime proof | Supply SSH host, user and auth method privately, plus installation permission. |
+| B2 | RESOLVED | Lead / user-approved hostname | No remaining hostname gate; physical passkeys remain B8 | Canonical `monadboy-play.vercel.app`, matching production RP ID, persisted project domain and anonymous rendered HTTPS proof. Requested `monadboy.vercel.app` was already in use. |
+| B3 | OPEN: target deployment proof | Lead | Backend HTTPS, recovery and uptime | SSH/key access and noninteractive sudo verified; complete isolated target services, restart/HTTPS and monitoring. |
 | B5 | SKIPPED | User decision / verified requirement | No current submission gate | Agora requires Mera + AUSD + Perpl; current Kuru-only scope is excluded ([SUBMISSIONS](SUBMISSIONS.md)). |
 | B8 | OPEN | User: devices; lead: test surface | S4 supported-phone restore and standalone PWA launch acceptance | Exercise create/restore and standalone launch on iPhone Safari and Android Chrome over HTTPS. |
 | B10 | OPEN: bounded final mirror acceptance | Lead | Continuous healthy production mirror and operating budget | Original ten-minute run self-took BOT quotes; final correction has one external-maker transition, but target quote preflight refused a crossing third-party bid. Prove final-strategy alignment and cost before continuous enablement. |
@@ -29,17 +29,16 @@ Labels: **[V]** observed evidence; **[I]** intended behavior; **[U]** unresolved
 
 [V] Mera passkeys bind to the relying-party hostname: [Mera guide](https://docs.monad.xyz/guides/mera).
 
-- User supplies the final domain or subdomain; set `VITE_RP_ID` to that hostname.
-- Disposable HTTPS-tunnel passkeys are device-test cards, not production cards.
-- Local session/error-handling work can proceed; production create/restore acceptance cannot.
-- Close after the hostname is fixed and its HTTPS origin is exercised.
+- [V, 2026-10-08] The user approved `monadboy-play.vercel.app` after Vercel refused the already-assigned original hostname.
+- [V] Production deployment READY; project-domain persistence verified; `VITE_RP_ID` matches the canonical host. Anonymous Edge rendered landing1440x900 and card412x915 without the missing-domain error and navigated START to `/play`.
+- B2 is closed. Existing tunnel cards do not migrate to this RP. Physical S22 Chrome and later iPhone Safari create/restore remain B8.
 
 ## B3: deployment access
 
-- Needed privately: SSH host, user, authentication method/key path, and permission to install Bun, Node, Caddy and service files.
-- Never paste a private key into this document or a tracked file.
+- [V, 2026-10-08] VPS SSH access and `sudo -n true` verified using the user-approved, restricted24-hour deployment key. Key material stays outside the repository and is removed after deployment.
+- [V] Only the three approved Mandate containers are stopped; their data and nine unrelated running containers are preserved. Capacity and proxy inspection support VPS-first deployment.
 - Close after service restart recovery and HTTPS health are observed on the target VPS.
-- Deployment acceptance also requires 24-hour health evidence and availability through judging; configuration files alone do not prove it.
+- Deployment acceptance also requires24-hour health evidence and availability through judging; access and configuration files alone do not prove it.
 
 ## B5: mobile eligibility
 

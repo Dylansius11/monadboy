@@ -8,9 +8,9 @@ Read a task as `box + task ID + deliverable + proof`. `[x]` means the named deli
 
 ## Status at a glance
 
-As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](../BLOCKERS.md); user-facing asks are mirrored in the external handoff.
+As of **2026-10-08 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCKERS.md); user-facing asks are mirrored in the external handoff.
 
-**Latest integrated unit:** Funded testnet registry/market, browser gameplay, signed cash-flow accounting and local Envio cutover. Fresh assembled `bun run verify` passed web551 / SDK153 / worker133 tests, typecheck and lint; `bun run build` passed. Foundry17tests/snapshot and indexer4projection tests/typecheck passed. These checks cover the assembled working tree, not independent historical snapshots. Physical devices, production hosting and final continuous mirror acceptance remain open.
+**Latest integrated unit:** Public frontend deployed at **https://monadboy-play.vercel.app**, with matching RP ID and persisted canonical project domain. Start1.168.60 closes the Vercel-reported security gate; Nitro builds the production adapter without bypassing the gate. Anonymous Edge rendered landing1440x900/card412x915 and exercised START. Fresh assembled verify passed web556 / SDK153 / worker134, typecheck and lint; Vercel build/deployment READY and Foundry17tests/snapshot passed. SSH and sudo access are verified; only approved Mandate containers are paused. Backend HTTPS/recovery, physical devices and final continuous mirror acceptance remain open.
 
 | Phase                          | Status  | Done/Total tasks | Next action                                                                         | Blocker                                     |
 | ------------------------------ | ------- | ---------------- | ----------------------------------------------------------------------------------- | ------------------------------------------- |
@@ -24,7 +24,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 | 6 — Worker                     | DOING   | 8/12             | Prove final continuous mirror alignment/cost and deploy                             | B10; B3 for VPS                             |
 | 7 — Web integration            | DOING   | 6/14             | Close partial-load recovery/audio boundary proof, then supported-phone/domain gates | B2 / B8; remaining runtime acceptance       |
 | 8 — Envio indexer              | DONE    | 5/5              | Preserve indexed parity and outage recovery                                         | Public hosting remains Phase9/B3            |
-| 9 — Deploy and submission      | BLOCKED | 0/7              | Obtain fixed hostname and VPS access                                                | B2 / B3; upstream live proof                |
+| 9 — Deploy and submission      | DOING   | 1/7              | Deploy isolated VPS backend, verify HTTPS/recovery and record uptime                | B3 / B8; upstream live proof                |
 
 ## Phase 0 — Repo bootstrap
 
@@ -256,7 +256,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 
 **Goal** Ship the fixed-domain demo with reproducible setup and inspectable submission evidence.
 
-- [ ] **9.1** Resolve VPS access and fixed production hostname — proof required: B2/B3 decisions, reachable SSH and final VITE_RP_ID recorded without secrets; optional RPC credentials never block public-RPC work.
+- [x] **9.1** Resolve VPS access and fixed production hostname — proof: user-approved `monadboy-play.vercel.app`, matching production/preview VITE_RP_ID, persisted verified project domain, anonymous Edge HTTPS render and navigation; restricted SSH key authenticated `ubuntu`, `sudo -n true` and actual capacity/container inventory on2026-10-08 UTC. No credentials tracked.
 - [ ] **9.2** Deploy web/worker behind Caddy HTTPS and systemd — proof required: public phone page load, HTTPS /v1/health and service restart recovery.
 - [ ] **9.3** Rehearse on three fresh devices — proof required: iPhone, Android and desktop Chrome with Google Password Manager recordings, including a phone that never saw the app and stateless restore.
 - [ ] **9.4** Observe healthy worker for 24 hours — proof required: timestamped health samples and source/tick ages across 24h; operate through the confirmed judging period (Rules/dashboard dates conflict; see [SUBMISSIONS](../SUBMISSIONS.md)).

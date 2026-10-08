@@ -20,3 +20,5 @@ indexer/generated/
 __pycache__/
 .claude/settings*.json
 music/
+
+.vercel
