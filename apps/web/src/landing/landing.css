@@ -23,7 +23,7 @@ body:has(.landing) {
   --text: #e4dfff;
   --text-soft: #c9bfff;
   --text-dim: #9c89ff;
-  --text-faint: #7a6cc0;
+  --text-faint: #a89bd9;
   --lit: #85e6ff;
   --gutter: clamp(20px, 4vw, 56px);
 
@@ -32,6 +32,19 @@ body:has(.landing) {
   color: var(--text);
   font-family: var(--font-pixel);
   -webkit-font-smoothing: none;
+}
+
+.landing :is(.hero-grid, .how-pin, .real, .cast, .closing) {
+  box-sizing: border-box;
+}
+
+.landing
+  :is(.hero-copy, .hero-console, .how-copy, .how-console, .fact, .cast-member) {
+  min-width: 0;
+}
+
+.landing :is(#how, #real) {
+  scroll-margin-top: 24px;
 }
 
 .landing ::selection {
@@ -63,17 +76,18 @@ body:has(.landing) {
 }
 
 .landing .heading {
-  margin: 0 0 40px;
+  margin: 0 0 32px;
   font-size: 44px;
   line-height: 1;
   font-weight: 400;
   text-transform: uppercase;
   color: #f4f1ff;
+  text-wrap: balance;
 }
 
 .landing .lead {
   max-width: 30ch;
-  margin: 0 0 44px;
+  margin: 0 0 32px;
   font-size: 22px;
   line-height: 1.45;
   color: var(--text-soft);
@@ -92,8 +106,8 @@ body:has(.landing) {
   display: inline-flex;
   align-items: center;
   gap: 14px;
-  height: 58px;
-  padding: 0 18px 0 14px;
+  min-height: 64px;
+  padding: 12px 24px 12px 20px;
   border: 0;
   border-radius: 999px;
   background: var(--text);
@@ -139,7 +153,7 @@ body:has(.landing) {
 
 .landing .quiet-link {
   font-size: 16px;
-  color: var(--text-dim);
+  color: var(--text-soft);
   text-decoration: underline;
   text-underline-offset: 6px;
   text-decoration-thickness: 1px;
@@ -176,13 +190,27 @@ body:has(.landing) {
   inset: 0;
 }
 
+/* Keep the copy quiet and the buildings legible around the console. */
+.landing .hero-city::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(14, 9, 28, 0.82),
+    rgba(14, 9, 28, 0.2) 48%,
+    transparent 72%
+  );
+}
 .landing .topbar {
   position: relative;
   z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px var(--gutter);
+  padding: max(24px, env(safe-area-inset-top))
+    max(var(--gutter), env(safe-area-inset-right)) 20px
+    max(var(--gutter), env(safe-area-inset-left));
   font-size: 11px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -196,6 +224,9 @@ body:has(.landing) {
   gap: 28px;
 }
 .landing .topbar-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--text-dim);
   text-decoration: none;
 }
@@ -213,19 +244,28 @@ body:has(.landing) {
   width: 100%;
   max-width: 1320px;
   margin: 0 auto;
-  padding: 0 var(--gutter) 56px;
+  padding: 8px var(--gutter) 24px;
 }
 
 .landing .hero-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 28px;
+  gap: 20px 24px;
 }
 
+.landing .hero-actions .quiet-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 11px;
+}
 .landing .hero-console {
   display: grid;
   justify-items: center;
+  justify-self: end;
+  width: 100%;
+  max-width: clamp(440px, 37.5vw, 520px);
   animation: hover-float 6s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
 }
 .landing .street-shadow {
@@ -278,7 +318,7 @@ body:has(.landing) {
   height: 100svh;
   max-width: 1320px;
   margin: 0 auto;
-  padding: 0 var(--gutter);
+  padding: 24px var(--gutter);
 }
 
 .landing .beats {
@@ -290,7 +330,7 @@ body:has(.landing) {
 }
 .landing .beat {
   position: relative;
-  opacity: 0.3;
+  opacity: 0.65;
   transition: opacity 320ms var(--ease-out-screen);
 }
 .landing .beat.is-on {
@@ -345,12 +385,12 @@ body:has(.landing) {
   gap: clamp(24px, 5vw, 88px);
   max-width: 1320px;
   margin: 0 auto;
-  padding: 160px var(--gutter);
+  padding: 112px var(--gutter);
 }
 .landing .facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 56px 64px;
+  gap: 48px 48px;
   margin: 0;
 }
 .landing .fact dt {
@@ -376,7 +416,7 @@ body:has(.landing) {
 .landing .cast {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 40px var(--gutter) 160px;
+  padding: 24px var(--gutter) 112px;
 }
 .landing .cast-row {
   display: grid;
@@ -396,7 +436,7 @@ body:has(.landing) {
   position: relative;
   display: grid;
   place-items: end center;
-  width: 224px;
+  width: min(224px, 100%);
   height: 208px;
   margin-bottom: 14px;
 }
@@ -442,7 +482,7 @@ body:has(.landing) {
   border-top: 1px solid #241845;
   max-width: 1320px;
   margin: 0 auto;
-  padding: 120px var(--gutter) 48px;
+  padding: 88px var(--gutter) max(40px, env(safe-area-inset-bottom));
 }
 .landing .closing-cta {
   display: flex;
@@ -458,7 +498,7 @@ body:has(.landing) {
   display: flex;
   flex-wrap: wrap;
   gap: 16px 36px;
-  margin-top: 112px;
+  margin-top: 80px;
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -483,7 +523,7 @@ body:has(.landing) {
 
 @media (max-width: 1100px) {
   .landing .display {
-    font-size: 66px;
+    font-size: 55px;
   }
 }
 
@@ -494,32 +534,70 @@ body:has(.landing) {
   }
   .landing .hero-grid {
     gap: 40px;
+    align-content: center;
     padding-top: 24px;
+  }
+  .landing .display {
+    font-size: 66px;
+  }
+  .landing .hero-console {
+    justify-self: center;
+    max-width: 480px;
+  }
+  .landing .hero-city::after {
+    background: linear-gradient(
+      #0e091c,
+      rgba(14, 9, 28, 0.72) 32%,
+      transparent 68%
+    );
   }
   .landing .how-pin {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     align-content: start;
     gap: 24px;
-    padding-top: 24px;
+    padding-top: 32px;
+  }
+  .landing .how-console {
+    align-self: start;
   }
   .landing .how-copy {
     order: 2;
     align-self: start;
   }
   .landing .how-copy .heading {
-    display: none;
+    margin-bottom: 20px;
+    font-size: 33px;
   }
-  /* one beat at a time: the console holds the top of the screen */
+  /* The selected beat follows the held console, with a readable section title. */
   .landing .beat:not(.is-on) {
     display: none;
   }
   .landing .facts {
-    grid-template-columns: minmax(0, 1fr);
+    gap: 40px 32px;
   }
   .landing .cast-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 64px;
+    gap: 24px;
+  }
+}
+
+@media (max-width: 900px) and (max-height: 740px) {
+  .landing .how-pin {
+    gap: 16px;
+    padding-block: 16px;
+  }
+  .landing .how-console {
+    width: 100%;
+    max-width: min(100%, calc((100svh - 280px) * 0.72));
+    justify-self: center;
+  }
+  .landing .how-copy .heading {
+    margin-bottom: 12px;
+    font-size: 22px;
+  }
+  .landing .fixture-note {
+    margin-top: 12px;
+    letter-spacing: 0.08em;
   }
 }
 
@@ -533,12 +611,44 @@ body:has(.landing) {
   .landing .lead {
     font-size: 16px;
   }
+  .landing .hero-grid {
+    gap: 32px;
+  }
+  .landing .hero-actions {
+    gap: 12px 24px;
+  }
+  .landing .topbar {
+    gap: 16px;
+    letter-spacing: 0.12em;
+  }
+  .landing .topbar-nav {
+    gap: 0;
+  }
+  .landing .facts,
+  .landing .cast-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .landing .cast-row {
+    gap: 56px;
+  }
+  .landing .closing-meta {
+    margin-top: 64px;
+    line-height: 1.6;
+  }
   .landing .topbar-nav a {
     display: none;
   }
   .landing .real {
-    padding-top: 112px;
-    padding-bottom: 112px;
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+}
+
+@media (max-width: 380px) {
+  .landing .start {
+    gap: 12px;
+    font-size: 16px;
+    white-space: nowrap;
   }
 }
 

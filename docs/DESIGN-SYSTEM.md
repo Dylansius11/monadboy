@@ -254,6 +254,11 @@ into that header and outer framing, never behind the game text. The native shell
 keeps 44px controls and a flexible bright screen; unusually short viewports scroll
 instead of scaling or clipping controls. Held landing consoles keep landscape layout.
 
+The landing page preserves the same city, console and factual copy. Its primary
+PRESS START action has a 64px minimum height; short phones use 16px action text
+to keep the label on one line. Hero copy has a protected dark reading area,
+and tablet/phone sections reflow without turning the site into a generic card grid.
+
 ### Volume
 
 The shared VOL slider is the only visible sound control. Zero is exact silence.

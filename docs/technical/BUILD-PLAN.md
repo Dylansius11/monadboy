@@ -17,7 +17,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 | 0 — Repo bootstrap             | DONE    | 2/2              | Maintain guard and commit discipline                                                | None                                        |
 | 1 — Docs first                 | DONE    | 4/4              | Keep docs aligned with implementation                                               | None                                        |
 | 2 — Frontend shell and screens | DONE    | 23/23            | Maintain the rendered and behavior checks                                           | None                                        |
-| 2b — Experience pass           | DONE    | 9/9              | Preserve portrait, help and native sound                                            | None for local experience work              |
+| 2b — Experience pass           | DONE    | 10/10              | Preserve portrait, help and native sound                                            | None for local experience work              |
 | 3 — Pure SDK                   | DONE    | 9/9              | Maintain receipt-backed units and shape-specific gas                                | None                                        |
 | 4 — Funded spikes              | DOING   | 5/6              | Record physical iPhone/Android S4 results                                           | B8                                          |
 | 5 — DiskRegistry v2            | DONE    | 6/6              | Preserve receipt/artifact identity and stateless device proof                       | B8 for physical restore, outside deployment |
@@ -386,3 +386,5 @@ Each bounded unit below uses the freshly verified assembled tree described above
 - [x] **2b.8** Unscaled RULE BOOK/GUIDE and concise modal navigation — native Edge launcher119x44 desktop and91x44 phone; card guide defaults to current actions with no key table. Controls opens on demand; Enter stays on/card, Escape restores launcher focus and H reopens the default section. Native dialog/input-lock regressions and assembled verify556/153/133, build, Foundry17/snapshot passed.
 
 - [x] **2b.9** Preserve native portrait controls with city/header framing — actual Edge phone screen372x643 at412x915 and320x388 at360x640, all page widths within viewport. GUIDE stays above the shell, not over game actions; desktop retains480x320 screen. Screenshots inspected with Departure Mono. Assembled verify556/153/133, build, Foundry17/snapshot passed; no physical-device claim.
+
+- [x] **2b.10** Refine the existing landing rather than rebrand — actual landing renders1280x800/768x1024/412x915/360x640 showed no horizontal overflow. A short-phone wrapped CTA was corrected to285.625x64 with16px label; final screenshot inspected. Native PRESS START reached/play. Copy/assets/start behavior preserved; assembled verify556/153/133, final build, Foundry17/snapshot passed.
