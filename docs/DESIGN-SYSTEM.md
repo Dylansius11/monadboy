@@ -249,7 +249,10 @@ The shell uses these illustrated-plastic constants:
 The centered laptop console sits above a seeded pixel night city: layered facades, roof details, a crescent moon, elevated railway, harbour reflections and a foreground railing.
 The city draws once per resize; only a small train moves by compositor transform.
 Reduced motion freezes the train; hidden tabs pause it. No scenery implies a live fill or affects a game number.
-Phone chrome gives space to the game; the city remains in the margins.
+Portrait phones reserve a 52px safe-area-aware GUIDE header. The city is cropped
+into that header and outer framing, never behind the game text. The native shell
+keeps 44px controls and a flexible bright screen; unusually short viewports scroll
+instead of scaling or clipping controls. Held landing consoles keep landscape layout.
 
 ### Volume
 

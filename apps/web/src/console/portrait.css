@@ -2,19 +2,44 @@
    grows into the available height; controls retain their actual hit sizes.
    Held consoles on the landing page keep the landscape presentation. */
 @media (max-width: 640px) and (orientation: portrait) {
+  .console-stage {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding: calc(52px + env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: radial-gradient(ellipse at 50% 32%, #2a2051, #100b21 72%);
+  }
+
   .console-stage .console {
     display: flex;
     flex-direction: column;
-    width: calc(100% - 16px);
+    position: relative;
+    top: auto;
+    left: auto;
+    flex: 1 0 0;
+    width: 100%;
     max-width: 428px;
-    height: calc(100% - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height: 580px;
     max-height: 888px;
-    /* Native dimensions already fit the stage; never inherit a stale desk scale. */
-    transform: translate(-50%, -50%) !important;
+    margin: auto;
+    /* The header and shell are in flow; short viewports can scroll, never scale. */
+    transform: none !important;
     border-radius: 24px 24px 36px 24px;
-    background: linear-gradient(165deg, #9c89ff, #6e54ff 12%, #6e54ff 82%, #4a35c4);
-    box-shadow: inset 2px 0 0 #b3a6ec, inset -2px 0 0 #3a2a9e;
-    filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.55));
+    background: linear-gradient(
+      165deg,
+      #9c89ff,
+      #6e54ff 12%,
+      #6e54ff 86%,
+      #4a35c4
+    );
+    box-shadow:
+      inset 1px 1px 0 #b3a6ec,
+      inset -1px -1px 0 #3a2a9e;
+    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.4));
   }
 
   .console-stage .lid {
@@ -22,7 +47,7 @@
     flex: 1;
     min-height: 0;
     flex-direction: column;
-    padding: 8px 8px 0;
+    padding: 4px 8px 0;
     border-radius: 24px 24px 0 0;
     background: none;
     box-shadow: none;
@@ -30,7 +55,7 @@
 
   .console-stage .wordmark {
     order: -1;
-    padding: 0 0 8px;
+    padding: 0;
     color: #e4dfff;
     font-family: var(--font-pixel);
     font-size: 11px;
@@ -50,7 +75,9 @@
     min-height: 0;
     padding: 4px;
     border-radius: 8px;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.75), 0 1px 0 #b3a6ec;
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.75),
+      0 1px 0 #b3a6ec;
   }
 
   .console-stage .viewport {
@@ -70,7 +97,7 @@
 
   .console-stage .base {
     flex: none;
-    padding: 4px 12px 8px;
+    padding: 0 12px 4px;
     border-radius: 0 0 36px 24px;
     background: none;
     box-shadow: none;
@@ -81,10 +108,23 @@
     margin: 0 4px;
   }
 
-  .console-stage .mark { width: 20px; height: 20px; }
-  .console-stage .led { width: 8px; height: 8px; }
-  .console-stage .vol-cap { color: #e4dfff; font-size: 9px; }
-  .console-stage .vol-track { height: 44px; background: none; box-shadow: none; }
+  .console-stage .mark {
+    width: 20px;
+    height: 20px;
+  }
+  .console-stage .led {
+    width: 8px;
+    height: 8px;
+  }
+  .console-stage .vol-cap {
+    color: #e4dfff;
+    font-size: 9px;
+  }
+  .console-stage .vol-track {
+    height: 44px;
+    background: none;
+    box-shadow: none;
+  }
   .console-stage .vol-track::before {
     content: '';
     position: absolute;
@@ -93,35 +133,53 @@
     background: var(--shell-dd);
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
   }
-  .console-stage .vol-knob { top: 10px; }
+  .console-stage .vol-knob {
+    top: 10px;
+  }
 
   .console-stage .deck {
-    grid-template-columns: 144px 1fr;
-    grid-template-rows: 144px;
+    grid-template-columns: 132px 1fr;
+    grid-template-rows: 132px;
     gap: 8px;
   }
 
   .console-stage .dpad-well {
     grid-column: 1;
     grid-row: 1;
-    width: 144px;
-    height: 144px;
+    width: 132px;
+    height: 132px;
     border-radius: 24px;
     background: rgba(58, 42, 158, 0.5);
   }
-  .console-stage .dpad { width: 132px; height: 132px; }
+  .console-stage .dpad {
+    width: 132px;
+    height: 132px;
+  }
   .console-stage .dpad i.v {
-    top: 0; left: 44px; width: 44px; height: 132px;
+    top: 0;
+    left: 44px;
+    width: 44px;
+    height: 132px;
   }
   .console-stage .dpad i.h {
-    top: 44px; left: 0; width: 132px; height: 44px;
+    top: 44px;
+    left: 0;
+    width: 132px;
+    height: 44px;
   }
   .console-stage .dpad i.c {
-    top: 54px; left: 54px; width: 24px; height: 24px;
+    top: 54px;
+    left: 54px;
+    width: 24px;
+    height: 24px;
   }
 
-  .console-stage .mid { display: contents; }
-  .console-stage .speaker { display: none; }
+  .console-stage .mid {
+    display: contents;
+  }
+  .console-stage .speaker {
+    display: none;
+  }
   .console-stage .ab-well {
     grid-column: 2;
     grid-row: 1;
@@ -145,8 +203,14 @@
     gap: 12px;
     padding-bottom: 8px;
   }
-  .console-stage .startsel button { width: 52px; height: 44px; }
-  .console-stage .startsel button::before { width: 40px; margin-left: -20px; }
+  .console-stage .startsel button {
+    width: 52px;
+    height: 44px;
+  }
+  .console-stage .startsel button::before {
+    width: 40px;
+    margin-left: -20px;
+  }
   .console-stage .startsel button::after {
     position: absolute;
     top: 34px;
@@ -159,5 +223,20 @@
     text-align: center;
     content: 'SELECT';
   }
-  .console-stage .startsel button:last-child::after { content: 'START'; }
+  .console-stage .startsel button:last-child::after {
+    content: 'START';
+  }
+}
+
+/* Give header space back through plastic, not smaller text or touch targets. */
+@media (max-width: 640px) and (orientation: portrait) and (max-height: 700px) {
+  .console-stage {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .console-stage .console {
+    min-height: 540px;
+  }
+  .console-stage .wordmark {
+    display: none;
+  }
 }

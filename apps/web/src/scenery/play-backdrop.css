@@ -6,8 +6,18 @@
   background: #100b21;
   isolation: isolate;
 }
-.play-city { position: absolute; top: 0; left: 0; image-rendering: pixelated; }
-.play-railway { position: absolute; left: 0; right: 0; top: 76%; }
+.play-city {
+  position: absolute;
+  top: 0;
+  left: 0;
+  image-rendering: pixelated;
+}
+.play-railway {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 76%;
+}
 .play-train {
   position: absolute;
   width: calc(72px * var(--art-scale, 3));
@@ -17,12 +27,35 @@
   image-rendering: pixelated;
   animation: city-train 48s linear infinite;
 }
-.console-stage > .console { z-index: 1; }
-.play-backdrop.is-paused .play-train { animation-play-state: paused; }
+.console-stage > .console {
+  z-index: 1;
+}
+.play-backdrop.is-paused .play-train {
+  animation-play-state: paused;
+}
 @keyframes city-train {
-  0%, 20% { transform: translateX(0); }
-  65%, 100% { transform: translateX(var(--train-travel, 1800px)); }
+  0%,
+  20% {
+    transform: translateX(0);
+  }
+  65%,
+  100% {
+    transform: translateX(var(--train-travel, 1800px));
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .play-train { animation: none; left: 8%; }
+  .play-train {
+    animation: none;
+    left: 8%;
+  }
+}
+
+/* A closer skyline in the phone's header, rather than a full-height city
+   hidden behind the native screen. The rest of the stage supplies night glow. */
+@media (max-width: 640px) and (orientation: portrait) {
+  .play-backdrop {
+    inset: -24px 0 auto;
+    height: min(360px, 100%);
+    mask-image: linear-gradient(#000 75%, transparent);
+  }
 }

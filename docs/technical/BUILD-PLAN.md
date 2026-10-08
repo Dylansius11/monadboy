@@ -17,7 +17,7 @@ As of **2026-10-07 local / UTC**. The live blocker register is [../BLOCKERS.md](
 | 0 — Repo bootstrap             | DONE    | 2/2              | Maintain guard and commit discipline                                                | None                                        |
 | 1 — Docs first                 | DONE    | 4/4              | Keep docs aligned with implementation                                               | None                                        |
 | 2 — Frontend shell and screens | DONE    | 23/23            | Maintain the rendered and behavior checks                                           | None                                        |
-| 2b — Experience pass           | DONE    | 8/8              | Preserve portrait, help and native sound                                            | None for local experience work              |
+| 2b — Experience pass           | DONE    | 9/9              | Preserve portrait, help and native sound                                            | None for local experience work              |
 | 3 — Pure SDK                   | DONE    | 9/9              | Maintain receipt-backed units and shape-specific gas                                | None                                        |
 | 4 — Funded spikes              | DOING   | 5/6              | Record physical iPhone/Android S4 results                                           | B8                                          |
 | 5 — DiskRegistry v2            | DONE    | 6/6              | Preserve receipt/artifact identity and stateless device proof                       | B8 for physical restore, outside deployment |
@@ -384,3 +384,5 @@ Each bounded unit below uses the freshly verified assembled tree described above
 - [x] **2b.7** Replace obsolete fixture-only guidance with mode-aware actions — live card guide describes passkey restore/create and optional sealed saves; actual source, quote, fixed-range, fill and manual-exit boundaries are explicit. Fixture simulation remains opt-in and distinct. Native live guide inspected; assembled verify web556/SDK153/worker133, build and Foundry17/snapshot passed.
 
 - [x] **2b.8** Unscaled RULE BOOK/GUIDE and concise modal navigation — native Edge launcher119x44 desktop and91x44 phone; card guide defaults to current actions with no key table. Controls opens on demand; Enter stays on/card, Escape restores launcher focus and H reopens the default section. Native dialog/input-lock regressions and assembled verify556/153/133, build, Foundry17/snapshot passed.
+
+- [x] **2b.9** Preserve native portrait controls with city/header framing — actual Edge phone screen372x643 at412x915 and320x388 at360x640, all page widths within viewport. GUIDE stays above the shell, not over game actions; desktop retains480x320 screen. Screenshots inspected with Departure Mono. Assembled verify556/153/133, build, Foundry17/snapshot passed; no physical-device claim.
