@@ -14,10 +14,13 @@ ExecStart=/usr/local/bin/bun src/index.ts
 # systemd creates /var/lib/monadboy for the user and keeps it the only writable path.
 StateDirectory=monadboy
 Environment=SQLITE_PATH=/var/lib/monadboy/worker.sqlite
-Environment=WORKER_BIND=127.0.0.1
 Restart=always
 RestartSec=5
 TimeoutStopSec=15
+# Bound this process without reserving memory from unrelated applications.
+MemoryHigh=160M
+MemoryMax=192M
+TasksMax=64
 NoNewPrivileges=true
 PrivateTmp=true
 PrivateDevices=true

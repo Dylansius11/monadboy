@@ -1,9 +1,24 @@
-# {$WORKER_HOST} is the worker's public hostname, set in Caddy's service environment.
+# Set hosts and upstreams in Caddy's environment, or substitute concrete values
+# when appending these sites to an existing container-managed Caddyfile.
 {$WORKER_HOST} {
 	encode zstd gzip
+	# Host Caddy: 127.0.0.1:8787. Container Caddy: its host bridge gateway:8787.
+	# No trusted_proxies: Caddy replaces untrusted forwarded client addresses.
+	reverse_proxy {$WORKER_UPSTREAM}
+}
 
-	# The worker listens on loopback only. Caddy does not trust a client-supplied
-	# X-Forwarded-For (no trusted_proxies is configured), so it sets the header to
-	# the real peer address, which is what the drip quota hashes.
-	reverse_proxy 127.0.0.1:8787
+{$GRAPHQL_HOST} {
+	encode zstd gzip
+	@graphql path /v1/graphql
+	handle @graphql {
+		reverse_proxy {$GRAPHQL_UPSTREAM} {
+			# Public clients cannot select privileged Hasura roles or sessions.
+			header_up -X-Hasura-*
+			header_up X-Hasura-Role public
+		}
+	}
+	# Administration, console, metadata and other paths stay private.
+	handle {
+		respond "Not found" 404
+	}
 }

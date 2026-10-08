@@ -9,7 +9,7 @@ Labels: **[V]** observed evidence; **[I]** intended behavior; **[U]** unresolved
 | ID | Status | Owner | Blocks | Resolution |
 | --- | --- | --- | --- | --- |
 | B2 | RESOLVED | Lead / user-approved hostname | No remaining hostname gate; physical passkeys remain B8 | Canonical `monadboy-play.vercel.app`, matching production RP ID, persisted project domain and anonymous rendered HTTPS proof. Requested `monadboy.vercel.app` was already in use. |
-| B3 | OPEN: target deployment proof | Lead | Backend HTTPS, recovery and uptime | SSH/key access and noninteractive sudo verified; complete isolated target services, restart/HTTPS and monitoring. |
+| B3 | RESOLVED: access/HTTPS/recovery | Lead | No remaining access gate;24-hour operations remain9.4 | Target SSH/sudo, actual unit/Caddy validation, public HTTPS health, worker restart/SQLite preservation and indexer recreation/persistent-fill recovery observed. |
 | B5 | SKIPPED | User decision / verified requirement | No current submission gate | Agora requires Mera + AUSD + Perpl; current Kuru-only scope is excluded ([SUBMISSIONS](SUBMISSIONS.md)). |
 | B8 | OPEN | User: devices; lead: test surface | S4 supported-phone restore and standalone PWA launch acceptance | Exercise create/restore and standalone launch on iPhone Safari and Android Chrome over HTTPS. |
 | B10 | OPEN: bounded final mirror acceptance | Lead | Continuous healthy production mirror and operating budget | Original ten-minute run self-took BOT quotes; final correction has one external-maker transition, but target quote preflight refused a crossing third-party bid. Prove final-strategy alignment and cost before continuous enablement. |
@@ -37,8 +37,8 @@ Labels: **[V]** observed evidence; **[I]** intended behavior; **[U]** unresolved
 
 - [V, 2026-10-08] VPS SSH access and `sudo -n true` verified using the user-approved, restricted24-hour deployment key. Key material stays outside the repository and is removed after deployment.
 - [V] Only the three approved Mandate containers are stopped; their data and nine unrelated running containers are preserved. Capacity and proxy inspection support VPS-first deployment.
-- Close after service restart recovery and HTTPS health are observed on the target VPS.
-- Deployment acceptance also requires24-hour health evidence and availability through judging; access and configuration files alone do not prove it.
+- [V] Actual worker unit and Caddy candidate validated. Public HTTPS health returned200; worker restart preserved migrations1..5 and the first SQLite price sample. Force-recreated PostgreSQL/Hasura/indexer retained an actual historical fill and recovered public GraphQL.
+- B3 access/deployment recovery is closed. Five-minute durable health sampling has started, but24-hour healthy uptime, full maker-basis coverage and judging-period availability remain open acceptance, not a new credentials request.
 
 ## B5: mobile eligibility
 

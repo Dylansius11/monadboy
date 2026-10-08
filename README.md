@@ -159,10 +159,17 @@ Use HTTPS or localhost for passkeys [V: Mera guide](https://docs.monad.xyz/guide
 Frontend: **https://monadboy-play.vercel.app**. The persisted Vercel production domain
 matches the passkey RP ID; the default project domain redirects to it. Anonymous Edge
 rendered the public landing and portrait card and exercised START on2026-10-08.
-Worker/SQLite and Envio/PostgreSQL/Hasura target the VPS; SSH access is verified.
-Use a managed database only if measured VPS capacity is insufficient. The browser
-signs for players, never the worker. Backend HTTPS/recovery,24-hour monitoring and
-physical-phone create/restore remain gates. Keep unattended signing disabled until B10.
+Worker/SQLite and Envio/PostgreSQL/Hasura are deployed on the VPS. Use a managed
+database only if measured capacity is insufficient. Public worker health:
+`https://monadboy-api.43.129.38.115.sslip.io/v1/health`; read-only GraphQL:
+`https://monadboy-data.43.129.38.115.sslip.io/v1/graphql`.
+The worker restarted with its SQLite history intact; indexer container recreation
+preserved an actual fill. Public role spoofing/mutations and admin paths are refused.
+The browser signs for players, never the worker. This deployment is **read-only
+bring-up, not full judge-play acceptance**: mirror/drip are disabled, maker-basis
+backfill is partial, and physical-phone create/restore plus24-hour monitoring remain
+gates. Keep unattended signing disabled until B10. [Deployment operations](deploy/README.md)
+records limits, private backup/restore proof and five-minute health sampling.
 
 ### Local indexed history
 

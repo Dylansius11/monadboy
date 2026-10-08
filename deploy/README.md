@@ -2,8 +2,8 @@
 
 The worker is one Bun process (`apps/worker`) behind Caddy on the VPS. It signs only
 with two dedicated testnet operations keys; its mainnet client is read-only. No route
-signs for a player. Nothing here is deployed yet: the VPS and hostname are still
-outstanding, so every command below is an instruction, not a record.
+signs for a player. The frontend is public at **https://monadboy-play.vercel.app**.
+Target evidence and remaining acceptance gates are recorded below, not inferred from configuration.
 
 ## Selected hosting boundary
 
@@ -11,7 +11,7 @@ outstanding, so every command below is an instruction, not a record.
 - Backend: this Bun worker on the VPS; SQLite remains its local cache and drip ledger.
 - Indexing: Envio, PostgreSQL and Hasura remain self-hosted on the VPS.
 - Local Docker proves integration only; it cannot supply public availability.
-- No Supabase project or second account/authentication layer is required.
+- A managed PostgreSQL migration is conditional on measured VPS capacity, not required at startup.
 
 Keep frontend, worker and GraphQL origins distinct in configuration:
 
@@ -47,39 +47,71 @@ worker's actual coverage and provenance, not just container health or HTTP200.
 
 ## Install
 
-1. Create the `monadboy` system user and `/opt/monadboy`. Install Bun at
-   `/usr/local/bin/bun` and Caddy from the distribution's supported packages.
-2. Place the repository at `/opt/monadboy` and run `bun install --frozen-lockfile`.
-3. Create `/opt/monadboy/apps/worker/.env`, mode `0600`, owned by `monadboy`, starting
-   from `apps/worker/.env.example`. Blank values count as unset. Keys live only in that
-   file: never in a unit, the Caddy config, a command line, SQLite or a log.
-4. Set `APP_ORIGIN` to the fixed HTTPS web origin. The unit already sets
-   `SQLITE_PATH=/var/lib/monadboy/worker.sqlite` (created by `StateDirectory=`) and binds
-   the listener to `127.0.0.1`; keep `WORKER_PORT=8787` to match the Caddyfile.
-5. Install the unit and start it:
+1. Inspect existing services, disk/RAM and the proxy network first. Create the
+   `monadboy` system user and `/opt/monadboy`; install pinned Bun1.3.14 at
+   `/usr/local/bin/bun` after checking the release checksum. Reuse an existing
+   Caddy; do not install another listener on ports80/443.
+2. Transfer source and locks without `.env`, keys, dependencies or generated output.
+   Run `bun install --production --filter @monadboy/worker --frozen-lockfile --ignore-scripts`.
+3. Create `/opt/monadboy/apps/worker/.env`, mode0600, owned by `monadboy`. Keep
+   private tokens and any later operation keys only there, never in CLI arguments.
+   Set `APP_ORIGIN=https://monadboy-play.vercel.app`, `WORKER_PORT=8787` and
+   `ENABLE_TRANSACTIONS=false`. The unit sets persistent
+   `SQLITE_PATH=/var/lib/monadboy/worker.sqlite` and limits the process to192MiB.
+4. Host Caddy uses default `WORKER_BIND=127.0.0.1`. Container Caddy requires its
+   actual host bridge gateway; on the inspected target this is172.18.0.1.
+   Bind there, not0.0.0.0, and set `TRUSTED_PROXY_IP` to the exact Caddy container
+   peer172.18.0.4. Other peers cannot spoof forwarded drip quota addresses.
+   Reinspect after proxy/network recreation; never trust an entire bridge CIDR.
+5. Install and validate the actual unit, then start it:
 
 ```sh
 install -m 0644 deploy/monadboy-worker.service /etc/systemd/system/
 systemd-analyze verify /etc/systemd/system/monadboy-worker.service
 systemctl daemon-reload
 systemctl enable --now monadboy-worker
-systemctl status monadboy-worker
-curl http://127.0.0.1:8787/v1/health
+systemctl is-active monadboy-worker
+curl http://172.18.0.1:8787/v1/health
 ```
 
-6. Set `WORKER_HOST` in Caddy's service environment, install the example as
-   `/etc/caddy/Caddyfile`, then:
+6. Configure the private indexer `.env` from `indexer/.env.example`, plus
+   `MONADBOY_PROXY_GATEWAY` and `APP_ORIGIN`. Keep it0600. Reuse the base Compose
+   file with `deploy/compose.vps.yaml`; its Postgres volume survives recreation.
+   No database port is published. GraphQL binds only the proxy gateway.
 
 ```sh
-caddy validate --config /etc/caddy/Caddyfile
-systemctl reload caddy
-curl https://$WORKER_HOST/v1/health
+# From /opt/monadboy. Use sudo when the deployment account cannot read private env.
+dc() {
+  docker compose --env-file indexer/.env --project-directory indexer \
+    -f indexer/compose.yaml -f deploy/compose.vps.yaml "$@"
+}
+dc config --quiet
+dc build indexer
+# Bootstrap has a measured higher peak than the192MiB steady-state process.
+MONADBOY_INDEXER_MEMORY=512m dc run --rm --no-deps \
+  -e NODE_OPTIONS=--max-old-space-size=384 --entrypoint sh indexer \
+  -c "pnpm install --frozen-lockfile"
+MONADBOY_INDEXER_MEMORY=512m dc run --rm --no-deps \
+  -e NODE_OPTIONS=--max-old-space-size=384 --entrypoint node indexer \
+  node_modules/envio/bin.mjs codegen
+dc up -d --wait postgres graphql indexer
 ```
 
-The drip quota hashes the client address. The worker trusts `X-Forwarded-For` only when
-the TCP peer is loopback (Caddy), and Caddy replaces the header with the real peer. Keep
-the listener on loopback and do not open its port; local users could otherwise claim any
-address. Fix the web hostname before the first production passkey.
+7. Render the two sites from `Caddyfile.example` with the real hosts/upstreams.
+   Back up the existing configuration and append only these sites. Validate the
+   candidate inside the existing proxy container, then copy into its mounted
+   configuration and reload. A file-only bind mount requires preserving its inode;
+   renaming a new host file over it can leave Caddy reading the old inode.
+   Never replace unrelated sites or expose Hasura administration.
+8. Public routes are `https://monadboy-api.43.129.38.115.sslip.io` and
+   `https://monadboy-data.43.129.38.115.sslip.io/v1/graphql`. Caddy strips
+   supplied `X-Hasura-*` headers and forces the public role; only `/v1/graphql`
+   is exposed. Check mutations and role spoofing are refused, metadata/console404,
+   exact-origin CORS and restart recovery before acceptance.
+
+The worker trusts forwarded client addresses only from loopback or the configured
+exact proxy IP. Caddy must replace untrusted forwarded headers. Do not expose the
+worker directly or configure broad proxy trust.
 
 ## Enabling transactions
 
@@ -152,6 +184,16 @@ exact `APP_ORIGIN`. Blank env values are unset; no operations keys are needed fo
 
 - `/v1/health` is `green`, `amber` (degraded: mirror disabled, low treasury, stale
   tracker, failing job) or `red` (price feed paused). Point the uptime monitor at it.
+- Install `monadboy-health.service` and `.timer`, validate them with
+  `systemd-analyze verify`, then `systemctl enable --now monadboy-health.timer`.
+  The timer samples public HTTPS every five minutes into root-protected
+  `/var/lib/monadboy/health.jsonl`. Each JSON row carries the worker's epoch
+  timestamp and source/job ages. Failed requests are journaled; missing samples
+  are not healthy uptime. Read evidence with sudo and retain it through judging.
+- Keep consistent, private backups: SQLite `VACUUM INTO` under `umask077`, not a
+  live file/WAL copy; PostgreSQL `pg_dump -Fc` under `umask077`. Validate SQLite
+  integrity and restore PostgreSQL into an isolated temporary database before
+  relying on a backup. The recorded backups are on this VPS, not offsite disaster recovery.
 - SQLite is a cache and ledger, never the truth for chain data. Stop the service before
   copying the file and its `-wal` / `-shm` siblings, or use SQLite's online backup.
 - Never delete `drips` rows with status `pending` after a crash: look up their hashes on
@@ -159,14 +201,41 @@ exact `APP_ORIGIN`. Blank env values are unset; no operations keys are needed fo
 
 ## Validation record
 
+**[V, 2026-10-08 target]** Worker unit and health service/timer validated against
+the installed Bun1.3.14 binary. Existing container Caddy validated and reloaded
+only the appended MONADBOY sites, preserving all prior sites and nine unrelated
+running containers. Worker restarted active, with SQLite migrations1..5 and its
+first sample1791480426610 preserved. Public HTTPS health and canonical-origin
+browser fetch returned200; foreign-origin CORS was refused.
+
+The PostgreSQL/Hasura/indexer containers were force-recreated and became healthy;
+the persistent database retained fill `10143_69014514_2`. Public role spoofing
+still allowed only reads; mutation was refused and metadata/console returned404.
+SQLite online backup passed integrity_check with the same first sample; private
+PostgreSQL dump restored that fill into a temporary database, which was removed.
+
+Steady startup RSS measured about54MiB PostgreSQL,197MiB Hasura,153MiB indexer.
+Later target snapshot had624MiB available RAM and8.8GiB free disk, with no runtime
+OOM or automatic worker restart observed. The192MiB installer failed with a
+recorded container OOM; only bootstrap was raised to512MiB and runtime returned
+to192MiB. Healthy containers do not close coverage acceptance: GraphQL is ready
+and near head, but the worker's bounded direct maker-basis cursor is still
+catching up. Health remains amber; mirror/drip signing is disabled.
+
+The first health sample immediately after a manual worker restart returned502;
+later timer/manual samples succeeded and are retained. Six timestamped rows span
+about20minutes, not24hours. Physical S22/iPhone, complete maker-basis acceptance,
+continuous B10 economics and24-hour healthy monitoring remain open.
+
+
 Fresh checks on 2026-10-06 used the installed Windows/WSL environment, not a target VPS.
 Original `systemd-analyze verify deploy/monadboy-worker.service` exited 1 because
 `/usr/local/bin/bun` is absent. A temporary syntax-only copy with ExecStart changed to
 `/usr/bin/true` exited 0, with Windows-mount permission warnings. This does not prove
 the original executable, user, service start or restart. Caddy was unavailable on both
 installed command paths; the earlier Caddy-success record cannot be reproduced here.
-Re-run the actual unit and Caddy validation on the target. Public HTTPS, service restart
-and 24-hour uptime remain B2/B3 gates.
+These historical syntax-only checks were not target deployment evidence. The
+2026-10-08 target record above supersedes their hosting-access uncertainty.
 
 The isolated read-only worker served all seven live markets with authenticated complete
 HyperSync trade coverage. One recorded snapshot contained 21,668 trades; later counts
