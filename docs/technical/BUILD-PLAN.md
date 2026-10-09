@@ -22,7 +22,7 @@ As of **2026-10-09 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCK
 | 4 — Funded spikes              | DOING   | 5/6              | Record physical iPhone/Android S4 results                                           | B8                                          |
 | 5 — DiskRegistry v2            | DONE    | 6/6              | Preserve receipt/artifact identity and stateless device proof                       | B8 for physical restore, outside deployment |
 | 6 — Worker                     | DOING   | 10/12            | Finish measured policy calibration and final continuous mirror economics            | B10; calibrated policy proof                |
-| 7 — Web integration            | DOING   | 6/14             | Close partial-load/audio acceptance and physical supported-phone gates              | B8; remaining runtime acceptance            |
+| 7 — Web integration            | DOING   | 7/14             | Close partial-load/audio acceptance and remaining restore/PWA/device proofs          | B8; remaining runtime acceptance            |
 | 8 — Envio indexer              | DONE    | 5/5              | Preserve public read-only parity; wait for complete worker maker-basis backfill       | Full worker coverage remains open           |
 | 9 — Deploy and submission      | DOING   | 3/8              | Record24-hour operational proof, physical-device rehearsal and submission package    | B8 / B10; upstream live proof               |
 
@@ -209,7 +209,7 @@ As of **2026-10-09 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCK
 **Goal** Replace marked fixtures with real data and local passkey signing while preserving every screen.
 
 - [ ] **7.1** Client-only Mera card session and per-disk viem clients — proof required: HTTPS create/insert/eject run; no Mera server import; sessions end on eject / hidden-tab timeout; only credential metadata persists.
-- [ ] **7.2** S1 MemoryCard: real INSERT / NEW CARD and error copy — proof required: supported-phone passkey prompts and mapped error screenshots; FIXTURE marker removed only after real actions.
+- [x] **7.2** S1 MemoryCard: real INSERT / NEW CARD and error copy — user acceptance:2026-10-09 Samsung S22 Chrome / Google Password Manager reports working card access, insert/new disk and sound, then explicitly accepts the tested experience. Production screenshots/public receipts reach funded provision;7.10a independently excludes fixtures. This closes the user-accepted S22 entry flow, not an exhaustive authenticator-error matrix, iPhone PRF support, stateless restore or standalone launch; those unobserved outcomes remain in4.4/7.9/7.11/B8.
 - [ ] **7.3** S2 DiskSelect: derive/read/decrypt three slots, create/drip/save and OPEN — user-reported production screenshots show populated desktop/Android slots; S22 disk2 has0.476637308TESTNET MON and SAVED TO CARD. Latest user report confirms insert/new disk and repaired shelf; physical play now reaches provisioned orders. Complete proof still requires all three addresses, registry/hash readbacks, receipt inspection and stateless restore; the supplied screenshots alone do not close the task.
 - [x] **7.3a** Decrypted-disk cartridge and leaderboard navigation — proof: native 412x915 local-registry walk kept disk 1/name, locked cartridges stayed locked; leaderboard window URL/back exercised. Unmatched route-context warning fixed with explicit navigation.
 - [x] **7.3b** Difficulty preferences and sealed persistence — native/local-registry NORMAL and HARD/GOD MODE changes restored after storage clear; funded native-card NORMAL also saved/restored. Regression preserves private notes/history and prevents GOD MODE below HARD; unsellable gate unchanged. Physical acceptance remains7.11/B8.
@@ -225,6 +225,7 @@ As of **2026-10-09 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCK
 
 **Acceptance**
 
+- [x] **User acceptance, Samsung S22** — accepted by the user on2026-10-09 for the reported card/disk entry, sound and repaired phone UI. Record as user acceptance, not independently observed physical testing. No new iPhone, restore, fill-specific audio, PWA or24-hour operational result is implied.
 - Full real-phone sequence and restore satisfy the evidence contract below; use the fixed `monadboy-play.vercel.app` RP ID before production card creation.
 - Review all twelve product rules on every screen; every balance says TESTNET, every number has a source, DAMAGE equals SCORE's visual weight.
 - Signing stays in browser; no production fixture or server restore dependency.
