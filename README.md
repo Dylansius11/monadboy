@@ -11,7 +11,7 @@ SCORE is realized flip spread. DAMAGE is equally visible. Every number has a sou
 The app moves no real money; mainnet market data is read-only.
 
 **Live app:** [monadboy-play.vercel.app](https://monadboy-play.vercel.app).
-Read-only deployment; [remaining play/device gates](docs/BLOCKERS.md) stay explicit.
+Testnet disk funding is active; the mirror stays disabled. [Remaining play/device gates](docs/BLOCKERS.md) stay explicit.
 
 Video: added before submission
 
@@ -153,7 +153,7 @@ Set `VITE_WORKER_URL` to the worker origin and worker `APP_ORIGIN` to the exact 
 Set `VITE_RP_ID` to the chosen stable hostname. The verified registry/market manifests are defaults; optional registry/RPC overrides must target chain10143. `VITE_RP_NAME` is optional. Never reuse disposable tunnel cards as production cards.
 To walk the marked screen simulation locally, set `VITE_USE_FIXTURES=true` in the web development environment. Production builds ignore it. `/` is the landing page; `/play` is the handheld. RULE BOOK on desktop and GUIDE on phones open current-screen actions first, with gameplay and control sections on demand. H or ? toggles it. VOL controls effects/music; zero is silent, an adjustment clears mute, and M mutes/restores the saved level. There is no separate mute button.
 The development-only `/dev/passkey` page exercises disposable WebAuthn create/restore, disk signing and local authenticated sealing without a transaction. It is not a production route or physical-device support claim.
-Worker configuration and safety policy are documented in [deploy/README.md](deploy/README.md). Keep `ENABLE_TRANSACTIONS=false` for read-only development; unattended signing requires final continuous mirror/cost acceptance, not just a successful deployment.
+Worker configuration and safety policy are documented in [deploy/README.md](deploy/README.md). Keep `ENABLE_TRANSACTIONS=false` for read-only development. Production drip-only operation configures DRIP but no BOT key; unattended mirror signing still requires final continuous alignment/cost acceptance.
 Bot, drip, and deployer keys are distinct local / VPS secrets. Never put secret values in the browser or repository.
 Use HTTPS or localhost for passkeys [V: Mera guide](https://docs.monad.xyz/guides/mera); test supported authenticators before claiming restore works [U: S4].
 
@@ -169,11 +169,13 @@ database only if measured capacity is insufficient. Public worker health:
 The worker restarted with its SQLite history intact; indexer container recreation
 preserved an actual fill. Spoofed roles cannot elevate; mutations are refused and
 administration paths return404.
-The browser signs for players, never the worker. This deployment is **read-only
-bring-up, not full judge-play acceptance**: mirror/drip are disabled, maker-basis
-backfill is partial, and physical-phone create/restore plus24-hour monitoring remain
-gates. Keep unattended signing disabled until B10. [Deployment operations](deploy/README.md)
-records limits, private backup/restore proof and five-minute health sampling.
+The browser signs for players, never the worker. On2026-10-09, production drip-only
+funding confirmed0.5MON +10AUSD through public HTTPS and refused a repeated payout.
+Mirror signing remains disabled with `no-bot-key`; latest health reports live Envio
+reads and an indexed leaderboard. This is **not full judge-play acceptance**:
+physical-phone funded save/restore, full gameplay and24-hour accepted operations
+remain gates. [Deployment operations](deploy/README.md) records receipts, key
+isolation, private backup/restore proof and five-minute health sampling.
 
 ### Local indexed history
 

@@ -11,7 +11,7 @@ This document owns external boundaries and their failure ladders. **[V]** means 
 | Mera | Passkey PRF, per-disk EOAs and signing sessions | [V] [Mera guide](https://docs.monad.xyz/guides/mera); [U, S4] supported real-device create/restore |
 | Agora AUSD faucet | Ops top-up of bot/drip AUSD inventories; player receives testnet AUSD via worker | [V, S1] 10,000 AUSD receipt, global 60-second cooldown and real drip/refusal; [AUSD research](../research/ausd.md) |
 | Envio HyperIndex | S7 fills, S8 history and leaderboard SCORE from events | [V, S5] Live-RPC observations 564–570 ms and exact client/indexer/worker SCORE parity; original 16.620 s miss retained |
-| Hono worker on Bun + SQLite | Mid, health, tracker, drip and cached leaderboard | [V] Actual local reads/drips/bounded trades; public VPS and final continuous mirror acceptance remain gated |
+| Hono worker on Bun + SQLite | Mid, health, tracker, drip and cached leaderboard | [V] Public VPS reads and drip-only MON/AUSD receipts/refusal; final continuous mirror acceptance remains gated |
 | Mainnet RPC | Worker public-client reads only | [V] `https://rpc.monad.xyz`, chain 143 ([network facts](https://docs.monad.xyz/ai/current-facts.md)); provider capacity is not guaranteed |
 | DiskRegistry v2 | Save/erase ciphertext; three-slot stateless restore | [V] Testnet deployed, runtime/artifact matched and source verified; physical-device acceptance is separate |
 
@@ -98,7 +98,7 @@ The 200-block fallback is bounded. It cannot prove older history is empty; show 
 | Drip freshness/quota refusal | "TESTNET SUPPLY LIMIT" | Surface refusal without sending a duplicate funding transaction |
 | Whole worker unavailable | "SERVICE OFFLINE" | Mera + registry restore and user-signed cancellation/withdrawal remain independent of worker |
 
-[V] Fresh-disk drip requires nonce0 and MON below threshold; quota is three per IP hash per24h plus a global daily cap. SQLite stores the funding ledger, not user keys or plaintext disks. [V, 2026-10-08] Actual VPS restart-always worker and five-minute public HTTPS health sampling are running; restart preserved SQLite history. Public bring-up disables mirror/drip signing. Final continuous economics, complete maker basis and24-hour healthy uptime remain gates; [deployment evidence](../../deploy/README.md) owns the target record.
+[V] Fresh-disk drip requires nonce0 and MON below threshold; quota is three per IP hash per24h plus a global daily cap. SQLite stores the funding ledger, not user keys or plaintext disks. Actual VPS restart-always worker and five-minute public HTTPS sampling preserve history. Initial bring-up disabled all signing; on2026-10-09 drip-only production confirmed0.5MON/10AUSD and409 repeat refusal. The worker has no BOT key or mirror job. Health is amber for that deliberate mirror gate; final economics, physical-device gameplay/restore and24-hour accepted operations remain open. [Deployment evidence](../../deploy/README.md) owns the target record.
 
 ## 8. Mainnet RPC failure ladder
 

@@ -110,7 +110,7 @@ const MERA_COPY: Record<MeraCode, string> = {
 const DRIP_COPY: Record<string, string> = {
   'ip-limit': 'TESTNET FUNDING LIMIT REACHED. TRY LATER.',
   'daily-limit': 'TESTNET FUNDING LIMIT REACHED. TRY LATER.',
-  'supply-unavailable': 'TESTNET FUNDING IS EMPTY. TRY LATER.',
+  'supply-unavailable': 'TESTNET FUNDING UNAVAILABLE. TRY LATER.',
   'supply-low': 'TESTNET FUNDING IS EMPTY. TRY LATER.',
   'chain-unavailable': 'TESTNET FUNDING IS OFFLINE. TRY LATER.',
 }

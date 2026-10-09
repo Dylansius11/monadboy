@@ -24,6 +24,7 @@ Labels: **[V]** observed evidence; **[I]** intended behavior; **[U]** unresolved
 - Use the existing funding sweep outside this repository; never reuse one operations key across roles.
 - B1 is resolved: all three roles meet the lean funding targets. Dependent deployment, inventory and gas acceptance still requires its own receipts; funding alone does not prove any broadcast.
 - [V, S3] With three players already funded, DRIP held 18.446398388 MON. Seventeen remaining payouts plus observed gas require 8.688142468 MON, leaving 9.758255920 MON under the approved block-spaced branch. Unsigned reads at head68996303 found empty DRIP code and no sender transactions or authorization lists in the prior three blocks. No additional funding request is needed for this measured branch; future gas, balance and delegation state must be rechecked.
+- [V, 2026-10-09] The phone funding error was a disabled production service, not exhausted treasury. At testnet block69480629, DRIP still held18.446398388MON and10,970AUSD. Production now enables only DRIP, never BOT; real HTTPS0.5MON/10AUSD receipts succeeded six blocks apart and repeat funding returned409. Post-smoke17.935331184MON/10,960AUSD remains available. [Deployment proof](../deploy/README.md) records the receipts; no new top-up is requested.
 
 ## B2: permanent passkey hostname
 
@@ -51,6 +52,7 @@ Labels: **[V]** observed evidence; **[I]** intended behavior; **[U]** unresolved
 - The dev-only `/dev/passkey` create/restore, signature and authenticated-seal surface is prepared and exercised with native WebAuthn and a virtual PRF-capable authenticator on localhost. Production preview returned 404 for it. Virtual proof does not close this gate.
 - The user must observe the actual authenticator on iPhone Safari and Android Chrome; headless browser checks do not establish physical-device PRF support.
 - Record hostname, browser, authenticator, result and error code without PRF output or key material.
+- [V, user-reported2026-10-09] Samsung S22 Chrome with Google Password Manager reached the production SAVE DISKS shelf; the supplied screenshot shows a derived disk address and empty slots. This establishes the reported card-access step, not funded save or stateless restore. Drip activation now removes the observed503 service gate; retry A Create using the same card before recording save/restore/PWA results.
 - Close S4 only after both required device results are recorded; document a supported-authenticator fallback if one fails.
 - Isolated local registry smoke saved three encrypted disks, then restored them and NORMAL preferences after eject, storage clear and reload. A separate fresh virtual card also restored HARD with GOD MODE enabled. This proves reachable logic, not supported-phone or funded testnet acceptance.
 - Native Chromium production manifest parsing and installability checks returned no errors. Physical-phone standalone launch remains unobserved; no Lighthouse report is claimed.

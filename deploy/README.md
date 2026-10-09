@@ -28,7 +28,7 @@ backend HTTPS or passkey restore on physical devices.
 
 Start public infrastructure read-only with `ENABLE_TRANSACTIONS=false`. Complete
 source/index coverage, HTTPS and service-restart checks before claiming health.
-Enable unattended signing only after B10's final mirror alignment/cost acceptance.
+Enable unattended mirror signing only after B10's final alignment/cost acceptance.
 Do not run a second signing worker against the same operations accounts.
 
 Before target deployment, obtain SSH host/port, user, private authentication method
@@ -116,13 +116,31 @@ worker directly or configure broad proxy trust.
 ## Enabling transactions
 
 `ENABLE_TRANSACTIONS` defaults to `false`: the worker then only reads (mid sampling,
-tracker, leaderboard) and `/v1/health` reports the mirror and drip as disabled. To enable
-sends, set it to `true` together with distinct `BOT_PRIVATE_KEY` and `DRIP_PRIVATE_KEY`
-(`cast wallet new`, funded by the owner), a stable `DRIP_IP_SALT` of at least 32
-characters. The checked-in verified testnet manifest is the default; set `MARKETS_JSON`
-and an explicit start block for a custom deployment. At start the worker refuses to
-sign unless the RPC reports chain10143 and every configured contract has bytecode.
-Never use these keys on mainnet.
+tracker, leaderboard) and `/v1/health` reports mirror and drip as disabled.
+For **drip-only production**, set it to `true`, configure the funded
+`DRIP_PRIVATE_KEY` and a stable `DRIP_IP_SALT` of at least32characters, and leave
+`BOT_PRIVATE_KEY` absent. The existing operations boundary then creates only the
+drip treasury, its inventory monitor and AUSD top-up job; no mirror executor/job exists.
+Keep the salt unchanged across restarts so client quotas remain effective.
+Only configure a separate BOT key after B10 acceptance; never share keys between roles.
+The verified testnet manifest is the default; custom deployments need `MARKETS_JSON`
+and their explicit start block. Startup refuses signing unless the RPC reports
+chain10143 and every configured contract has bytecode. Never use these keys on mainnet.
+
+[V, 2026-10-09] Production initially returned503 `supply-unavailable` because
+transactions were disabled, not because inventory was empty. Drip-only activation
+now reports `drip.enabled=true`, treasury `ok` and mirror disabled with `no-bot-key`.
+Actual HTTPS funding of a fresh test-owned account confirmed0.5MON and10AUSD:
+
+- MON receipt: `0x76dc2321f1414ead04a126a6508857ce05dc3c0520c1c315d50c8d23312ee7d9`, block69485927.
+- AUSD receipt: `0x42bd24f929e849469d01b0daed71c10ba243896b484b8573dd7742e7232da0fa`, block69485933.
+- Both receipts succeeded; six actual blocks separated the sends.
+- Retrying the same address returned409 `already-funded`, with no duplicate payout.
+- Post-smoke treasury:17.935331184MON /10,960AUSD. No new funding request.
+
+This generated-account smoke is not physical-phone save/restore acceptance.
+The worker env remains0600 and owned by monadboy; its pre-activation backup is
+root-only0600. Operation keys never enter public web variables or tracked files.
 
 [V, S2] `GAS_MARKET_ORDER` and `GAS_BATCH_UPDATE` default to 2,000,000 as bounded
 estimation/declared-budget ceilings, not constant paid limits. Each mirror call simulates,
