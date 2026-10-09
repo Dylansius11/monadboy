@@ -12,7 +12,7 @@ Labels: **[V]** observed evidence; **[I]** intended behavior; **[U]** unresolved
 | B3 | RESOLVED: access/HTTPS/recovery | Lead | No remaining access gate;24-hour operations remain9.4 | Target SSH/sudo, actual unit/Caddy validation, public HTTPS health, worker restart/SQLite preservation and indexer recreation/persistent-fill recovery observed. |
 | B5 | SKIPPED | User decision / verified requirement | No current submission gate | Agora requires Mera + AUSD + Perpl; current Kuru-only scope is excluded ([SUBMISSIONS](SUBMISSIONS.md)). |
 | B8 | OPEN: remaining device proofs; S22 entry/UI user-accepted | User: devices; lead: test surface | S4 restore, iPhone and standalone PWA evidence | Tested S22 card/disk entry, sound and repaired UI accepted by user; remaining create/restore/standalone scenarios are not recorded as passed. |
-| B10 | OPEN: bounded final mirror acceptance | Lead | Continuous healthy production mirror and operating budget | Original ten-minute run self-took BOT quotes; final correction has one external-maker transition, but target quote preflight refused a crossing third-party bid. Prove final-strategy alignment and cost before continuous enablement. |
+| B10 | OPEN: operating budget; bounded technical run passed | User: budget/cadence; lead: implementation | Unattended production mirror and judging-period cost | Corrected609262ms run aligned89usable samples within0.05%, cost1.247819856MON and had no self-trades/reverts. Approve sustainable operation before enabling a continuous signing loop. |
 
 ## B1: testnet supply
 
@@ -78,7 +78,39 @@ No guessed address, fabricated receipt, fixture fill or merely configured endpoi
 - [V] Read-only indexed-path measurement took2173ms for11paced RPC requests; GraphQL answered21–73ms. Separate cold fallback without an indexer took135RPC requests/18243ms unpaced; normal indexed cost is not that fallback cost. One attempt hit the public15rps quota. These reads do not establish a VPS compute bottleneck or a new latency guarantee.
 - [V, 2026-10-09] Fresh SSH access is restored: the user authenticated directly in visible Orca terminal `MONADBOY VPS login`, and the Ubuntu24.04.4 welcome plus `ubuntu@VM-4-200-ubuntu:~$` prompt were observed. No password was read or recorded, and no VPS reboot/container change was performed. The prior restricted key remains revoked. The preceding `Connection closed by 43.129.38.115 port 22` cause is still unverified; a later successful session is not a root-cause fix. B10's engineering/safety acceptance remains lead-owned; authentication does not authorize an unattended loop or bypass the crossing guard.
 
-This is a lead-owned engineering/operational gate, not a new protocol signup or funding request; fresh SSH authentication has been observed as recorded above. Do not enable an unattended signing loop or extrapolate24-hour costs from the self-taking run. Preserve the approved step cap/source policy and record final-strategy continuous alignment/cost before closing Phase6's live mirror acceptance.
+Bounded technical proof is recorded below; the remaining gate is an operating decision, not a new protocol login or a missing funded BOT identity. Preserve the approved notional/source/placement guards. Do not enable an unattended loop without a sustainable budget/cadence decision, or extrapolate guaranteed24-hour costs from a short controlled run.
+
+### Latest bounded production evidence —2026-10-09 UTC
+
+- Existing funded BOT was reused, not replaced with an empty account. Initial
+  wallet59.9806914474106MON and matching nonce90/90 were observed privately.
+- The initial run deposited14MON into the BOT's own MarginAccount, not into a
+  player account. Its538200ms duration and1.711103142MON gas exposed the
+  free-only inventory bug:16empty sampled books, despite61aligned samples.
+  Eleven fills had external makers and zero self-trades. This is controlled
+  testnet activity, not organic user demand.
+- After same-block reclaimable-inventory repair,609262ms replay completed:
+  90samples,89usable and all89within0.05%, zero empty sampled books,
+  26successful transactions, no reverts/self-trades,1.247819856MON gas.
+  One RPC read refusal stayed recorded; no price was fabricated for that sample.
+- Primary timer samples during the replay show live Envio lag2, enabled DRIP
+  and complete tracker trade coverage. Repeat funding returned409.
+- Both probes ended with no owned test quotes or pending nonce mismatch.
+  A later single capped passive seed restored a two-sided demo book at0.024577:
+  orders189/190 are preserved in the production ownership ledger. This is a
+  funded snapshot, not continuous alignment or guaranteed depth for every amount.
+- A later indexed-fallback failure was reproduced as QuickNode HTTP429/-32013,
+  account50/sec. Shared20starts/s worker dispatch restored all205real hydration
+  calls and public indexed health; failures remain visible and no retry was added.
+- Temporary probe scripts/BOT env were removed. Both restricted deployment
+  authorizations were revoked; subsequent key authentication returned permission
+  denied, and local temporary keys were deleted. Original operations keys remain.
+- Production still has no BOT key/job; DRIP remains enabled. User must choose
+  the operating budget and/or approve a cadence/tolerance change before24/7
+  mirror signing. The observed gas rate does not fit an assumed free or
+  indefinitely funded service. Existing player positions still need manual
+  re-centering; native flip re-arming is not automatic range relocation.
+
 
 
 ## Resolved and non-blocking items

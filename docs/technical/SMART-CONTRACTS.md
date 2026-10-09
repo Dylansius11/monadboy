@@ -192,4 +192,39 @@ Empty address, hash and block cells mean no deployment evidence yet, not a trunc
 | Optional AUSD-USDC market | Testnet [I] | | | | | conditional on spike S1 supply |
 | DiskRegistry v2 | Testnet [V] | `0xbfc885C572Cb1121FC4e4e82434279c4B4302714` | `0xaf7a396b8f73814ba6fac77829c73e632f4ec1c2e0dfa83cfa1e9f50354229af` | 68939801 | 1885 | confirmed, runtime match, MonadVision/Sourcify perfect source verification |
 
-[V, S3] Actual DEPLOYER/BOT/DRIP funding50/80/20MON and measured receipts support the approved block-spaced twenty-player drip branch. Final continuous mirror alignment/cost remains B10; physical devices and public deployment remain B8/B2/B3. See [BUILD-PLAN](BUILD-PLAN.md) and [BLOCKERS](../BLOCKERS.md).
+[V, S3] Actual DEPLOYER/BOT/DRIP funding50/80/20MON and measured receipts support the approved block-spaced twenty-player drip branch. B2/B3 hosting/access are resolved; remaining physical-device proof is B8 and continuous mirror operation is B10. See [BUILD-PLAN](BUILD-PLAN.md) and [BLOCKERS](../BLOCKERS.md).
+
+## 5. Bounded mirror and passive demo evidence
+
+[V,2026-10-09 UTC] Existing BOT
+`0x2FBF1B1063EF5e5d0422D8c4c4357640f99F7c1F` was reused with a
+distinct private key from DRIP. All writes were on10143 with explicit
+gas and block-spaced nonce management; no player key was used.
+
+The first bounded run deposited14MON into BOT margin and recorded36successful
+transactions,11external-maker fills and no self-trades. It stopped at its gas
+budget before ten minutes:538200ms,1.711103142MON. The trace exposed free-only
+inventory causing undersized replacement quotes; it is failed acceptance evidence.
+Real quote161/162 at block69588055 proved free1.003822731225MON versus
+reclaimable3.432019928325MON after the fix.
+
+The corrected run completed609262ms with26successful receipts and
+1.247819856MON gas. It had no taker fills or self-trades; all89usable price
+samples were within0.05%, with one unpriced RPC refusal retained. Cancellation
+and replacement are separate transactions, so sampled continuity is not a claim
+of an atomic quote refresh. Both test runs cleaned their quotes before exit.
+Full public receipts/events and samples are retained externally as
+`mirror-acceptance-result.json` and `mirror-acceptance-corrected-result.json`.
+
+After cleanup, one funded passive pair was seeded without a recurring signer:
+
+| Operation | Receipt | Block | Declared gas | Cost |
+| --- | --- | --- | --- | --- |
+| BOT passive quote,0.06AUSD cap per side | [0x529e0f…27495](https://testnet.monadvision.com/tx/0x529e0f6585556e30489c01d303c2ee360dd01d147bdcf7263265f86540727495) | 69596276 | 636239 | 0.064896378MON |
+
+Orders189/190 back bid0.02455242 and ask0.02460158; the observed midpoint
+0.024577 matched that operation's fresh mainnet source. Ownership IDs are kept
+in production SQLite for safe future cancellation. They are real passive orders,
+not a continuously refreshed book or a promise of fills/depth.
+`mirror-passive-seed.json` records the exact hash, source and receipt.
+Unattended signing remains disabled pending B10 budget/cadence approval.
