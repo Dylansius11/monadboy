@@ -3,6 +3,7 @@ import { rangeState } from '@monadboy/sdk'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { useSession } from '../../state/session'
 import { useSound } from '../../sound/SoundProvider'
+import { price } from '../../lib/format'
 import { Panel, PixelText } from '../../ui'
 import { PriceField } from '../PriceField'
 import {
@@ -145,6 +146,20 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
                   ? 'IN RANGE'
                   : 'No active range'}
         </PixelText>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-micro">
+          <span>MAINNET price: {state.sourceMid === null ? 'unavailable' : price(state.sourceMid)}</span>
+          <span>TESTNET book: {position.mid === null ? 'unavailable' : price(position.mid)}</span>
+          {low !== null && high !== null && (
+            <span>Your range: {price(low)} to {price(high)}</span>
+          )}
+        </div>
+        {!paused && band === 'OUT_OF_RANGE' && low !== null && high !== null &&
+          position.mid !== null && position.mid >= low && position.mid <= high && (
+            <PixelText role="micro" tone="loss" as="p">
+              Mainnet price is outside this TESTNET range. The books are not aligned.
+              Jump is available in range; re-centering is manual.
+            </PixelText>
+          )}
         {mid !== null && low !== null && high !== null && (
           <PriceField
             series={series.length ? series : [mid]}

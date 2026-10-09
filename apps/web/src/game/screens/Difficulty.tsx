@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { gatesFor, mainnetProfile } from '@monadboy/sdk'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { characters } from '../../config/brand'
@@ -118,12 +118,13 @@ export function Difficulty({
   const [godModeOn, setGodModeOn] = useState(godMode)
   const [overlayOpen, setOverlayOpen] = useState(false)
   const body = useRef<HTMLDivElement>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = body.current
     if (!el?.clientHeight) return
-    el.querySelector<HTMLElement>(focus === 'godmode' ? '[role="option"]' : '.difficulty-cast')
+    if (focus === 'tier') el.scrollTop = 0
+    else el.querySelector<HTMLElement>('[role="option"]')
       ?.scrollIntoView({ block: 'nearest' })
-  }, [focus])
+  }, [difficulty, focus])
 
   // GOD MODE cannot survive a downgrade off HARD. `session.ts`'s
   // `chooseDifficulty` enforces the same rule at the store; this is the
@@ -278,12 +279,12 @@ export function Difficulty({
         {gateRows(gates).map((row) => (
           <div
             key={row.label}
-            className="flex items-baseline justify-between gap-2"
+            className="difficulty-gate"
           >
             <PixelText role="micro" tone="dim" upper>
               {row.label}
             </PixelText>
-            <PixelText role="micro" className="tabular-nums" upper>
+            <PixelText role="micro" className="difficulty-gate-value tabular-nums" upper>
               {row.value}
             </PixelText>
           </div>

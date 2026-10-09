@@ -176,8 +176,16 @@ reads and an indexed leaderboard. This is **not full judge-play acceptance**:
 physical-phone stateless restore, full gameplay and24-hour accepted operations
 remain gates. [Deployment operations](deploy/README.md) records receipts, key
 isolation, private backup/restore proof and five-minute health sampling.
-The user-reported S22/GPM screenshot now shows a funded disk and SAVED TO CARD;
-that is physical save evidence, not restore or full-play acceptance.
+The latest user-reported S22 run confirms sound, card/disk access and the repaired
+shelf, then reaches a live position. Public receipt checks confirm approval,
+deposit, zap and four flip orders. No maker fill is shown in that run.
+The mainnet source and TESTNET book are currently divergent because mirror
+execution is disabled, so sitting is not evidence that those transactions failed.
+The live view exposes both prices and range endpoints; A jumps only while the
+source is in range. More player funding does not fix mirror alignment.
+Entry now rejects insufficient full buffered ask capacity before deposit; the
+minimum-order and separate-step recovery guards remain intact.
+Physical stateless restore, fill-specific audio and full-play acceptance remain open.
 
 ### Local indexed history
 

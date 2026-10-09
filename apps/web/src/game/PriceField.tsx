@@ -85,10 +85,14 @@ export function PriceField({
       points.push(`${Math.round((i + 1) * step)},${Math.round(y(value))}`)
     }
   })
+  // The first observed price is held across the field; one SVG point has no
+  // visible line and would leave half the character outside the left edge.
+  if (series.length === 1)
+    points.push(`${plotWidth},${Math.round(y(series[0]))}`)
 
   const nowPrice = series[series.length - 1]
   const nowY = y(nowPrice)
-  const nowX = Math.round((series.length - 1) * step)
+  const nowX = plotWidth
 
   // A bound outside the visible window is simply not drawn. When price runs a
   // long way past one edge the other edge stops being the thing worth showing,

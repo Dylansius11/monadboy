@@ -4,6 +4,11 @@ Newest on top. Each entry: root cause, then the durable rule.
 
 ## Technical
 
+### 2026/10/09 — Name the venue behind the character
+
+- **Cause:** A mainnet-price character was compared with a ladder funded at a divergent testnet mid while the mirror was disabled. Distant edges left the graph, and the first single-point SVG sample showed no line with half the sprite off-screen.
+- **Rule:** Expose both venue prices and actual ladder endpoints even when edges leave the plot. Hold the first observed price across the field; never invent a second price, fill or running state to cover a disabled integration.
+
 ### 2026/10/09 — Check the full buffered buy before deposit
 
 - **Cause:** The preview checked enough gross MON for the ladder, then added fee/slippage headroom without checking whether the fill-or-kill input exceeded all resting asks. A real historical book accepted the minimum-base arithmetic but rejected the buffered buy.

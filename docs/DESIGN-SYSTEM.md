@@ -74,6 +74,14 @@ One flex region absorbs remaining height. Do not hand-sum component heights to 3
 Budget text using its component's default role and line height, including wrapped lines.
 Development overflow warnings make silent clipping observable; verify the actual rendered screen.
 
+Difficulty readouts reserve a non-wrapping label column; long symbol lists wrap
+only in the value column. Changing tier restores the cast to the top of the
+internal scrolling region. The header and action footer do not shrink.
+Quote review leads with actual range endpoints, clamp warnings, deposit and
+fee estimates. Supporting execution checks stay in shallow disclosures, not
+in place of visible costs or recovery. A new quote/error or return from Inputs
+resets the review scroll so the relevant result is not hidden below an old offset.
+
 ## 3. Palette and contrast
 
 The values below define the chosen tokens. Implementation changes happen in tokens.css and its palette mirror together.

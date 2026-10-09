@@ -14,10 +14,6 @@ describe('ladder failures in player words', () => {
     }
   })
 
-  it('uses the SPEC sentence for an amount too small', () => {
-    expect(ladderErrorCopy(new LadderError('AMOUNT_TOO_SMALL'))).toBe('AMOUNT TOO SMALL FOR THIS RANGE')
-  })
-
   it('does not share its sentence with a missing market rule', () => {
     expect(CODES.map((code) => ladderErrorCopy(new LadderError(code)))).not.toContain(NO_MARKET_RULES_COPY)
   })

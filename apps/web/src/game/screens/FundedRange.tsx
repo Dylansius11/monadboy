@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { price, usdFine } from '../../lib/format'
 import { Panel, PixelText, Value } from '../../ui'
@@ -17,6 +17,10 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
   const [inspect, setInspect] = useState(false)
   const position = state.position!
   const quote = state.quote
+  const body = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    if (body.current) body.current.scrollTop = 0
+  }, [quote, state.error, state.readError, state.saveError, inspect])
   const recovered =
     position.orders.length > 0 ||
     position.holdings.marginBase > 0 ||
@@ -63,9 +67,90 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
   })
   if (inspect) return <Inputs state={state} onClose={() => setInspect(false)} />
   return (
-    <div className="screen-range bg-screen flex h-full w-full flex-col gap-1 p-2">
+    <div className="screen-range screen-funded-range bg-screen flex h-full w-full flex-col gap-1 p-2">
       <Header title={quote ? 'Confirm real steps' : 'Set range'} />
-      <div className="funded-body flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+      <div ref={body} className="funded-body funded-range-body flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+        <Notices state={state} />
+        {state.steps.length > 0 && <ReceiptSteps state={state} />}
+        {quote && (
+          <Panel flush className="funded-range-review flex flex-col gap-1 p-2">
+            <PixelText role="body" as="h2">
+              Range {price(quote.ladder.low)} to {price(quote.ladder.high)}
+            </PixelText>
+            <PixelText role="micro">
+              {quote.ladder.levels} buy + {quote.ladder.levels} sell flip levels
+            </PixelText>
+            {quote.ladder.clamped && (
+              <PixelText role="micro" tone="loss">
+                Range capped by ladder depth or minimum order size. Review the
+                actual endpoints above.
+              </PixelText>
+            )}
+            <PixelText role="micro">
+              Lock {quote.ladder.baseNeeded.toFixed(8)} MON +{' '}
+              {quote.ladder.quoteNeeded.toFixed(6)} AUSD.
+            </PixelText>
+            <PixelText role="micro">
+              {quote.depositRaw > 0n
+                ? `Deposit before margin zap: ${quote.quoteRequired.toFixed(6)} AUSD.`
+                : 'Existing chain margin covers this ladder; no additional deposit.'}
+            </PixelText>
+            {quote.zapRaw > 0n ? (
+              <PixelText role="micro">
+                Swap fee est. {usdFine(quote.takerFeeQuote)} + 1% quote headroom.
+              </PixelText>
+            ) : (
+              <PixelText role="micro">No swap needed; existing MON margin covers sells.</PixelText>
+            )}
+            <PixelText role="micro">
+              Gas fee est. {quote.gasCostMon.toFixed(6)} MON, not a ceiling.
+            </PixelText>
+            <PixelText role="micro">
+              Separate transactions, not atomic. Confirmed partial funds can be withdrawn.
+            </PixelText>
+            <details className="funded-range-details text-micro">
+              <summary className="pressable min-h-11">
+                Review minimum output and gas checks
+              </summary>
+            {quote.zapRaw > 0n ? (
+              <>
+                <PixelText role="micro">
+                  Buy minimum {quote.quotedBase.toFixed(8)} MON. Taker fee est.{' '}
+                  {usdFine(quote.takerFeeQuote)} + 1% quote headroom.
+                </PixelText>
+                <PixelText role="micro">
+                  Actual funded simulation enforces this minimum output. Price
+                  movement beyond headroom stops before signing.
+                </PixelText>
+              </>
+            ) : (
+              <PixelText role="micro">
+                Existing MON margin covers the sell side. No swap, fee or
+                minimum-output claim.
+              </PixelText>
+            )}
+            <PixelText role="micro">
+              Measured-shape fee est. {quote.gasCostMon.toFixed(6)} MON, not a
+              ceiling. Each step re-estimates bounded gas + 20%.
+            </PixelText>
+            <PixelText role="micro">
+              Quote block {quote.block.toString()}. Steps are separate
+              transactions, not atomic.
+            </PixelText>
+            </details>
+            <details className="funded-range-details text-micro">
+              <summary className="pressable min-h-11">
+                Open actual ladder inputs
+              </summary>
+              {quote.ladder.orders.map((order, index) => (
+                <p key={index}>
+                  {order.isBuy ? 'BUY' : 'SELL'} {order.size.toFixed(8)} at{' '}
+                  {price(order.price)}; flip {price(order.flipPrice)}
+                </p>
+              ))}
+            </details>
+          </Panel>
+        )}
         <Panel flush className="range-choices flex flex-col gap-1 p-2">
           <div className="flex items-baseline justify-between">
             <PixelText role="body" upper>
@@ -120,13 +205,24 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
             </button>
           </div>
           <PixelText role="micro">
-            Width couples ladder spacing and depth using{' '}
-            {state.sigmaDaily === null
-              ? 'unavailable observed volatility; use manual edges'
-              : `${(state.sigmaDaily * 100).toFixed(2)}% observed daily volatility`}
-            . Not a prediction. Flip orders re-arm natively; no automatic
-            re-center signing.
+            WIDE: more room. TIGHT: closer edges. Order limits can shrink either.
           </PixelText>
+          {state.sigmaDaily === null && state.manual === null && (
+            <PixelText role="micro" tone="loss">
+              No volatility reading. Use manual edges.
+            </PixelText>
+          )}
+          <details className="funded-range-details text-micro">
+            <summary className="pressable min-h-11">How width and re-arming work</summary>
+            <p>
+              Width couples ladder spacing and depth using{' '}
+              {state.sigmaDaily === null
+                ? 'unavailable observed volatility; use manual edges'
+                : `${(state.sigmaDaily * 100).toFixed(2)}% observed daily volatility`}
+              . Not a prediction. Flip orders re-arm natively. Re-centering is
+              manual; no automatic re-center signing.
+            </p>
+          </details>
           {manual && (
             <div className="flex flex-col gap-1">
               <label className="text-micro">
@@ -185,67 +281,6 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
             </PixelText>
           )}
         </Panel>
-        {quote && (
-          <Panel flush className="flex flex-col gap-1 p-2">
-            <PixelText role="body">
-              {quote.ladder.levels} buy + {quote.ladder.levels} sell flip levels
-            </PixelText>
-            <PixelText role="micro">
-              Range {price(quote.ladder.low)} to {price(quote.ladder.high)}
-            </PixelText>
-            {quote.ladder.clamped && (
-              <PixelText role="micro" tone="loss">
-                Range capped by ladder depth or minimum order size. Review the
-                actual endpoints above.
-              </PixelText>
-            )}
-            <PixelText role="micro">
-              Lock {quote.ladder.baseNeeded.toFixed(8)} MON +{' '}
-              {quote.ladder.quoteNeeded.toFixed(6)} AUSD.
-            </PixelText>
-            <PixelText role="micro">
-              {quote.depositRaw > 0n
-                ? `Deposit before margin zap: ${quote.quoteRequired.toFixed(6)} AUSD.`
-                : 'Existing chain margin covers this ladder; no additional deposit.'}
-            </PixelText>
-            {quote.zapRaw > 0n ? (
-              <>
-                <PixelText role="micro">
-                  Buy minimum {quote.quotedBase.toFixed(8)} MON. Taker fee est.{' '}
-                  {usdFine(quote.takerFeeQuote)} + 1% quote headroom.
-                </PixelText>
-                <PixelText role="micro">
-                  Actual funded simulation enforces this minimum output. Price
-                  movement beyond headroom stops before signing.
-                </PixelText>
-              </>
-            ) : (
-              <PixelText role="micro">
-                Existing MON margin covers the sell side. No swap, fee or
-                minimum-output claim.
-              </PixelText>
-            )}
-            <PixelText role="micro">
-              Measured-shape fee est. {quote.gasCostMon.toFixed(6)} MON, not a
-              ceiling. Each step re-estimates bounded gas + 20%.
-            </PixelText>
-            <PixelText role="micro">
-              Quote block {quote.block.toString()}. Steps are separate
-              transactions, not atomic.
-            </PixelText>
-            <details className="text-micro">
-              <summary className="pressable min-h-11">
-                Open actual ladder inputs
-              </summary>
-              {quote.ladder.orders.map((order, index) => (
-                <p key={index}>
-                  {order.isBuy ? 'BUY' : 'SELL'} {order.size.toFixed(8)} at{' '}
-                  {price(order.price)}; flip {price(order.flipPrice)}
-                </p>
-              ))}
-            </details>
-          </Panel>
-        )}
         {recovered && (
           <Panel flush className="flex flex-col gap-1 p-2">
             <PixelText role="body">Chain recovery available</PixelText>
@@ -264,8 +299,6 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
             </button>
           </Panel>
         )}
-        <ReceiptSteps state={state} />
-        <Notices state={state} />
         <SourceLinks state={state} />
       </div>
       <footer className="screen-footer flex flex-wrap items-center justify-between gap-1">

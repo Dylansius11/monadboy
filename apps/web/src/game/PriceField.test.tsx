@@ -17,6 +17,18 @@ const BASE = {
 }
 
 describe('price field geometry', () => {
+  it('draws the first observed price across the field and keeps the character inside the plot', () => {
+    const { container, getByRole } = render(
+      <PriceField {...BASE} series={[100]} />,
+    )
+    const points = container.querySelector('polyline')!.getAttribute('points')!
+      .split(' ').map((point) => point.split(',').map(Number))
+    expect(points.map(([x]) => x)).toEqual([0, 408])
+    expect(points[0][1]).toBe(points[1][1])
+    const character = getByRole('img', { name: /molandak/i }).parentElement!.parentElement!
+    expect(Number.parseFloat(character.style.left)).toBe(408)
+  })
+
   it('holds each sampled price until the next sample instead of interpolating', () => {
     const { container } = render(<PriceField {...BASE} />)
     const points = container.querySelector('polyline')!.getAttribute('points')!

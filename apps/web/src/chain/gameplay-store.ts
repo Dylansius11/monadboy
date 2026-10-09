@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import {
+  LadderError,
   evaluateGates,
   gatesFor,
   mainnetMarkets,
@@ -30,6 +31,7 @@ import { appendActualRun, basisFromDisk, diskWithBasis } from './gameplay-disk'
 import { zDiskPlaintext } from './disk-plaintext'
 import { parseTracker } from '../lib/worker/schemas'
 import { TRACKER_STALE_MS } from '../game/data/provenance'
+import { ladderErrorCopy } from '../lib/range/ladder-copy'
 import { useSession } from '../state/session'
 import { cardErrorCopy, isCardError, meraCodeOf } from './errors'
 import type { Market } from '@monadboy/sdk'
@@ -104,6 +106,7 @@ const sourceSchema = z.object({
   ageMs: z.number().nullable(),
 })
 function errorCopy(error: unknown) {
+  if (error instanceof LadderError) return ladderErrorCopy(error)
   if (isCardError(error) || meraCodeOf(error)) return cardErrorCopy(error).text
   // viem shortMessage contains only the public operation failure, not serialized signing inputs.
   if (error instanceof Error)

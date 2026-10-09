@@ -18,6 +18,39 @@
 .funded-body > * { flex-shrink: 0; }
 .funded-numbers > div { min-width: 0; overflow-wrap: anywhere; }
 
+/* Labels keep their own column; long symbols wrap only in the value column.
+   Tier changes own the scroll position, not browser content anchoring. */
+.screen-difficulty > :not(.difficulty-body) { flex-shrink: 0; }
+.difficulty-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-anchor: none;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.difficulty-body > * { flex-shrink: 0; }
+.difficulty-choice { min-width: 0; }
+.difficulty-label { white-space: nowrap; }
+.difficulty-gate {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+}
+.difficulty-gate > :first-child { white-space: nowrap; }
+.difficulty-gate-value { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.screen-funded-range > :not(.funded-body) { flex-shrink: 0; }
+.funded-range-body { overflow-anchor: none; overscroll-behavior: contain; scrollbar-width: thin; }
+.funded-range-body > * { min-width: 0; overflow-wrap: anywhere; }
+.funded-range-details > summary { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.funded-range-details > summary::before { content: '+'; }
+.funded-range-details[open] > summary::before { content: '-'; }
+.funded-range-details[open] > :not(summary) { display: block; margin-top: 4px; }
+
 @container game-screen (max-width: 440px) and (min-height: 340px) {
   .screen-memory, .screen-disks, .screen-cartridges, .screen-difficulty,
   .screen-tracker, .screen-range, .screen-live, .screen-results, .range-editor {
