@@ -4,6 +4,11 @@ Newest on top. Each entry: root cause, then the durable rule.
 
 ## Technical
 
+### 2026/10/09 — Budget RPC starts across the worker
+
+- **Cause:** Faster private RPC responses let sequential historical-order hydration exceed QuickNode's shared account quota. A real trace received HTTP429/-32013, `account limited to50/sec`, then the worker correctly exposed indexed fallback despite a near-head Envio cursor.
+- **Rule:** Share a bounded start dispatcher between testnet reads and operations wallets; leave headroom for the separate indexer and other account traffic. Pace starts, not response completion, preserve cancellation and visible failures, and prove all real hydration reads recover rather than hiding429 with extra retries.
+
 ### 2026/10/09 — Plan mirror refreshes with reclaimable inventory
 
 - **Cause:** The mirror chose quote sizes from free margin while its own resting quotes held most of the base. Canceling those quotes then left a planned replacement below the minimum size, alternating between quoted and empty books and spending gas unnecessarily. Unpinned balances could also mix a cancellation credit with older resting holdings.

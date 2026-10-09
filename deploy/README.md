@@ -204,6 +204,19 @@ the bounded one-shot codegen succeeded. Codegen still printed an ignored-build
 diagnostic for esbuild/rescript despite exit0 and successful compilation/tests.
 No build allowlist was weakened; this diagnostic is not silently suppressed.
 
+[V] A later full hydration trace hit QuickNode HTTP429/-32013,
+`account limited to50/sec`. A near-head GraphQL cursor alone did not prove the
+worker could read its matching chain holdings. The worker now shares one
+50ms start dispatcher across testnet public reads and operations wallets
+(at most20starts/s per process), without serializing response completion or
+adding retries. Mainnet and indexer transports remain separate; the limit
+does not guarantee spare capacity across every endpoint on the provider account.
+After deployment,205actual margin/order-membership calls for all four indexed
+makers completed without RPC errors; public health returned live Envio lag2,
+indexed leaderboard and no job errors. Three regressions cover delayed
+responses, failed requests and queued cancellation. The disposable trace
+script was removed; raw redacted evidence is retained outside the repository.
+
 The mainnet MON_USDC source pauses immediately for an empty/crossed book or relative
 spread `(ask - bid) / mid > 2%`. This fixed operator maximum is user-approved policy,
 not measured calibration. Transport failures retain the three-failure pause. Testnet

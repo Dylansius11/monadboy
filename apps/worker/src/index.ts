@@ -11,6 +11,7 @@ import { createBirthResolver } from './chain/market-births'
 import { createBookReader } from './chain/l2-book'
 import { createDirectFillSource } from './chain/fill-source'
 import { createIndexedFillSource } from './chain/indexed-fill-source'
+import { testnetRpcFetch } from './chain/rpc-fetch'
 import {
   createHypersyncFetcher,
   createRpcFetcher,
@@ -65,7 +66,7 @@ const mainnetHistory = createPublicClient({
 })
 const testnet = createPublicClient({
   chain: monadTestnet,
-  transport: http(env.TESTNET_RPC_URL, { timeout: 8_000, retryCount: 0 }),
+  transport: http(env.TESTNET_RPC_URL, { timeout: 8_000, retryCount: 0, fetchFn: testnetRpcFetch }),
 })
 const markets = loadTestnetMarkets(env.MARKETS_JSON)
 

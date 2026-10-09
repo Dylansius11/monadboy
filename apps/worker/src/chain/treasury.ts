@@ -9,6 +9,7 @@ import type {
 import { privateKeyToAccount } from 'viem/accounts'
 import type { PrivateKeyAccount } from 'viem/accounts'
 import { monadTestnet } from '@monadboy/sdk'
+import { testnetRpcFetch } from './rpc-fetch'
 
 // [V] Reserve-balance rule (docs.monad.xyz/developer-essentials/reserve-balance):
 // an undelegated sender may only dip below the reserve through its first
@@ -108,7 +109,7 @@ export function createTreasury({
   const wallet = createWalletClient({
     account,
     chain: monadTestnet,
-    transport: http(rpc, { timeout: 10_000, retryCount: 0 }),
+    transport: http(rpc, { timeout: 10_000, retryCount: 0, fetchFn: testnetRpcFetch }),
   })
   const nonces = createNonceManager(() =>
     client.getTransactionCount({
