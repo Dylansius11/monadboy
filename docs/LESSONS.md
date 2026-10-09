@@ -4,6 +4,11 @@ Newest on top. Each entry: root cause, then the durable rule.
 
 ## Technical
 
+### 2026/10/09 — Check the full buffered buy before deposit
+
+- **Cause:** The preview checked enough gross MON for the ladder, then added fee/slippage headroom without checking whether the fill-or-kill input exceeded all resting asks. A real historical book accepted the minimum-base arithmetic but rejected the buffered buy.
+- **Rule:** Compare the exact encoded buffered input with same-block ask capacity before any deposit. Keep minimum output, fill-or-kill and funded simulation guards; preview capacity is necessary, not an execution guarantee.
+
 ### 2026/10/09 — Preserve live content before distributing height
 
 - **Cause:** Equal `flex: 1` shelf rows centered four populated lines inside the height budget for empty slots; default shrink also collapsed a live chart to zero. Equal-width numeric columns clipped DAMAGE on narrow phones.

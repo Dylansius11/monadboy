@@ -192,13 +192,15 @@ export async function quoteFunding(
   )
   let remaining = neededBase
   let cost = 0
-  while (offset < raw.length && remaining > 0) {
+  let askCapacity = 0n
+  while (offset < raw.length) {
     const price = BigInt(`0x${raw.slice(offset, offset + 64)}`)
     offset += 64
     if (price === 0n) break
     if (offset + 64 > raw.length) throw new Error('TESTNET asks are truncated.')
     const size = BigInt(`0x${raw.slice(offset, offset + 64)}`)
     offset += 64
+    askCapacity += price * size
     const available = Number(size) / Number(market.params.sizePrecision)
     const take = Math.min(remaining, available)
     cost += (take * Number(price)) / Number(market.params.pricePrecision)
@@ -206,13 +208,22 @@ export async function quoteFunding(
   }
   if (remaining > 1e-9)
     throw new Error(
-      'TESTNET ask depth cannot fund this ladder. Lower the amount; no funds moved.',
+      'TESTNET ask depth cannot fund this ladder. Refresh the book or retry when liquidity returns. No funds moved.',
     )
   const quoteBeforeFee = cost / (1 - market.params.takerFeeBps / 10000)
   const zapRaw = rawQuoteCeil(
     quoteBeforeFee * (1 + Number(SLIPPAGE_BPS) / 10000),
     market.params.quoteDecimals,
   )
+  // Fill-or-kill consumes the full fee/slippage-buffered input, not just the minimum base.
+  const zapUnits = quoteToUnits(
+    Number(formatUnits(zapRaw, market.params.quoteDecimals)),
+    market.params,
+  )
+  if (zapUnits * market.params.sizePrecision > askCapacity)
+    throw new Error(
+      'TESTNET asks cannot cover this amount plus its safety buffer. Refresh the book or retry when liquidity returns. No funds moved.',
+    )
   const requiredQuote =
     rawQuoteCeil(ladder.quoteNeeded, market.params.quoteDecimals) + zapRaw
   const depositRaw =

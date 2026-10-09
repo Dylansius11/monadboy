@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { scoreFromFills, testnetMarkets } from '@monadboy/sdk'
+import { planLadder, scoreFromFills, testnetMarkets } from '@monadboy/sdk'
+import { createPublicClient, custom, encodeAbiParameters } from 'viem'
+import { quoteFunding } from './market-execution'
+import type { Hex } from 'viem'
+import type { PositionRead } from './gameplay'
 import {
   cancelPairIds,
   projectMarketEvents,
@@ -118,4 +122,87 @@ describe('real gameplay consumer boundaries', () => {
     expect(() => bufferedGas(17909681n, 2000000n)).toThrow()
     expect(rawQuoteCeil(0.0603, 6)).toBe(60300n)
   })
+  it('rejects a minimum-base preview when the buffered fill-or-kill input exceeds all asks', async () => {
+    const ladder = planLadder({
+      mid: 0.033,
+      mode: 'TIGHT',
+      budgetQuote: 0.4752,
+      sigmaDaily: 0,
+      manual: { low: 0.032934, high: 0.033066 },
+      params: market.params,
+    })
+    await expect(
+      quoteFunding(historicalBookClient(), market, ladder, unfundedPosition),
+    ).rejects.toThrow()
+  })
+  it('keeps fee and slippage funding for a ladder within the same historical ask capacity', async () => {
+    const ladder = planLadder({
+      mid: 0.033,
+      mode: 'TIGHT',
+      budgetQuote: 0.24,
+      sigmaDaily: 0,
+      manual: { low: 0.032934, high: 0.033066 },
+      params: market.params,
+    })
+    const quote = await quoteFunding(
+      historicalBookClient(),
+      market,
+      ladder,
+      unfundedPosition,
+    )
+    expect(quote.minimumBaseRaw).toBe(3636363636200000000n)
+    expect(quote.zapRaw).toBe(121654n)
+    expect(quote.depositRaw).toBe(241654n)
+    expect(quote.takerFeeQuote).toBeCloseTo(0.00036134651496390335, 12)
+  })
 })
+
+// Public MON-AUSD getL2Book capture at block 69567406, before the S22 zap.
+function historicalBookClient() {
+  const words = [
+    69567406n,
+    3298142n, 434450669n,
+    3296700n, 18241269831n,
+    3295256n, 18243838631n,
+    3293400n, 18236476264n,
+    3292164n, 18225094497n,
+    0n,
+    3301441n, 17764026544n,
+    3303300n, 18181818181n,
+    3304533n, 18190921911n,
+    3306600n, 18181818181n,
+  ]
+  const book: Hex = `0x${words.map((word) => word.toString(16).padStart(64, '0')).join('')}`
+  return createPublicClient({
+    transport: custom({
+      request: async ({ method }) => {
+        if (method === 'eth_call')
+          return encodeAbiParameters([{ type: 'bytes' }], [book])
+        if (method === 'eth_gasPrice') return '0x174876e800'
+        throw new Error(`Unexpected public RPC method: ${method}`)
+      },
+    }),
+  })
+}
+
+const unfundedPosition: PositionRead = {
+  block: 69567406n,
+  head: 69567406n,
+  mid: 0.033,
+  bid: 0.03298142,
+  ask: 0.03301441,
+  paused: false,
+  walletBase: 1,
+  walletQuote: 1,
+  holdings: { marginBase: 0, marginQuote: 0, restingBase: 0, restingQuote: 0 },
+  orders: [],
+  marginBaseRaw: 0n,
+  marginQuoteRaw: 0n,
+  fills: [],
+  missingOrigins: [],
+  complete: false,
+  source: 'INDEXED',
+  coverageFrom: 69567406n,
+  valuation: null,
+  observedAt: 0,
+}
