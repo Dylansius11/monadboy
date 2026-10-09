@@ -22,3 +22,6 @@ __pycache__/
 music/
 
 .vercel
+
+# graphify knowledge graph (machine-generated, local)
+graphify-out/

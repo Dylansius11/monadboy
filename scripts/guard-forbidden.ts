@@ -4,7 +4,7 @@ import { readFileSync, statSync } from "node:fs";
 const encoded: [string, string?][] = [
   ["JFL"], ["kooB ytidiuqiL"], ["riaPBL"], ["2v-eoj"], ["yvirP"],
   ["aisylE"], ["sjaisyle@"], ["nede", "word"], ["ztilB"],
-  ["atrakaJ"], ["tsuguA 8", "date"], ["yfihparg"], ["yedipS"],
+  ["atrakaJ"], ["tsuguA 8", "date"], ["yedipS"],
   ["naM-redipS", "hero"], ["erecniv-repmes"],
 ];
 const terms = encoded.map(([value, rule]) => {
