@@ -24,7 +24,7 @@ export type MirrorInput = {
   testnetObserved: boolean
   deviationThreshold: number
   maxStepNotional: number
-  // Margin balances in whole units, what the bot can actually trade.
+  // Whole-unit margin inventory, including owned resting funds released before execution.
   inventory: { base: number; quote: number }
 }
 

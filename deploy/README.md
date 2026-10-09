@@ -213,6 +213,13 @@ plain quotes are canceled before taker execution to prevent self-taking; only au
 live price-point membership counts as resting inventory. Tracker rows older than
 45 minutes become stale and non-playable.
 
+Mirror decision inventory is same-block free margin plus the remaining backing
+of authoritative-live owned quotes recorded in `mirror_quotes`. Execution cancels
+those quotes before taking and reads actual free balances again before replacement.
+Do not size the decision from free margin alone: a healthy quote can lock enough
+base to make its own replacement appear too small. Filled storage and other
+owners' orders are excluded; post-only/source/gas guards remain unchanged.
+
 Top-three maker concentration is bounded at 1, preserving its mathematical ratio
 despite floating-point summation order. The strict web `[0,1]` schema is unchanged.
 

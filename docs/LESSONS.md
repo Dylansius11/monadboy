@@ -4,6 +4,11 @@ Newest on top. Each entry: root cause, then the durable rule.
 
 ## Technical
 
+### 2026/10/09 — Plan mirror refreshes with reclaimable inventory
+
+- **Cause:** The mirror chose quote sizes from free margin while its own resting quotes held most of the base. Canceling those quotes then left a planned replacement below the minimum size, alternating between quoted and empty books and spending gas unnecessarily. Unpinned balances could also mix a cancellation credit with older resting holdings.
+- **Rule:** Include remaining authoritative-live owned quotes in decision inventory at the same block as free balances. Still cancel before taking, and size actual replacement orders from post-take free balances; never count stale storage or another account's orders.
+
 ### 2026/10/09 — Name the venue behind the character
 
 - **Cause:** A mainnet-price character was compared with a ladder funded at a divergent testnet mid while the mirror was disabled. Distant edges left the graph, and the first single-point SVG sample showed no line with half the sprite off-screen.

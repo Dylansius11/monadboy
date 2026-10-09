@@ -41,13 +41,14 @@ export function createMirrorExecutor({
   const read = async () =>
     (params ??= await readMarketParams(client, market.address))
   const bot = treasury.account.address
-  const balance = async (token: Address, decimals: number) =>
+  const balance = async (token: Address, decimals: number, blockNumber?: bigint) =>
     Number(
       await client.readContract({
         address: margin,
         abi: kuruMarginAccountAbi,
         functionName: 'getBalance',
         args: [bot, token],
+        blockNumber,
       }),
     ) /
     10 ** decimals
@@ -186,10 +187,21 @@ export function createMirrorExecutor({
   return {
     inventory: async () => {
       const p = await read()
-      return {
-        base: await balance(market.baseToken, p.baseDecimals),
-        quote: await balance(market.quoteToken, p.quoteDecimals),
+      const blockNumber = await client.getBlockNumber({ cacheTime: 0 })
+      let base = await balance(market.baseToken, p.baseDecimals, blockNumber)
+      let quote = await balance(market.quoteToken, p.quoteDecimals, blockNumber)
+      // Decision inventory includes funds that execute() will release by canceling
+      // owned quotes. A filled storage row or someone else's order is not inventory.
+      for (const row of db.query<{ order_id: string }, [string]>(
+        'SELECT order_id FROM mirror_quotes WHERE market = ?',
+      ).all(market.address)) {
+        const order = await readActiveOrder(client, market.address, Number(row.order_id), blockNumber)
+        if (!order || order[0].toLowerCase() !== bot.toLowerCase()) continue
+        const size = Number(order[1]) / Number(p.sizePrecision)
+        if (order[7]) quote += size * (order[5] / Number(p.pricePrecision))
+        else base += size
       }
+      return { base, quote }
     },
     execute: async (action, targetMid, assertSource) => {
       const p = await read()
