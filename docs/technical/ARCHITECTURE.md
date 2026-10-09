@@ -1,6 +1,6 @@
 # MONADBOY architecture
 
-MONADBOY runs STAY IN RANGE on a testnet Kuru flip-order ladder. The tagline is "The handheld that plays your liquidity." Chain state is authoritative; Envio and SQLite are read models. Local services and testnet contracts have runtime evidence; VPS/HTTPS deployment remains gated by domain and access.
+MONADBOY runs STAY IN RANGE on a testnet Kuru flip-order ladder. The tagline is "The handheld that plays your liquidity." Chain state is authoritative; Envio and SQLite are read models. Frontend is deployed on Vercel; worker and self-hosted Envio/PostgreSQL/Hasura run on the VPS behind HTTPS. Physical-device acceptance, continuous mirror alignment/cost and24-hour accepted operations remain open.
 
 Labels: **[V]** verified with the linked source or command; **[I]** inference or planned integration; **[U]** unresolved, with the settling spike named. Contract addresses and deployment evidence belong in [SMART-CONTRACTS](SMART-CONTRACTS.md); failure behavior belongs in [INTEGRATIONS](INTEGRATIONS.md).
 
