@@ -173,9 +173,11 @@ The browser signs for players, never the worker. On2026-10-09, production drip-o
 funding confirmed0.5MON +10AUSD through public HTTPS and refused a repeated payout.
 Mirror signing remains disabled with `no-bot-key`; latest health reports live Envio
 reads and an indexed leaderboard. This is **not full judge-play acceptance**:
-physical-phone funded save/restore, full gameplay and24-hour accepted operations
+physical-phone stateless restore, full gameplay and24-hour accepted operations
 remain gates. [Deployment operations](deploy/README.md) records receipts, key
 isolation, private backup/restore proof and five-minute health sampling.
+The user-reported S22/GPM screenshot now shows a funded disk and SAVED TO CARD;
+that is physical save evidence, not restore or full-play acceptance.
 
 ### Local indexed history
 

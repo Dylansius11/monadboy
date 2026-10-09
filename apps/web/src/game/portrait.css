@@ -3,6 +3,21 @@
 .screen-scroll { display: contents; }
 .tracker-selection { display: none; }
 
+/* Live disk cards must retain their content height. Only the list gives up
+   space when receipt/error text or native phone type makes a slot taller. */
+.screen-real-shelf > :not(.real-shelf-body) { flex-shrink: 0; }
+.real-shelf-body { overscroll-behavior: contain; scrollbar-width: thin; }
+.real-shelf-body > * { flex-shrink: 0; }
+.real-shelf-row { flex: 1 0 auto; min-height: 52px; padding: 4px 8px; }
+.real-shelf-row > [role='img'] { flex-shrink: 0; }
+.real-shelf-information { overflow-wrap: anywhere; }
+.real-shelf-stats { align-items: baseline; }
+
+/* Receipt-rich live screens scroll their contents instead of collapsing
+   charts or squeezing readable figures out of their columns. */
+.funded-body > * { flex-shrink: 0; }
+.funded-numbers > div { min-width: 0; overflow-wrap: anywhere; }
+
 @container game-screen (max-width: 440px) and (min-height: 340px) {
   .screen-memory, .screen-disks, .screen-cartridges, .screen-difficulty,
   .screen-tracker, .screen-range, .screen-live, .screen-results, .range-editor {
@@ -72,6 +87,11 @@
   .disk-information > div:first-child > span:nth-child(2) { font-size: 16px; line-height: 24px; }
   .disk-information > div:first-child > span:last-child { width: 100%; margin: 0; }
   .disk-information > div:last-child > span:last-child { margin: 0; }
+
+  .screen-real-shelf { padding: 12px; }
+  .real-shelf-row { min-height: 96px; padding: 12px; }
+  .real-shelf-information { gap: 4px; }
+  .real-shelf-stats { justify-content: space-between; }
 
   .screen-cartridges > div:first-child { flex-wrap: wrap; gap: 4px; }
   .cartridge-shelf {

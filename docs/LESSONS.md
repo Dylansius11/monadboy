@@ -4,6 +4,11 @@ Newest on top. Each entry: root cause, then the durable rule.
 
 ## Technical
 
+### 2026/10/09 — Preserve live content before distributing height
+
+- **Cause:** Equal `flex: 1` shelf rows centered four populated lines inside the height budget for empty slots; default shrink also collapsed a live chart to zero. Equal-width numeric columns clipped DAMAGE on narrow phones.
+- **Rule:** Measure populated, receipt-rich and unavailable states with the shipped font. Preserve child content heights inside one scrolling region, reserve numeric-label width, keep the footer visible and scroll keyboard selection into view. Empty fixture screens do not prove live layout.
+
 ### 2026/10/08 — Align the router's SSR query bridge
 
 - **Cause:** The security-required Start/router upgrade changed the server SSR interface while the old query bridge still called `isDehydrated()`. The public request returned200 but aborted its React boundary and fell back to client rendering.

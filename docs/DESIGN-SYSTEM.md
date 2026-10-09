@@ -138,6 +138,16 @@ Portrait play uses local role overrides, not a global token change: micro/body 1
 Changing numbers use tabular metrics and fixed character-width slots.
 A rising counter must not move neighboring labels.
 
+The live disk shelf uses compact, equally weighted body-role SCORE/DAMAGE
+figures; selected rows invert both figures for contrast without removing labels.
+Name/run, exact TESTNET MON balance and score/damage form three reading groups.
+Rows keep their content height, a fixed integer sprite footprint and wrapping
+long values. Native portrait spacing is container-scoped. Receipt-rich shelves
+and funded gameplay scroll inside the screen with a pinned footer; selection
+scrolls the active slot into view without animation. Shared live/result figures
+reserve label width and let the remaining value column wrap, never clip a loss.
+Charts retain their content height rather than shrinking to zero.
+
 Check every non-ASCII glyph against the actual shipped font file before using it in player copy.
 Maintain the confirmed glyph inventory from font inspection, not from what a system fallback happens to draw.
 If a symbol is absent, use a supported ASCII equivalent or an explicit pixel icon.

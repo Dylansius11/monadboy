@@ -136,7 +136,7 @@ export function Numbers({
   net: number | null
 }) {
   return (
-    <Panel flush className="grid grid-cols-2 gap-x-2 gap-y-1 p-2">
+    <Panel flush className="funded-numbers grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 p-2">
       <PixelText role="body" upper>
         Score
       </PixelText>

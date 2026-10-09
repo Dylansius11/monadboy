@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatEther } from 'viem'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { getCardManager, useCardState } from '../../chain/card-store'
@@ -19,6 +19,10 @@ export function RealDiskShelf({ onOpen, onBack }: {
   const state = shelf.useShelf()
   const [selected, setSelected] = useState<DiskSlot>(1)
   const [proof, setProof] = useState(false)
+  const selectedRow = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    selectedRow.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [selected, proof, state.status])
   useEffect(() => { if (card.phase === 'inserted') void shelf.refresh() }, [card.serial, card.phase, shelf])
   const slot = state.shelf?.slots[selected]
   function activate() {
@@ -52,14 +56,23 @@ export function RealDiskShelf({ onOpen, onBack }: {
           ) : state.status === 'ready' ? DISK_SLOTS.map((id) => {
             const entry = state.shelf?.slots[id]
             if (!entry) return null
-            return <button key={id} type="button" className={`pressable real-shelf-row border-edge flex min-h-11 flex-1 items-center gap-2 border p-2 text-left ${selected === id ? 'bg-accent text-ink-invert' : 'bg-panel'}`}
+            return <button key={id} type="button" className={`pressable real-shelf-row border-edge flex items-center gap-2 border text-left ${selected === id ? 'bg-accent text-ink-invert' : 'bg-panel'}`}
+              ref={selected === id ? selectedRow : null}
               onClick={() => setSelected(id)} aria-pressed={selected === id}>
               {entry.kind === 'disk' && <Sprite character={entry.disk.difficulty === 'hard' ? 'mouch' : entry.disk.difficulty === 'normal' ? 'moyaki' : 'molandak'} animation="idle" size={32} />}
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <PixelText role="body" tone={selected === id ? 'invert' : 'ink'} upper>Disk {id}: {entry.kind === 'disk' ? entry.disk.name : entry.kind === 'empty' ? 'Empty slot' : 'Unreadable'}</PixelText>
-                <PixelText role="micro" tone={selected === id ? 'invert' : 'ink'}>{entry.kind === 'error' ? entry.error.text : entry.kind === 'disk' ? `${entry.disk.runs} saved runs` : 'A: create and save'} </PixelText>
-                <PixelText role="micro" tone={selected === id ? 'invert' : 'ink'}>TESTNET MON {entry.balance === null ? 'not read' : formatEther(entry.balance)}</PixelText>
-                {entry.kind === 'disk' && <div className="flex gap-2"><span>SCORE <Value amount={entry.disk.bestScore} decimals={2} /></span><span>DAMAGE <Value amount={entry.disk.bestDamage} decimals={2} tone="loss" /></span></div>}
+              <div className="real-shelf-information flex min-w-0 flex-1 flex-col">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                  <PixelText role="body" tone={selected === id ? 'invert' : 'ink'} upper className="break-words">Disk {id}: {entry.kind === 'disk' ? entry.disk.name : entry.kind === 'empty' ? 'Empty slot' : 'Unreadable'}</PixelText>
+                  {entry.kind === 'disk' && <PixelText role="micro" tone={selected === id ? 'invert' : 'dim'}>{entry.disk.runs} saved runs</PixelText>}
+                </div>
+                {entry.kind !== 'disk' && <PixelText role="micro" tone={selected === id ? 'invert' : 'ink'} className="break-words">{entry.kind === 'error' ? entry.error.text : 'A: create and save'}</PixelText>}
+                <div className="font-pixel flex flex-wrap gap-x-1 text-micro">
+                  <span>TESTNET MON</span><span className="break-all">{entry.balance === null ? 'not read' : formatEther(entry.balance)}</span>
+                </div>
+                {entry.kind === 'disk' && <div className="real-shelf-stats flex flex-wrap gap-x-3">
+                  <span className="flex min-w-0 flex-wrap items-baseline gap-x-1"><PixelText role="micro" tone={selected === id ? 'invert' : 'ink'}>SCORE</PixelText><Value amount={entry.disk.bestScore} decimals={2} role="body" tone={selected === id ? 'invert' : 'ink'} className="break-all" /></span>
+                  <span className="flex min-w-0 flex-wrap items-baseline gap-x-1"><PixelText role="micro" tone={selected === id ? 'invert' : 'ink'}>DAMAGE</PixelText><Value amount={entry.disk.bestDamage} decimals={2} role="body" tone={selected === id ? 'invert' : 'loss'} className="break-all" /></span>
+                </div>}
               </div>
             </button>
           }) : <Panel>{state.error?.text ?? 'Reading three disk accounts from testnet.'}</Panel>}
