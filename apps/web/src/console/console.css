@@ -57,6 +57,14 @@
   overflow: hidden;
 }
 
+/* Near-square desktop windows need a header lane for the unscaled guide.
+   Native portrait phones keep their existing in-flow header and shell. */
+@media (min-width: 641px) and (max-aspect-ratio: 4/3) {
+  .console-stage {
+    top: 64px;
+  }
+}
+
 /* The landing hero's console carries the same name, so the browser morphs it
    into this one on PRESS START instead of cutting. */
 .console-stage .console {

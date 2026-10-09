@@ -2,19 +2,10 @@ import { useEffect, useState } from 'react'
 import type { RefObject } from 'react'
 
 /**
- * Scale factor that fits `box` inside `stage`.
- *
- * INTEGER FIRST, and that is not fussiness. The 480x320 screen sits inside the
- * console, so whatever scales the console scales the pixel art. A fractional
- * factor makes some source pixels two device pixels wide and others three,
- * which is the same "pecah" that ruined the first sprite cut, one level up.
- *
- * So: try 3x, 2x, 1x. Only when even 1x does not fit do we fall back to a
- * continuous scale, because a phone at 390px cannot show a 568px console at 1x
- * and half a black screen is worse than slight resampling. That fallback is a
- * documented concession, not an accident.
+ * Fit the complete desktop shell to the available viewport, including fractional
+ * enlargement between integer sizes. The game keeps its 480x320 logical grid;
+ * native portrait CSS overrides the transform and never scales the phone UI.
  */
-const LADDER = [3, 2, 1] as const
 
 export function useFitScale(
   stageRef: RefObject<HTMLElement | null>,
@@ -43,8 +34,7 @@ export function useFitScale(
       const sw = available.width - padding
       const sh = available.height - padding
 
-      const fitted = LADDER.find((n) => bw * n <= sw && bh * n <= sh)
-      setScale(fitted ?? Math.min(sw / bw, sh / bh))
+      setScale(Math.min(sw / bw, sh / bh))
     }
 
     measure()

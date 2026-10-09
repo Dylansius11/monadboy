@@ -35,11 +35,17 @@ References inform density, not a borrowed visual identity.
 | Rendering | Game: DOM/CSS and stepped SVG; decorative outer scenery: pixelated canvas |
 | Image filtering | `image-rendering: pixelated` |
 
-Laptop and held consoles keep the fixed landscape composition and fit scale. At <=640px in portrait, the play shell becomes a native-sized handheld: a flexible screen above compact, unscaled controls. Container queries on `game-screen` reflow the game without changing the landing's held consoles. Short phones scroll dense settings within the screen, with action footers pinned and D-pad focus scrolling into view.
-Use integer scaling for sprite pixels and snap sprite positions to the logical grid.
+Laptop and held consoles keep the fixed landscape composition. Desktop play uses adaptive viewport fitting, including fractional shell enlargement when more room is available; the 480x320 logical screen and shell proportions are unchanged. Short desktop viewports shrink rather than clip controls. At <=640px in portrait, the play shell remains a native-sized handheld with no manual scale control: a flexible screen above compact, unscaled controls. Container queries on `game-screen` reflow the game without changing the landing's held consoles. Short phones scroll dense settings within the screen, with action footers pinned and D-pad focus scrolling into view.
+Use integer scaling for sprite pixels inside the logical screen and snap sprite positions to the logical grid. Fractional outer-shell fitting is an explicit readability trade-off, not permission to resample sprite sheets or introduce fractional logical coordinates.
 A fixed inset fit box owns screen measurement, not content height or an already transformed element.
 Re-measure after `document.fonts.ready` and `visualViewport` resize.
 Two independent transforms never share the same element.
+
+Desktop fitting measures the stage, not the already-transformed shell. Widescreen
+play uses the full stage; widths >=641px with viewport aspect ratio <=4:3 reserve
+a64px header lane for the unscaled guide. The fit calculation uses that reduced
+stage height so controls cannot extend below the viewport. GUIDE remains outside
+the shell transform. No manual zoom setting or portrait-phone sizing change is added.
 
 ```css
 --spacing: 4px;
