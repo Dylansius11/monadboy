@@ -22,7 +22,7 @@ chains:
   - id: 10143
     start_block: 68939801
     rpc:
-      - url: https://testnet-rpc.monad.xyz
+      - url: "${ENVIO_RPC_URL:-https://testnet-rpc.monad.xyz}"
         for: live
         initial_block_interval: 100
         interval_ceiling: 100

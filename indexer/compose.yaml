@@ -48,6 +48,7 @@ services:
       - store:/workspace/indexer/.pnpm-store
     environment:
       ENVIO_API_TOKEN: ${ENVIO_API_TOKEN:-}
+      ENVIO_RPC_URL: ${ENVIO_RPC_URL:-https://testnet-rpc.monad.xyz}
       ENVIO_PG_HOST: postgres
       ENVIO_PG_PORT: 5432
       ENVIO_PG_USER: postgres

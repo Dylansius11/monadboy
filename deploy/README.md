@@ -167,6 +167,43 @@ including one rate-limit wait), and each request costs 1000 of a 15000-per-60-se
 The worker therefore runs one HyperSync chunk at a time, waits out a 429 using
 `x-ratelimit-reset`, and polls every 30 s. Keep the token in `.env` only.
 
+### Private testnet RPC
+
+Set `TESTNET_RPC_URL` in the private worker `.env` and `ENVIO_RPC_URL` in the
+private indexer `.env`. Compose forwards the latter; HyperIndex's config retains
+the public testnet URL as the unset/blank default. Do not put the tokenized URL
+in tracked YAML, `VITE_*`, command arguments or public proof artifacts.
+Mainnet sampling and HyperSync credentials are separate and remain unchanged.
+
+Before switching, verify chain10143, deployed bytecode, current/historical
+`eth_call`, receipt reads, bounded `eth_getLogs` and `eth_estimateGas`.
+Back up the two private env files, config and Compose file with restricted access.
+Stop only the indexer, run codegen with the existing512MiB one-shot ceiling and
+`NODE_OPTIONS=--max-old-space-size=384`, then restore its192MiB steady-state limit:
+
+```sh
+dc stop indexer
+MONADBOY_INDEXER_MEMORY=512m dc run --rm --no-deps \
+  -e NODE_OPTIONS=--max-old-space-size=384 --entrypoint node indexer \
+  node_modules/envio/bin.mjs codegen
+dc up -d --wait postgres graphql indexer
+systemctl restart monadboy-worker
+```
+
+Do not run codegen inside the192MiB live container. Restore services even after
+a failed codegen; never delete persistent volumes. Check actual resolved RPC
+privately, source/indexer recovery, a historical indexed fill and the existing
+drip ledger after restart. Generated config may contain the resolved token:
+keep it private along with env/backup files. HTTP200 is not a load-test result.
+
+[V,2026-10-09] QuickNode backend switch passed these RPC checks, pinned
+HyperIndex3.0.0-alpha.21 interpolation/codegen and native Linux typecheck/tests.
+Worker retained four drip records and first mid sample1791480426610; public
+GraphQL retained fill10143_69014514_2. The initial in-container probe exited137;
+the bounded one-shot codegen succeeded. Codegen still printed an ignored-build
+diagnostic for esbuild/rescript despite exit0 and successful compilation/tests.
+No build allowlist was weakened; this diagnostic is not silently suppressed.
+
 The mainnet MON_USDC source pauses immediately for an empty/crossed book or relative
 spread `(ask - bid) / mid > 2%`. This fixed operator maximum is user-approved policy,
 not measured calibration. Transport failures retain the three-failure pause. Testnet
