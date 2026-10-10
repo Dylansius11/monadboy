@@ -39,7 +39,8 @@ export type StepReceipt = {
 }
 export type ExecutionStep = {
   step: string
-  state: 'checking' | 'broadcast' | 'confirmed'
+  state: 'checking' | 'broadcast' | 'confirmed' | 'not-sent' | 'unconfirmed'
+  detail?: string
   hash?: Hex
   receipt?: StepReceipt
 }
@@ -69,63 +70,84 @@ export async function sendDiskTransaction(
   publish: (state: ExecutionStep) => void,
 ): Promise<StepReceipt> {
   return withSenderLock(lease.address, async () => {
-    lease.assertLive()
-    publish({ step, state: 'checking' })
-    await waitForSender(client, lease.address, lease)
-    lease.assertLive()
-    const code = await client.getCode({ address: call.to })
-    lease.assertLive()
-    if (!code || code === '0x')
-      throw new Error(
-        'Required TESTNET contract has no code. No transaction signed.',
-      )
-    const estimate = await client.estimateGas({
-      account: lease.address,
-      to: call.to,
-      data: call.data,
-      value: call.value,
-      gas: call.cap,
-    })
-    lease.assertLive()
-    const gas = bufferedGas(estimate, call.cap)
-    const wallet = createWalletClient({
-      account: lease.account,
-      chain: CHAIN,
-      transport: browserTransport(rpc),
-    })
-    const request = await wallet.prepareTransactionRequest({
-      account: lease.account,
-      to: call.to,
-      data: call.data,
-      value: call.value,
-      gas,
-    })
-    lease.assertLive()
-    const signed = await wallet.signTransaction(request)
-    lease.assertLive()
-    const hash = await client.sendRawTransaction({
-      serializedTransaction: signed,
-    })
-    // A broadcast survives eject; retain the hash and receipt without starting another signature.
-    publish({ step, state: 'broadcast', hash })
-    const receipt = await client.waitForTransactionReceipt({ hash })
-    rememberSenderBlock(lease.address, receipt.blockNumber)
-    const proof = {
-      step,
-      hash,
-      block: receipt.blockNumber,
-      estimate,
-      gas,
-      gasUsed: receipt.gasUsed,
-      effectiveGasPrice: receipt.effectiveGasPrice,
-      status: receipt.status,
+    let broadcasting = false
+    let hash: Hex | undefined
+    let confirmed = false
+    try {
+      lease.assertLive()
+      publish({ step, state: 'checking' })
+      await waitForSender(client, lease.address, lease)
+      lease.assertLive()
+      const code = await client.getCode({ address: call.to })
+      lease.assertLive()
+      if (!code || code === '0x')
+        throw new Error(
+          'Required TESTNET contract has no code. No transaction signed.',
+        )
+      const estimate = await client.estimateGas({
+        account: lease.address,
+        to: call.to,
+        data: call.data,
+        value: call.value,
+        gas: call.cap,
+      })
+      lease.assertLive()
+      const gas = bufferedGas(estimate, call.cap)
+      const wallet = createWalletClient({
+        account: lease.account,
+        chain: CHAIN,
+        transport: browserTransport(rpc),
+      })
+      const request = await wallet.prepareTransactionRequest({
+        account: lease.account,
+        to: call.to,
+        data: call.data,
+        value: call.value,
+        gas,
+      })
+      lease.assertLive()
+      const signed = await wallet.signTransaction(request)
+      lease.assertLive()
+      broadcasting = true
+      publish({ step, state: 'broadcast' })
+      hash = await client.sendRawTransaction({
+        serializedTransaction: signed,
+      })
+      // A broadcast survives eject; retain the hash and receipt without starting another signature.
+      publish({ step, state: 'broadcast', hash })
+      const receipt = await client.waitForTransactionReceipt({ hash })
+      rememberSenderBlock(lease.address, receipt.blockNumber)
+      const proof = {
+        step,
+        hash,
+        block: receipt.blockNumber,
+        estimate,
+        gas,
+        gasUsed: receipt.gasUsed,
+        effectiveGasPrice: receipt.effectiveGasPrice,
+        status: receipt.status,
+      }
+      confirmed = true
+      publish({ step, state: 'confirmed', hash, receipt: proof })
+      if (receipt.status !== 'success')
+        throw new Error(
+          `${step} reverted. Check its receipt; prior confirmed steps remain on chain.`,
+        )
+      return proof
+    } catch (error) {
+      if (!confirmed)
+        publish({
+          step,
+          state: broadcasting ? 'unconfirmed' : 'not-sent',
+          hash,
+          detail: broadcasting
+            ? 'broadcast outcome or confirmation unavailable; refresh chain state'
+            : !lease.isLive()
+              ? 'card ejected'
+              : 'operation failed before broadcast',
+        })
+      throw error
     }
-    publish({ step, state: 'confirmed', hash, receipt: proof })
-    if (receipt.status !== 'success')
-      throw new Error(
-        `${step} reverted. Check its receipt; prior confirmed steps remain on chain.`,
-      )
-    return proof
   })
 }
 

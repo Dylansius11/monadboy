@@ -516,7 +516,7 @@ export function createGameplayController() {
         score: totals?.score ?? null,
         damage: totals?.damage ?? null,
         net: totals?.net ?? null,
-        fills: exited.position.fills.length,
+        fills: exited.position.historyError ? null : exited.position.fills.length,
         receipts: exited.receipts.map((receipt) => receipt.hash),
         complete: totals !== null,
       }
@@ -541,7 +541,11 @@ export function createGameplayController() {
   let serial = card.getState().serial
   card.subscribe(() => {
     const next = card.getState()
-    if (next.phase === 'ejected' || next.serial !== serial) {
+    if (
+      next.phase === 'ejected' ||
+      next.serial !== serial ||
+      (session !== null && !session.lease.isLive())
+    ) {
       generation++
       session = null
       demand?.stop()
@@ -550,7 +554,15 @@ export function createGameplayController() {
       // Public broadcast/receipt evidence survives; decrypted position/history does not.
       store.setState((state) => ({
         ...EMPTY,
-        steps: state.steps,
+        steps: state.steps.map((step) =>
+          step.state === 'checking'
+            ? {
+                ...step,
+                state: 'not-sent',
+                detail: next.phase === 'ejected' ? 'card ejected' : 'card replaced',
+              }
+            : step,
+        ),
         receipts: state.receipts,
         error:
           next.phase === 'ejected'

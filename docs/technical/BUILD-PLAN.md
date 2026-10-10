@@ -268,6 +268,31 @@ all-day alignment/depth, physical-device restore or24-hour availability.
 
 **Reachable integration proof:** Native WebAuthn virtual PRF reader and isolated Anvil proved three-slot seal/restore and profile preservation. Funded Monad testnet then proved two S6 provisions, maker flip, S8 exit, optional sealed saves and first-run discoverable restore without server/localStorage. Pending-operation eject/expiry regressions pass. Two-run shelf was observed before a later repeat restore stalled with the disposable authenticator unavailable; no production recovery claim is made from memory-only test credentials.
 
+**2026-10-10 funded interruption audit:** Provisioning cost checks now end as
+`not sent: card ejected` immediately on eject/expiry, while confirmed receipts
+remain visible. Pre-broadcast failures terminate the unsent step; interrupted
+broadcast/receipt reads retain an honest unknown-confirmation state rather than
+claiming the transaction failed. Reinsert/open reads chain-owned margin and
+orders independently of an optional sealed basis, preserving re-quote and
+withdrawal recovery. Hiding aborts an in-flight mirror-demand renewal; showing
+can renew again, and eject stops the demand lease. Regression coverage includes
+pending provisioning eject, partial-margin recovery, double confirmation,
+quote expiry, network failures and mirror visibility lifecycle. No new
+transaction or physical-device restore proof is claimed by these unit tests.
+Same-serial card replacement also invalidates a revoked gameplay lease.
+Low-balance sender block-spacing waits stop after 30 seconds if the chain
+does not advance, without signing or weakening the three-block requirement.
+Unavailable Envio/direct-log history no longer discards successfully read
+chain balances/orders or blocks withdrawal. It carries an explicit history
+error with unavailable totals; exit fill counts seal and restore as null,
+not a fabricated zero or a numeric completed run.
+Each gameplay tick now reads the chain head, then the six snapshot reads
+(order counter, both margin balances, wallet MON and AUSD, book) in one JSON-RPC
+batch at that block, and reads each order once per snapshot. The shared 200ms
+spacing applies to HTTP dispatch. Read-only measurement against the production
+RPC, worker and Envio on the same owner: median tick 1,403ms with 7 RPC requests
+before, 411ms with 2 after; a failed sub-read still rejects, never reads as zero.
+
 **Production PWA proof:** Built preview manifest parsed without errors; native Chromium Page.getInstallabilityErrors returned an empty error list, with real 192/512/maskable icons. No service worker caches chain responses. Physical-phone standalone launch and Lighthouse report are not recorded, so 7.9 remains open. Live leaderboard no-market and retained OFFLINE state are rendered; no invented ranking or fill is claimed.
 
 ## Phase 8 — Envio indexer
