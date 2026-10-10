@@ -227,4 +227,28 @@ Orders189/190 back bid0.02455242 and ask0.02460158; the observed midpoint
 in production SQLite for safe future cancellation. They are real passive orders,
 not a continuously refreshed book or a promise of fills/depth.
 `mirror-passive-seed.json` records the exact hash, source and receipt.
-Unattended signing remains disabled pending B10 budget/cadence approval.
+As of2026-10-09, unattended signing remained disabled pending B10 approval.
+
+## 6. Demand-only amplified demo receipts
+
+[V,2026-10-10 UTC] The same BOT signed only while a saved test-owned disk
+maintained45second demand leases. Six heartbeats supported four cancellation/
+quote actions, each at least34seconds apart. Eight receipts succeeded, with
+declared-gas cost0.383914332MON at102gwei. Zero Trade events occurred: these are
+real bid/ask changes, not evidence of new player fills or profit.
+
+| Nonce | Receipt | Block | Declared gas |
+| --- | --- | --- | --- |
+| 153 | [0x9f713b…cba32](https://testnet.monadvision.com/tx/0x9f713bde6473781be0c520b8dca81c05f248ab558bd478b00d15147ef43cba32) | 69768678 | 304793 |
+| 154 | [0x8db887…43221](https://testnet.monadvision.com/tx/0x8db8873b496bcc03d7b2534cb8dc0287a54e8c638e7196d01610717e65343221) | 69768683 | 636113 |
+| 155 | [0x9a6081…799b](https://testnet.monadvision.com/tx/0x9a60813cf478cd397979c833494b77cb6511a3b66bc972bcaf90f0a49733799b) | 69768791 | 304793 |
+| 156 | [0x7e38ef…20e2](https://testnet.monadvision.com/tx/0x7e38ef74123341e27ac4709164714797a6b480ae511a18a5fcb561792ff320e2) | 69768798 | 636255 |
+| 157 | [0x7bbc9b…586](https://testnet.monadvision.com/tx/0x7bbc9b54514e21382fbebd8e520c250a9336c3f7fd0c1a280e65246f600b1586) | 69768908 | 304793 |
+| 158 | [0xf04c93…1a5e](https://testnet.monadvision.com/tx/0xf04c9389dd9b3fcbec0ddbc0879e09bd1ae96c1f488c18473878e47ff0951a5e) | 69768915 | 636129 |
+| 159 | [0x75c7d3…7d54](https://testnet.monadvision.com/tx/0x75c7d398446072b04ace6ef238d39534246286fdd3a27c513f5961e7d9fb7d54) | 69769024 | 304793 |
+| 160 | [0x266d61…9a72](https://testnet.monadvision.com/tx/0x266d612b4a9554b70673a997de7dea4791beb5b7b98e0d8bed55374a0c549a72) | 69769030 | 636197 |
+
+Nonce stayed161 after demand expired; gas reservations0.459191652MON survived
+restart under the2MON UTC/day cap. The first-valid-source anchor is0.0248595;
+the common target is `anchor * (raw / anchor)^20`. Actual chain valuation is unchanged.
+External receipt/sample/ledger proofs are named in [deployment operations](../../deploy/README.md).

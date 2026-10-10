@@ -28,7 +28,8 @@ backend HTTPS or passkey restore on physical devices.
 
 Start public infrastructure read-only with `ENABLE_TRANSACTIONS=false`. Complete
 source/index coverage, HTTPS and service-restart checks before claiming health.
-Enable unattended mirror signing only after B10's final alignment/cost acceptance.
+Enable mirror signing only under an approved bounded operating policy with real
+source/execution/cost proof. Current approval is demand-only, not a24/7 loop.
 Do not run a second signing worker against the same operations accounts.
 
 Before target deployment, obtain SSH host/port, user, private authentication method
@@ -122,7 +123,8 @@ For **drip-only production**, set it to `true`, configure the funded
 `BOT_PRIVATE_KEY` absent. The existing operations boundary then creates only the
 drip treasury, its inventory monitor and AUSD top-up job; no mirror executor/job exists.
 Keep the salt unchanged across restarts so client quotas remain effective.
-Only configure a separate BOT key after B10 acceptance; never share keys between roles.
+Configure a separate BOT key only for the approved demand-only policy and verified
+bounded execution; never share keys between roles or silently enable24/7 signing.
 The verified testnet manifest is the default; custom deployments need `MARKETS_JSON`
 and their explicit start block. Startup refuses signing unless the RPC reports
 chain10143 and every configured contract has bytecode. Never use these keys on mainnet.
@@ -346,3 +348,26 @@ One corrected bounded transition canceled live owned quotes and filled DEPLOYER/
 makers; subsequent target quote preflight honestly refused a crossing third-party bid,
 without broadcasting a revert. Continuous final-strategy alignment/operating cost remains
 an acceptance gate. Full receipts and remaining checks live in BUILD-PLAN and the external log.
+
+### Demand-only production rollout —2026-10-10 UTC
+
+The global Vercel owner `dylansiusputra` verified the original MONADBOY project/team
+and canonical domain. Linux build READY, deployment
+`dpl_Ehr8Xnz32zcAWiwbtvW2FQggWQGN` promoted to `monadboy-play.vercel.app`.
+Windows compilation succeeded but local CLI output rename failed EPERM; Linux
+build/promotion is the observed successful path, not a claimed Windows fix.
+Actual user Chrome rendered production desktop1920x889 and native412x915 card/guide;
+production-origin DEMO API fetch returned200. RP ID and phone geometry unchanged.
+
+Worker env remains0600monadboy. Migration6 preserves original three sent/two
+already-funded drip rows and first sample1791480426610. Restricted online SQLite
+backup passed integrity_check before rollout. Restart preserved the20x anchor,
+eight receipt hashes and0.459191652MON conservative gas reservations.
+
+Six controlled heartbeats produced four actions at least34seconds apart:
+eight successful cancellation/quote receipts, zero Trade events and0.383914332MON
+declared-gas cost. Lease expiry stopped signing: BOT nonce153 ->161 then stayed161.
+Health recovered green with live Envio after an initial not-yet-observed state.
+No new player maker fill, guaranteed book depth or24-hour availability is implied.
+Proof files remain outside Git: demand-production-probe.json,
+demand-production-receipts.json, demand-release-ledger.json and demand-release-health.json.

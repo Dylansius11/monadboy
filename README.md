@@ -11,7 +11,7 @@ SCORE is realized flip spread. DAMAGE is equally visible. Every number has a sou
 The app moves no real money; mainnet market data is read-only.
 
 **Live app:** [monadboy-play.vercel.app](https://monadboy-play.vercel.app).
-Testnet disk funding is active. DEMO x20 demand-only play is implemented; matching production rollout is pending. [Remaining play/device gates](docs/BLOCKERS.md) stay explicit.
+Testnet funding and bounded demand-only `DEMO x20` play are active. [Remaining play/device gates](docs/BLOCKERS.md) stay explicit.
 
 Video: added before submission
 
@@ -177,18 +177,22 @@ preserved an actual fill. Spoofed roles cannot elevate; mutations are refused an
 administration paths return404.
 The browser signs for players, never the worker. On2026-10-09, production drip-only
 funding confirmed0.5MON +10AUSD through public HTTPS and refused a repeated payout.
-Mirror signing remains disabled with `no-bot-key`; latest health reports live Envio
-reads and an indexed leaderboard. This is **not full judge-play acceptance**:
-physical-phone stateless restore, full gameplay and24-hour accepted operations
-remain gates. [Deployment operations](deploy/README.md) records receipts, key
-isolation, private backup/restore proof and five-minute health sampling.
+On2026-10-10, the matched frontend/worker rollout enabled demand-only DEMO signing.
+Six controlled heartbeats led to eight successful cancellation/quote receipts,
+cost0.383914332MON and reserved0.459191652MON of the2MON UTC/day ceiling.
+After lease expiry, BOT nonce stayed161 and health returned green with live Envio.
+No Trade event occurred in this probe: it proves real quote movement and idle
+stopping, not a new player maker fill. Physical stateless restore, full gameplay
+and24-hour acceptance remain gates. [Deployment operations](deploy/README.md)
+records key isolation, private backup/restore and five-minute health sampling.
 The latest user-reported S22 run confirms sound, card/disk access and the repaired
 shelf, then reaches a live position. Public receipt checks confirm approval,
 deposit, zap and four flip orders. No maker fill is shown in that run.
-The mainnet source and TESTNET book are currently divergent because mirror
-execution is disabled, so sitting is not evidence that those transactions failed.
-The live view exposes both prices and range endpoints; A jumps only while the
-source is in range. More player funding does not fix mirror alignment.
+The preceding S22 source/book divergence occurred with the mirror disabled;
+sitting did not mean the provision transactions failed. The current live view
+separates raw mainnet, amplified DEMO target, actual TESTNET book and range.
+A jumps in range; out of range it reviews manual re-centering. Existing ranges
+are never automatically moved, and thin-book funding refusals remain honest.
 Entry now rejects insufficient full buffered ask capacity before deposit; the
 minimum-order and separate-step recovery guards remain intact.
 Physical stateless restore, fill-specific audio and full-play acceptance remain open.

@@ -122,8 +122,10 @@ or gas guarantees from a short controlled run.
   are not reset; out-of-range A remains reviewed manual re-centering.
 - Visible range/live saved disks provide signed45second leases, refreshed every
   15seconds. Idle skips mirror inventory/signing, with30second action cadence.
-- Local real HTTP admission/refusal and persistent budget regressions passed;
-  matched production rollout and new demand-only gas/alignment proof remain.
+- Matched production rollout passed: six controlled heartbeats, eight successful
+  cancellation/quote receipts,0.383914332MON cost and0.459191652MON reserved.
+  Lease expiry held nonce161; restart preserved anchor/gas ledger and drip history.
+  No Trade event occurred, so new player fills and long-run alignment are not proved.
 - Role snapshot at69748178: DEPLOYER43.4829476042MON,
   BOT42.9568720714106MON, DRIP16.913196776MON. No role transfer was needed.
 - Vercel global login `dylansiusputra` now returns HTTP200 for the original

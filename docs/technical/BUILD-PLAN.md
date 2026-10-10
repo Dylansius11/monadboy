@@ -10,7 +10,7 @@ Read a task as `box + task ID + deliverable + proof`. `[x]` means the named deli
 
 As of **2026-10-10 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCKERS.md); user-facing asks are mirrored in the external handoff.
 
-**Latest integrated unit:** approved DEMO x20 relative-price policy, signed demand-only mirror,30second action cadence and conservative2MON/day persistent reservation cap are implemented locally. Real Bun/Hono HTTP with a saved test-owned registry disk accepted demand and refused foreign/expired/forged/oversized requests. Concurrent cap and nonce-wait expiry regressions protect idle signing. Matching frontend rollout is still pending; canonical RP ID and phone geometry are unchanged. No automatic re-center or24-hour acceptance is claimed.
+**Latest integrated unit:** DEMO x20 demand-only frontend/worker are deployed at the unchanged canonical RP ID. Six controlled heartbeats produced eight successful cancellation/quote receipts,0.383914332MON cost and0.459191652MON reserved under the2MON UTC/day cap. Lease expiry held BOT nonce161; source/Envio recovered green. Real Chrome rendered desktop and native412x915 card/guide without overflow.7.1 closes on native HTTPS lifecycle proof; no physical-device, new maker-fill, automatic re-center or24-hour acceptance is claimed.
 
 | Phase                          | Status  | Done/Total tasks | Next action                                                                         | Blocker                                     |
 | ------------------------------ | ------- | ---------------- | ----------------------------------------------------------------------------------- | ------------------------------------------- |
@@ -224,6 +224,18 @@ mix. Actual user Chrome PCM rendered RMS0.04084380723204596 with silent tail.
 Native WebAudio music gain measured0.06750000268220901; VOL/effects are unchanged.
 These are digital browser proofs, not physical-speaker or full funded phone acceptance.
 
+**2026-10-10 matched production proof:** original Vercel project/team authorization
+and canonical alias were verified. Linux deployment READY and promoted; worker
+retains private0600env, migrations1..6, original three sent/two refused drip rows
+and first sample1791480426610. Real Chrome production-origin DEMO fetch returned200;
+desktop1920x889 and native412x915 card/guide rendered without horizontal overflow.
+Six controlled heartbeats yielded four actions at least34seconds apart, with
+eight successful cancellation/quote receipts, zero Trade events and0.383914332MON
+declared-gas cost. Persistent reservation is0.459191652MON under2MON/day.
+After lease expiry nonce161 stayed unchanged, activePlayers0 and health green
+with live Envio. This proves real quotes/demand stopping, not player maker fills,
+all-day alignment/depth, physical-device restore or24-hour availability.
+
 **2026-10-06 UTC review/runtime:** Authenticated HyperSync query HTTP 200, real book/log inputs and complete SQLite trade window; no broadcast jobs enabled. Expiry is evaluated after inventory awaits; tracker data over 45min cannot remain live/playable. Fresh mid/source reads, CORS allow/deny/preflight, strict invalid queries/bodies and disabled drip 503 observed. Leaderboard truthfully returned no-market-configured, so funded ranking/drip/mirror acceptance remains open. Original WSL systemd verification failed for missing Bun; only a temporary syntax copy passed. Caddy unavailable; target deployment/validation not claimed.
 
 ## Phase 7 — Web integration
@@ -282,7 +294,7 @@ These are digital browser proofs, not physical-speaker or full funded phone acce
 - [x] **9.1** Resolve VPS access and fixed production hostname — proof: user-approved `monadboy-play.vercel.app`, matching production/preview VITE_RP_ID, persisted verified project domain, anonymous Edge HTTPS render and navigation; restricted SSH key authenticated `ubuntu`, `sudo -n true` and actual capacity/container inventory on2026-10-08 UTC. No credentials tracked.
 - [x] **9.2** Deploy Vercel web and VPS worker/indexer behind Caddy HTTPS/systemd — proof: anonymous Edge public412x915 landing/card/data-route loads; worker HTTPS200 and restart/SQLite persistence; indexer force-recreation recovered persistent fill10143_69014514_2. Public spoofed-admin reads remained public-only, mutations refused and admin paths404. This rendered phone viewport is not physical B8 acceptance.
 - [ ] **9.3** Rehearse on three fresh devices — proof required: iPhone, Android and desktop Chrome with Google Password Manager recordings, including a phone that never saw the app and stateless restore.
-- [ ] **9.4** Observe healthy worker for24hours — five-minute persistent timer started; initial post-restart502 remains recorded. Latest2026-10-09 health reports live Envio and enabled drip, but mirror remains intentionally disabled with `no-bot-key`. Proof required:24-hour samples/source/tick ages and accepted final health, plus availability through judging; retain hosting through4November pending [SUBMISSIONS](../SUBMISSIONS.md).
+- [ ] **9.4** Observe healthy worker for24hours — five-minute persistent timer remains active; original restart502 and new startup indexer-offline/not-yet-observed state are retained.2026-10-10 matched demand-only rollout subsequently reports green, live Envio and enabled drip/mirror with activePlayers0. A short idle probe is not24-hour uptime. Proof required: complete24-hour samples/source/tick ages and accepted final health, plus availability through judging; retain hosting through4November pending [SUBMISSIONS](../SUBMISSIONS.md).
 - [ ] **9.5** Finalize README and clean-clone local setup — [V] fresh local clone of7268a17 installed832packages with `bun install --frozen-lockfile`; `bun run verify` passed web551/SDK153/worker133, typechecks and lint without copied env/generated/dependency directories. README addresses/code paths updated. Remaining proof: public screenshots/GIF, technical demo ≤3 minutes, separate pitch ≤2 minutes, logo ≤3 MB and complete package per [SUBMISSIONS](../SUBMISSIONS.md).
 - [ ] **9.6** Complete eligible bounty mapping — proof required: each requirement -> actual code path -> video timestamp in README/research/bounties.md; Agora is skipped (Mera + AUSD + Perpl required), not pending PWA qualification.
 - [ ] **9.7** Check public submission package against [SUBMISSIONS](../SUBMISSIONS.md) — proof required: public repo/live URL, MIT license, final address/tx/technical-demo/pitch links, logo, sponsor fields and AI-tool disclosure; saved submission receipt/checklist.
