@@ -217,6 +217,12 @@ Existing jsdom scroll/canvas warnings are not browser failures or hidden proof.
 Worker integration now gates inventory/execution on demand, checks it inside the
 actual signing queue and exposes raw/DEMO source plus persistent gas status.
 Idle/cadence and nonce-wait expiry regressions pass; no user-key signing is added.
+Frontend visible range/live now refreshes signed demand every15seconds, stops on
+hidden/eject/results/unmount and labels DEMO/raw source/actual book separately.
+In-range accepted jump uses160ms chip audio; music gain is15% of the previous
+mix. Actual user Chrome PCM rendered RMS0.04084380723204596 with silent tail.
+Native WebAudio music gain measured0.06750000268220901; VOL/effects are unchanged.
+These are digital browser proofs, not physical-speaker or full funded phone acceptance.
 
 **2026-10-06 UTC review/runtime:** Authenticated HyperSync query HTTP 200, real book/log inputs and complete SQLite trade window; no broadcast jobs enabled. Expiry is evaluated after inventory awaits; tracker data over 45min cannot remain live/playable. Fresh mid/source reads, CORS allow/deny/preflight, strict invalid queries/bodies and disabled drip 503 observed. Leaderboard truthfully returned no-market-configured, so funded ranking/drip/mirror acceptance remains open. Original WSL systemd verification failed for missing Bun; only a temporary syntax copy passed. Caddy unavailable; target deployment/validation not claimed.
 

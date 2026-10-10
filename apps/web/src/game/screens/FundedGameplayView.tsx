@@ -19,14 +19,14 @@ export type Actions = {
   openLive: () => void
 }
 export type FundedScreenProps = { state: GameplayState; actions: Actions }
-export function Header({ title }: { title: string }) {
+export function Header({ title, demoMultiplier = 1 }: { title: string; demoMultiplier?: number }) {
   return (
     <header className="flex flex-wrap items-baseline justify-between gap-1">
       <PixelText role="title" upper>
         {title}
       </PixelText>
       <PixelText role="micro" upper>
-        MON/AUSD TESTNET
+        {demoMultiplier > 1 ? `DEMO x${demoMultiplier} · TESTNET` : 'MON/AUSD TESTNET'}
       </PixelText>
     </header>
   )
@@ -69,6 +69,9 @@ export function ReceiptSteps({ state }: { state: GameplayState }) {
 export function Notices({ state }: { state: GameplayState }) {
   return (
     <>
+      {state.demandError && (
+        <PixelText role="micro" tone="loss" as="p">{state.demandError}</PixelText>
+      )}
       {state.error && (
         <PixelText role="micro" tone="loss" as="p" aria-live="polite">
           {state.error}
@@ -183,7 +186,7 @@ export function Inputs({
   const position = state.position!
   return (
     <div className="screen-inputs bg-screen flex h-full w-full flex-col gap-2 overflow-y-auto p-2">
-      <Header title="Actual inputs" />
+      <Header title="Actual inputs" demoMultiplier={state.demoMultiplier} />
       <Panel flush className="flex flex-col gap-1 p-2">
         <PixelText role="micro">
           TESTNET book bid{' '}

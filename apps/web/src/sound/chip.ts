@@ -8,6 +8,7 @@ export type SoundEffect =
   | 'move'
   | 'confirm'
   | 'back'
+  | 'jump'
   | 'boot'
   | 'coin'
   | 'alert'
@@ -46,6 +47,8 @@ export const EFFECTS: Readonly<Record<SoundEffect, ReadonlyArray<Note>>> = {
   confirm: [note(0, E5, 0.055, 0.5, 0.26), note(0.055, B5, 0.11, 0.5, 0.26)],
   // Two falling notes: backed out.
   back: [note(0, D5, 0.055, 0.25, 0.24), note(0.055, A4, 0.1, 0.25, 0.24)],
+  // A short rising slide for an accepted jump, distinct from a confirmed fill.
+  jump: [note(0, C5, 0.16, 0.25, 0.24, C6)],
   // The power-on chime: a short pick-up and a long high note.
   boot: [note(0, C6, 0.09, 0.5, 0.26), note(0.09, C7, 0.55, 0.5, 0.24)],
   // A real flip fill. Bright, thin duty, the one sound that should cut through.

@@ -26,7 +26,7 @@ export function FundedResults({ state, actions }: FundedScreenProps) {
   if (inspect) return <Inputs state={state} onClose={() => setInspect(false)} />
   return (
     <div className="screen-results bg-screen flex h-full w-full flex-col gap-1 p-2">
-      <Header title={result ? 'Session over' : 'No confirmed exit'} />
+      <Header title={result ? 'Session over' : 'No confirmed exit'} demoMultiplier={state.demoMultiplier} />
       <div className="funded-body flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {result ? (
           <>

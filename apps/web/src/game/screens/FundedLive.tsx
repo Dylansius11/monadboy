@@ -97,6 +97,7 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
   }, [position.fills, band, paused, play])
   const jump = () => {
     if (paused || state.busy) return
+    play('jump')
     setJumping(true)
     clearTimeout(jumpTimer.current)
     jumpTimer.current = setTimeout(() => setJumping(false), 300)
@@ -128,7 +129,7 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
     <div
       className={`screen-live bg-screen flex h-full w-full flex-col gap-1 p-2 ${band === 'NAD_SENSE' && !paused ? 'nad-pulse' : ''}`}
     >
-      <Header title="Current position" />
+      <Header title="Current position" demoMultiplier={state.demoMultiplier} />
       <div className="funded-body flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         <Numbers
           score={valuation?.score ?? null}
@@ -147,7 +148,10 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
                   : 'No active range'}
         </PixelText>
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-micro">
-          <span>MAINNET price: {state.sourceMid === null ? 'unavailable' : price(state.sourceMid)}</span>
+          <span>MAINNET source: {state.mainnetMid === null ? 'unavailable' : price(state.mainnetMid)}</span>
+          {state.demoMultiplier > 1 && (
+            <span>DEMO target: {state.sourceMid === null ? 'unavailable' : price(state.sourceMid)}</span>
+          )}
           <span>TESTNET book: {position.mid === null ? 'unavailable' : price(position.mid)}</span>
           {low !== null && high !== null && (
             <span>Your range: {price(low)} to {price(high)}</span>
@@ -156,7 +160,7 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
         {!paused && band === 'OUT_OF_RANGE' && low !== null && high !== null &&
           position.mid !== null && position.mid >= low && position.mid <= high && (
             <PixelText role="micro" tone="loss" as="p">
-              Mainnet price is outside this TESTNET range. The books are not aligned.
+              {state.demoMultiplier > 1 ? 'DEMO target' : 'Mainnet price'} is outside this TESTNET range. The book is catching up.
               Jump is available in range; re-centering is manual.
             </PixelText>
           )}
@@ -206,7 +210,7 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
               : `History has unavailable gaps before block ${position.coverageFrom.toString()}. SCORE/DAMAGE/NET are unavailable, not zero.`}
           </PixelText>
           <PixelText role="micro">
-            Range display follows actual mainnet source; valuation uses actual
+            Range display follows {state.demoMultiplier > 1 ? `DEMO x${state.demoMultiplier} target` : 'mainnet source'}; valuation uses actual
             TESTNET book mid. Time in range is sampled on this tab only.
           </PixelText>
         </Panel>

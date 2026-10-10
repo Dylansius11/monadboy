@@ -25,8 +25,8 @@ export interface SoundEngine {
 /** Source: public/audio/LICENSE.md. */
 export const MUSIC_URL = `${import.meta.env.BASE_URL}audio/starlight-city-loop.mp3`
 
-/** The loop sits well under the effects: a bed, not the foreground. */
-const MUSIC_BUS_GAIN = 0.45
+/** Keep the music bed at 15% of its original gain; effects and VOL stay unchanged. */
+const MUSIC_BUS_GAIN = 0.0675
 const MUSIC_FADE_IN_SECONDS = 2
 /** Gain changes glide over a few time constants so a slider drag never zippers. */
 const LEVEL_TIME_CONSTANT = 0.02

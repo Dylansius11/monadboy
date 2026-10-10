@@ -188,6 +188,7 @@ export function InRange({
         return
       }
       // The entire mini-game input: a fixed-length swap, see JUMP_MS above.
+      play('jump')
       setJumping(true)
       clearTimeout(jumpTimeout.current)
       jumpTimeout.current = window.setTimeout(() => setJumping(false), JUMP_MS)

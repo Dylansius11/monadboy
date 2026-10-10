@@ -11,7 +11,7 @@ SCORE is realized flip spread. DAMAGE is equally visible. Every number has a sou
 The app moves no real money; mainnet market data is read-only.
 
 **Live app:** [monadboy-play.vercel.app](https://monadboy-play.vercel.app).
-Testnet disk funding is active; the mirror stays disabled. [Remaining play/device gates](docs/BLOCKERS.md) stay explicit.
+Testnet disk funding is active. DEMO x20 demand-only play is implemented; matching production rollout is pending. [Remaining play/device gates](docs/BLOCKERS.md) stay explicit.
 
 Video: added before submission
 
@@ -62,8 +62,14 @@ flowchart LR
 ```
 
 Chain IDs and public endpoints are [V: Monad current facts](https://docs.monad.xyz/ai/current-facts.md).
-The mirror targets Kuru mainnet MON/USDC and labels play `TESTNET BOOK, MAINNET PRICE (KURU MON/USDC)`.
-Source liveness was observed against real mainnet reads; the mirror pauses invalid/wide books. Final corrected-strategy continuous alignment and cost remain gated. USDC and AUSD are treated as one USD each [I], not measured parity.
+Playable MON/AUSD targets labeled `DEMO x20 TESTNET` movement from a persistent
+Kuru mainnet MON/USDC anchor: `anchorTarget * (mainnetMid / anchorSource)^20`.
+Raw mainnet, DEMO target and actual TESTNET book are separate inspectable values;
+actual holdings/SCORE/DAMAGE are never replaced with amplified valuations.
+The mirror requires signed saved-disk demand, acts at least30seconds apart and
+reserves at most2MON per UTC day before signing. Idle has no mirror sends.
+Invalid/wide source books pause it; alignment/depth and24-hour cost are not guaranteed.
+USDC and AUSD are treated as one USD each [I], not measured parity.
 The worker never signs for a user. Chain is truth; Envio and SQLite are read models.
 The sealed disk lives onchain in DiskRegistry v2. Clearing site data must not remove the ability to restore with the same passkey.
 Real-device restore remains [U: S4/B8]. Local S5 indexing passed with fresh564–570ms observations and exact SCORE parity. Public hosting/restart proof is recorded below; complete maker basis and final continuous mirror acceptance remain open.
@@ -153,7 +159,7 @@ Set `VITE_WORKER_URL` to the worker origin and worker `APP_ORIGIN` to the exact 
 Set `VITE_RP_ID` to the chosen stable hostname. The verified registry/market manifests are defaults; optional registry/RPC overrides must target chain10143. `VITE_RP_NAME` is optional. Never reuse disposable tunnel cards as production cards.
 To walk the marked screen simulation locally, set `VITE_USE_FIXTURES=true` in the web development environment. Production builds ignore it. `/` is the landing page; `/play` is the handheld. RULE BOOK on desktop and GUIDE on phones open current-screen actions first, with gameplay and control sections on demand. H or ? toggles it. VOL controls effects/music; zero is silent, an adjustment clears mute, and M mutes/restores the saved level. There is no separate mute button.
 The development-only `/dev/passkey` page exercises disposable WebAuthn create/restore, disk signing and local authenticated sealing without a transaction. It is not a production route or physical-device support claim.
-Worker configuration and safety policy are documented in [deploy/README.md](deploy/README.md). Keep `ENABLE_TRANSACTIONS=false` for read-only development. Production drip-only operation configures DRIP but no BOT key; unattended mirror signing still requires final continuous alignment/cost acceptance.
+Worker configuration and safety policy are documented in [deploy/README.md](deploy/README.md). Keep `ENABLE_TRANSACTIONS=false` for read-only development. Approved demand-only operation uses separate DRIP/BOT keys, a verified registry address and `MIRROR_DAILY_GAS_MON=2`; new production runtime/cost proof remains distinct from policy approval.
 Bot, drip, and deployer keys are distinct local / VPS secrets. Never put secret values in the browser or repository.
 Use HTTPS or localhost for passkeys [V: Mera guide](https://docs.monad.xyz/guides/mera); test supported authenticators before claiming restore works [U: S4].
 

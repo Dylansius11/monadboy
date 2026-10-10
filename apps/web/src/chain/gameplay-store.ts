@@ -34,6 +34,7 @@ import { TRACKER_STALE_MS } from '../game/data/provenance'
 import { ladderErrorCopy } from '../lib/range/ladder-copy'
 import { useSession } from '../state/session'
 import { cardErrorCopy, isCardError, meraCodeOf } from './errors'
+import { createMirrorDemand } from './mirror-demand'
 import type { Market } from '@monadboy/sdk'
 import type { Address, Hex } from 'viem'
 import type { DiskLease, DiskSlot } from './card'
@@ -57,6 +58,9 @@ export type GameplayState = {
   width: 'wide' | 'tight'
   manual: { low: number; high: number } | null
   sourceMid: number | null
+  mainnetMid: number | null
+  demoMultiplier: number
+  demandError: string | null
   sourceFresh: boolean
   source: string | null
   sigmaDaily: number | null
@@ -83,6 +87,9 @@ const EMPTY: GameplayState = {
   width: 'wide',
   manual: null,
   sourceMid: null,
+  mainnetMid: null,
+  demoMultiplier: 1,
+  demandError: null,
   sourceFresh: false,
   source: null,
   sigmaDaily: null,
@@ -99,6 +106,8 @@ const EMPTY: GameplayState = {
 }
 const sourceSchema = z.object({
   targetMid: z.number().finite().positive().nullable(),
+  mainnetMid: z.number().finite().positive().nullable(),
+  demo: z.object({ multiplier: z.number().int().min(1).max(20) }).nullable(),
   source: z.string(),
   fresh: z.boolean(),
   state: z.enum(['running', 'paused']),
@@ -125,6 +134,7 @@ export function createGameplayController() {
     market: Market
     reader: ReturnType<typeof createPositionReader>
   } | null = null
+  let demand: ReturnType<typeof createMirrorDemand> | null = null
   let generation = 0
   let reading: Promise<void> | null = null
   let saving: Promise<void> = Promise.resolve()
@@ -193,6 +203,8 @@ export function createGameplayController() {
   async function sourceAndGate() {
     let sourceFresh = false
     let sourceMid: number | null = null
+    let mainnetMid: number | null = null
+    let demoMultiplier = 1
     let source: string | null = null
     let sigmaDaily: number | null = null
     let allowed = false
@@ -206,6 +218,8 @@ export function createGameplayController() {
       if (midResponse.ok) {
         const mid = sourceSchema.parse(await midResponse.json())
         sourceMid = mid.targetMid
+        mainnetMid = mid.mainnetMid
+        demoMultiplier = mid.demo?.multiplier ?? 1
         source = mid.source
         sourceFresh =
           mid.fresh &&
@@ -248,7 +262,7 @@ export function createGameplayController() {
     } catch {
       /* An unavailable worker pauses new risk, not chain recovery or withdrawal. */
     }
-    return { sourceFresh, sourceMid, source, sigmaDaily, allowed, gateReason }
+    return { sourceFresh, sourceMid, mainnetMid, demoMultiplier, source, sigmaDaily, allowed, gateReason }
   }
   async function refresh() {
     const active = session
@@ -286,6 +300,8 @@ export function createGameplayController() {
   async function open(id: string, slot: DiskSlot) {
     const mine = ++generation
     store.setState({ ...EMPTY, status: 'loading' })
+    demand?.stop()
+    demand = null
     session = null
     try {
       const sourceMarket = mainnetMarkets.find(
@@ -319,6 +335,7 @@ export function createGameplayController() {
           import.meta.env.VITE_ENVIO_GRAPHQL_URL?.trim() || undefined,
         ),
       }
+      demand = createMirrorDemand(lease, market.address, resolveWorkerUrl(readChainEnv()))
       store.setState({
         market,
         owner: lease.address,
@@ -362,7 +379,7 @@ export function createGameplayController() {
         mid,
         mode: state.width === 'wide' ? 'WIDE' : 'TIGHT',
         budgetQuote: state.amount,
-        sigmaDaily: state.sigmaDaily ?? 0,
+        sigmaDaily: (state.sigmaDaily ?? 0) * state.demoMultiplier,
         params: active.market.params,
         manual: state.manual ?? undefined,
       })
@@ -527,6 +544,8 @@ export function createGameplayController() {
     if (next.phase === 'ejected' || next.serial !== serial) {
       generation++
       session = null
+      demand?.stop()
+      demand = null
       reading = null
       // Public broadcast/receipt evidence survives; decrypted position/history does not.
       store.setState((state) => ({
@@ -546,6 +565,17 @@ export function createGameplayController() {
     open,
     refresh,
     quote,
+    keepMirrorActive: async () => {
+      const active = demand
+      if (!active) return
+      try {
+        await active.pulse()
+        if (demand === active) store.setState({ demandError: null })
+      } catch {
+        if (demand === active)
+          store.setState({ demandError: 'DEMO mirror activation unavailable. Withdrawal remains available.' })
+      }
+    },
     confirm,
     withdraw,
     quoteExit: async () => {

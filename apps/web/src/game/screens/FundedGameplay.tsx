@@ -39,11 +39,19 @@ export function FundedGameplay({
   }, [card.phase, card.serial, card.disks, slot, id, controller])
   useEffect(() => {
     if (card.phase !== 'inserted' || slot === null) return
-    const timer = setInterval(() => {
+    const tick = () => {
+      if (document.hidden) return
+      if (stage !== 'results') void controller.keepMirrorActive()
       if (!controller.useState.getState().busy) void controller.refresh()
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [card.phase, slot, controller])
+    }
+    const timer = setInterval(tick, 5000)
+    document.addEventListener('visibilitychange', tick)
+    tick()
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', tick)
+    }
+  }, [card.phase, slot, controller, stage])
   const { play } = useSound()
   const actions: Actions = {
     quote: () => void controller.quote(),

@@ -68,7 +68,7 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
   if (inspect) return <Inputs state={state} onClose={() => setInspect(false)} />
   return (
     <div className="screen-range screen-funded-range bg-screen flex h-full w-full flex-col gap-1 p-2">
-      <Header title={quote ? 'Confirm real steps' : 'Set range'} />
+      <Header title={quote ? 'Confirm real steps' : 'Set range'} demoMultiplier={state.demoMultiplier} />
       <div ref={body} className="funded-body funded-range-body flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         <Notices state={state} />
         {state.steps.length > 0 && <ReceiptSteps state={state} />}
@@ -218,7 +218,7 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
               Width couples ladder spacing and depth using{' '}
               {state.sigmaDaily === null
                 ? 'unavailable observed volatility; use manual edges'
-                : `${(state.sigmaDaily * 100).toFixed(2)}% observed daily volatility`}
+                : `${(state.sigmaDaily * 100).toFixed(2)}% daily volatility${state.demoMultiplier > 1 ? `, amplified x${state.demoMultiplier} for DEMO` : ''}`}
               . Not a prediction. Flip orders re-arm natively. Re-centering is
               manual; no automatic re-center signing.
             </p>
@@ -266,8 +266,11 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
             {position.mid === null ? 'unavailable' : price(position.mid)}
           </PixelText>
           <PixelText role="micro">
-            Actual TESTNET bid/ask. Mainnet price source:{' '}
-            {state.sourceMid === null ? 'unavailable' : price(state.sourceMid)}.
+            Actual TESTNET bid/ask. MAINNET source:{' '}
+            {state.mainnetMid === null ? 'unavailable' : price(state.mainnetMid)}.
+            {state.demoMultiplier > 1 && (
+              <> DEMO target: {state.sourceMid === null ? 'unavailable' : price(state.sourceMid)}.</>
+            )}
           </PixelText>
           {(!state.sourceFresh || position.paused) && (
             <PixelText role="micro" tone="loss">

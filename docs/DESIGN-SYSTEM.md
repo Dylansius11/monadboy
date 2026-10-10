@@ -289,6 +289,10 @@ The shared VOL slider is the only visible sound control. Zero is exact silence.
 An explicit adjustment clears a stored mute; M still mutes/restores the saved level.
 While M-muted, the slider displays zero rather than a misleading nonzero level.
 No audio starts before a trusted gesture. Browser gain/state proof is not physical-speaker proof.
+The background loop's pre-master gain is0.0675, fifteen percent of its previous
+0.45gain. Effects and the player's VOL setting are unchanged. An accepted jump
+uses a160ms rising chip tone; paused/busy/out-of-range review does not emit it.
+The stepped300ms jump respects reduced motion; sound does not imply a chain fill.
 
 ### On-demand guide
 
