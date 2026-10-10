@@ -1,0 +1,495 @@
+/*
+  WHAT IS REAL: the explanation set-piece.
+
+  A flip-order ladder drawn like a page from a game manual, beside the four
+  product rules it acts out. Shell purples are the orders, the LED cyan is
+  only ever a fill or the rule currently being shown. Every SVG coordinate is
+  a whole pixel; motion is the ladder's own ticks plus stepped flashes.
+*/
+
+.landing section#real {
+  scroll-margin-top: 72px;
+}
+
+.landing .real-section {
+  --shell: #6e54ff;
+  --shell-d: #4a35c4;
+  --shell-dd: #3a2a9e;
+  --shell-l: #9c89ff;
+  --btn: #e4dfff;
+  --btn-d: #b3a6ec;
+  --edge: #241845;
+  --grey: #6a6684;
+
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'stage title'
+    'stage facts';
+  column-gap: clamp(32px, 5vw, 88px);
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 112px var(--gutter);
+}
+
+.landing .real-title {
+  grid-area: title;
+  margin-bottom: 40px;
+}
+
+.landing .real-stage {
+  grid-area: stage;
+  min-width: 0;
+  align-self: start;
+}
+
+/* ---- the illustration -------------------------------------------------- */
+
+.landing .ladder {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: 2px solid var(--shell-dd);
+  background: var(--street);
+  /* one hard art-pixel drop, the way the console's manual would print it */
+  box-shadow: 4px 4px 0 #06030e;
+}
+
+.landing .ladder-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--edge);
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+}
+
+.landing .ladder-light {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lit);
+}
+.landing .ladder-light::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--lit);
+}
+.landing .ladder.is-out .ladder-light {
+  color: var(--text-soft);
+}
+.landing .ladder.is-out .ladder-light::before {
+  box-sizing: border-box;
+  border: 2px solid var(--grey);
+  background: none;
+}
+
+/* Short laptop screens keep the whole figure, readout included, in one view. */
+.landing .ladder-plot {
+  position: relative;
+  height: clamp(336px, calc(100svh - 360px), 480px);
+  margin: 12px 12px 0;
+}
+
+.landing .ladder-svg {
+  display: block;
+  overflow: visible;
+  shape-rendering: crispEdges;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+.landing .ladder-svg text {
+  fill: var(--text-faint);
+}
+
+.landing .ladder-tick rect {
+  fill: #2a2150;
+}
+.landing .ladder-tick.is-band rect {
+  fill: #4f4290;
+}
+.landing .ladder-axis {
+  fill: var(--edge);
+}
+/* levels the range does not cover: the ladder continues, nothing rests there */
+.landing .ladder-rung {
+  fill: #1e1640;
+}
+
+/* Leaving the range freezes the orders, then greys them in four steps
+   (DESIGN-SYSTEM.md 6, out of range). Coming back in is instant. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing
+    .ladder.is-out
+    :is(.ladder-band, .ladder-bracket, .ladder-tab, .ladder-order rect, .ladder-order path) {
+    transition: fill 400ms steps(4, end) 200ms;
+  }
+}
+.landing .ladder-band {
+  fill: var(--night-2);
+}
+.landing .ladder-bracket,
+.landing .ladder-tab {
+  fill: var(--text-soft);
+}
+.landing .ladder-svg .ladder-tab-text {
+  fill: var(--street);
+}
+
+.landing .is-bid .o-body {
+  fill: var(--shell);
+}
+.landing .is-bid .o-hi {
+  fill: var(--shell-l);
+}
+.landing .is-bid .o-lo {
+  fill: var(--shell-dd);
+}
+.landing .is-ask .o-edge {
+  fill: var(--shell-l);
+}
+
+.landing .ladder.is-out .ladder-band {
+  fill: #100c1c;
+}
+.landing .ladder.is-out .ladder-bracket,
+.landing .ladder.is-out .ladder-tab,
+.landing .ladder.is-out .is-ask .o-edge,
+.landing .ladder.is-out .is-bid .o-hi {
+  fill: var(--grey);
+}
+.landing .ladder.is-out .is-bid .o-body {
+  fill: #48445f;
+}
+.landing .ladder.is-out .is-bid .o-lo {
+  fill: #2f2c42;
+}
+
+/* A fill: the order blinks cyan where the price took it, then re-arms one
+   step away on the other side with a lit frame and the flip arrow. */
+.landing .ladder-ghost,
+.landing .o-lit,
+.landing .ladder-flip rect,
+.landing .ladder-svg .ladder-flip text {
+  fill: var(--lit);
+}
+.landing .ladder-ghost {
+  animation: ladder-ghost 520ms steps(1, end) both;
+}
+.landing .ladder-order.is-armed,
+.landing .ladder-flip {
+  animation: ladder-arm 520ms steps(1, end) both;
+}
+@keyframes ladder-ghost {
+  0% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0;
+  }
+  32% {
+    opacity: 1;
+  }
+  52%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ladder-arm {
+  0% {
+    opacity: 0;
+  }
+  52%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.landing .ladder-price rect {
+  fill: #f4f1ff;
+}
+.landing .ladder-svg .ladder-price text {
+  fill: var(--text);
+}
+
+.landing .ladder-marker {
+  position: absolute;
+  line-height: 0;
+  pointer-events: none;
+}
+
+.landing .ladder-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 0;
+  padding: 10px 12px 8px;
+  list-style: none;
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+}
+.landing .ladder-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.landing .ladder-swatch {
+  box-sizing: border-box;
+  width: 16px;
+  height: 8px;
+}
+.landing .ladder-swatch.is-bid {
+  background: var(--shell);
+  box-shadow: inset 0 2px 0 var(--shell-l);
+}
+.landing .ladder-swatch.is-ask {
+  border: 2px solid var(--shell-l);
+}
+.landing .ladder-swatch.is-fill {
+  background: var(--lit);
+}
+
+.landing .ladder-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 52px;
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 2px solid var(--edge);
+  box-sizing: border-box;
+  font-size: 16px;
+  line-height: 20px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.landing .ladder-key {
+  padding: 4px 8px 3px;
+  background: var(--btn);
+  box-shadow: 0 2px 0 var(--btn-d);
+  color: var(--shell-dd);
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.12em;
+}
+.landing .ladder-key.is-down {
+  transform: translateY(2px);
+  background: var(--lit);
+  box-shadow: none;
+  color: var(--night);
+}
+
+.landing .ladder-readout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-top: 2px solid var(--edge);
+}
+.landing .ladder-readout.is-on {
+  box-shadow: inset 0 0 0 2px var(--lit);
+}
+.landing .ladder-readout > div {
+  min-width: 0;
+  padding: 10px 12px 12px;
+}
+.landing .ladder-readout .ladder-net {
+  border-left: 2px solid var(--edge);
+}
+.landing .ladder-readout dt {
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.16em;
+  color: var(--text-dim);
+}
+.landing .ladder-readout dd {
+  margin: 4px 0 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.landing .ladder-readout .is-lit dd {
+  color: var(--lit);
+}
+.landing .ladder-readout.is-frozen dd {
+  color: var(--text-faint);
+}
+
+/* ---- the rules --------------------------------------------------------- */
+
+.landing .real-facts {
+  grid-area: facts;
+  display: grid;
+  align-content: start;
+  gap: 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.landing .real-fact {
+  min-width: 0;
+}
+
+.landing .real-fact-term {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.landing .real-fact-jump,
+.landing .real-fact-plain {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+  color: #f4f1ff;
+}
+.landing .real-fact-jump {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+.landing .real-fact-jump:hover,
+.landing .real-fact.is-on .real-fact-jump {
+  color: #f4f1ff;
+}
+.landing .real-fact-jump:active {
+  transform: translate(1px, 1px);
+}
+/* the menu cursor: hollow when the rule can be called up, lit while shown */
+.landing .real-fact-jump::before {
+  content: '';
+  flex: none;
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--text-dim);
+}
+.landing .real-fact.is-on .real-fact-jump::before {
+  border-color: var(--lit);
+  background: var(--lit);
+}
+.landing .real-fact-plain {
+  flex-wrap: wrap;
+  padding-left: 26px;
+}
+
+.landing .real-tag {
+  padding: 3px 7px 2px;
+  background: var(--text);
+  color: var(--night);
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.16em;
+}
+
+.landing .real-fact-body {
+  max-width: 58ch;
+  margin: 4px 0 0 26px;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text-faint);
+}
+.landing .real-fact.is-on .real-fact-body,
+.landing .real-fact:last-child .real-fact-body {
+  color: var(--text-soft);
+}
+.landing .real-fact-body a {
+  color: var(--lit);
+  text-underline-offset: 4px;
+}
+
+/* ---- narrower ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .landing .real-section {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'title'
+      'stage'
+      'facts';
+  }
+  .landing .real-title {
+    margin-bottom: 32px;
+  }
+  .landing .real-stage {
+    margin-bottom: 48px;
+  }
+}
+
+@media (max-width: 560px) {
+  .landing .real-section {
+    padding: 96px var(--gutter) 80px;
+  }
+  .landing .real-title {
+    margin-bottom: 24px;
+  }
+  .landing .real-stage {
+    margin-bottom: 40px;
+  }
+  .landing .ladder-plot {
+    height: 320px;
+    margin: 8px 8px 0;
+  }
+  .landing .ladder-head,
+  .landing .ladder-legend,
+  .landing .ladder-status {
+    padding-inline: 8px;
+  }
+  .landing .ladder-head {
+    letter-spacing: 0.06em;
+  }
+  .landing .ladder-legend {
+    gap: 4px 14px;
+    letter-spacing: 0.08em;
+  }
+  .landing .ladder-status {
+    min-height: 44px;
+  }
+  .landing .ladder-readout > div {
+    padding: 6px 8px 8px;
+  }
+  .landing .real-facts {
+    gap: 24px;
+  }
+  .landing .real-fact-body {
+    margin-left: 0;
+  }
+  .landing .real-fact-plain {
+    padding-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing .ladder *,
+  .landing .real-fact-jump {
+    animation: none;
+    transition: none;
+  }
+}
