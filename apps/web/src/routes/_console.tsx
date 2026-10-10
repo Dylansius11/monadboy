@@ -28,7 +28,10 @@ function Shell() {
       backdrop={<PlayBackdrop />}
       tools={<ConsoleTools boot={path === '/play' || path === '/play/'} />}
     >
-      <Outlet />
+      {/* Keyed by path so every screen change plays the 120ms wipe once. */}
+      <div key={path} className="screen-wipe">
+        <Outlet />
+      </div>
     </Console>
   )
 }

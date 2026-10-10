@@ -155,6 +155,32 @@
   container-type: size;
 }
 
+/* Every screen change: the 120ms wipe from the motion contract, four frames
+   top to bottom. The wrapper fills the viewport so screens size as before. */
+.screen-wipe {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  animation: screen-wipe 120ms steps(4, end);
+}
+.screen-wipe > * {
+  flex: 1;
+  min-width: 0;
+}
+@keyframes screen-wipe {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen-wipe {
+    animation: none;
+  }
+}
+
 .wordmark {
   padding-top: 13px;
   color: var(--shell-l);
