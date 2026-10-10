@@ -8,9 +8,9 @@ Read a task as `box + task ID + deliverable + proof`. `[x]` means the named deli
 
 ## Status at a glance
 
-As of **2026-10-09 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCKERS.md); user-facing asks are mirrored in the external handoff.
+As of **2026-10-10 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCKERS.md); user-facing asks are mirrored in the external handoff.
 
-**Latest integrated unit:** S22 user evidence now reaches real provisioned play with sound and repaired disk UI. Setup/review labels and scroll transitions are repaired; live play exposes mainnet price, TESTNET mid and actual range. The first price sample draws a held line with the sprite inside the plot.40 actual setup/live renders had no horizontal/screen overflow and retained pinned footers; in-range A jump and out-of-range review remain distinct. Mainnet0.0247735 versus TESTNET0.03302882 and disabled mirror explain sitting; no synthetic fills or price substitution. Canonical RP ID, phone geometry and signing remain unchanged. B8/B10 and24-hour accepted operations remain open.
+**Latest integrated unit:** approved DEMO x20 relative-price policy, signed demand-only mirror,30second action cadence and conservative2MON/day persistent reservation cap are implemented locally. Real Bun/Hono HTTP with a saved test-owned registry disk accepted demand and refused foreign/expired/forged/oversized requests. Concurrent cap and nonce-wait expiry regressions protect idle signing. Matching frontend rollout is still pending; canonical RP ID and phone geometry are unchanged. No automatic re-center or24-hour acceptance is claimed.
 
 | Phase                          | Status  | Done/Total tasks | Next action                                                                         | Blocker                                     |
 | ------------------------------ | ------- | ---------------- | ----------------------------------------------------------------------------------- | ------------------------------------------- |
@@ -21,8 +21,8 @@ As of **2026-10-09 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCK
 | 3 — Pure SDK                   | DONE    | 9/9              | Maintain receipt-backed units and shape-specific gas                                | None                                        |
 | 4 — Funded spikes              | DOING   | 5/6              | Record physical iPhone/Android S4 results                                           | B8                                          |
 | 5 — DiskRegistry v2            | DONE    | 6/6              | Preserve receipt/artifact identity and stateless device proof                       | B8 for physical restore, outside deployment |
-| 6 — Worker                     | DOING   | 11/12            | Finish policy calibration and approve a sustainable continuous mirror budget        | B10 operating decision; calibration         |
-| 7 — Web integration            | DOING   | 7/14             | Close partial-load/audio acceptance and remaining restore/PWA/device proofs          | B8; remaining runtime acceptance            |
+| 6 — Worker                     | DOING   | 11/12            | Measure demand-only cost/alignment and finish policy calibration                     | B10 runtime calibration                     |
+| 7 — Web integration            | DOING   | 8/14             | Close partial-load/audio acceptance and remaining restore/PWA/device proofs          | B8; remaining runtime acceptance            |
 | 8 — Envio indexer              | DONE    | 5/5              | Preserve public read-only parity; wait for complete worker maker-basis backfill       | Full worker coverage remains open           |
 | 9 — Deploy and submission      | DOING   | 3/8              | Record24-hour operational proof, physical-device rehearsal and submission package    | B8 / B10; upstream live proof               |
 
@@ -203,13 +203,25 @@ As of **2026-10-09 UTC**. The live blocker register is [../BLOCKERS.md](../BLOCK
 
 **Proof to record** Commands, route outputs and SQL rows in external PROGRESS; measured mainnet inputs/calibration in research; bot/drip receipts and explicit gas in SMART-CONTRACTS.
 
+**2026-10-10 local demand-policy proof:** durable anchor computes relative20x movement
+without changing the raw mainnet route or actual chain valuation. Real HTTP smoke
+read source0.024884 and TESTNET0.024577, admitted a saved test-owned disk and
+refused foreign origin, stale/forged signature and oversized input. Its registry
+save succeeded at69765246 with271864declared gas; no mirror broadcast was made
+by that route smoke. Capacity-race regression failed before the final admission
+check; nonce-wait expiry regression failed before the immediate signing check.
+Matching production rollout and fresh demand-only chain/cost evidence remain separate.
+Release checks: `bun run verify` passed558web/153SDK/148worker tests with all
+typechecks/lint; `forge test --root contracts` passed17tests; staged guard clean.
+Existing jsdom scroll/canvas warnings are not browser failures or hidden proof.
+
 **2026-10-06 UTC review/runtime:** Authenticated HyperSync query HTTP 200, real book/log inputs and complete SQLite trade window; no broadcast jobs enabled. Expiry is evaluated after inventory awaits; tracker data over 45min cannot remain live/playable. Fresh mid/source reads, CORS allow/deny/preflight, strict invalid queries/bodies and disabled drip 503 observed. Leaderboard truthfully returned no-market-configured, so funded ranking/drip/mirror acceptance remains open. Original WSL systemd verification failed for missing Bun; only a temporary syntax copy passed. Caddy unavailable; target deployment/validation not claimed.
 
 ## Phase 7 — Web integration
 
 **Goal** Replace marked fixtures with real data and local passkey signing while preserving every screen.
 
-- [ ] **7.1** Client-only Mera card session and per-disk viem clients — proof required: HTTPS create/insert/eject run; no Mera server import; sessions end on eject / hidden-tab timeout; only credential metadata persists.
+- [x] **7.1** Client-only Mera card session and per-disk viem clients —2026-10-10 actual HTTPS localhost native virtual PRF reader created and inserted the same three disk addresses; EJECT refused old signing. Controlled native hidden-return event past ten minutes ended the session and refused signing. Persisted fields were only credentialId/rpId/transports/v; no key or PRF export. `demand-native-session-proof.json` in external handoff records outcomes. This is browser lifecycle proof, not physical iPhone/S22 acceptance.
 - [x] **7.2** S1 MemoryCard: real INSERT / NEW CARD and error copy — user acceptance:2026-10-09 Samsung S22 Chrome / Google Password Manager reports working card access, insert/new disk and sound, then explicitly accepts the tested experience. Production screenshots/public receipts reach funded provision;7.10a independently excludes fixtures. This closes the user-accepted S22 entry flow, not an exhaustive authenticator-error matrix, iPhone PRF support, stateless restore or standalone launch; those unobserved outcomes remain in4.4/7.9/7.11/B8.
 - [ ] **7.3** S2 DiskSelect: derive/read/decrypt three slots, create/drip/save and OPEN — user-reported production screenshots show populated desktop/Android slots; S22 disk2 has0.476637308TESTNET MON and SAVED TO CARD. Latest user report confirms insert/new disk and repaired shelf; physical play now reaches provisioned orders. Complete proof still requires all three addresses, registry/hash readbacks, receipt inspection and stateless restore; the supplied screenshots alone do not close the task.
 - [x] **7.3a** Decrypted-disk cartridge and leaderboard navigation — proof: native 412x915 local-registry walk kept disk 1/name, locked cartridges stayed locked; leaderboard window URL/back exercised. Unmatched route-context warning fixed with explicit navigation.

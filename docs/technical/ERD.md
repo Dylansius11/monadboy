@@ -118,8 +118,14 @@ Target: `apps/worker/src/db/schema.sql` with numbered migrations. Exact column s
 | `drips` | `id, at, address, ip_hash, mon_wei, ausd_units, mon_tx, ausd_tx, status` | Funding attempts and quota ledger; never a private disk record |
 | `mid_samples` | `at, market, mid` | Every 5 s; prune to 14 days; time-in-range and DAMAGE sampling |
 | `leaderboard_cache` | `window, json, computed_at` | Cached 24h / 7d / all rows derived from fills and samples |
+| `demo_anchors` | `market, multiplier, source_mid, target_mid` | Durable first-valid-source anchor; never re-anchor an existing market on restart |
+| `mirror_gas_reservations` | `id, at, max_cost_wei, tx_hash` | UTC daily declared-cost ceiling; nullable hash keeps uncertain sends charged |
 
 [I] Serialize integer token amounts losslessly (`mon_wei`, `ausd_units`); do not silently coerce them through JavaScript floating-point numbers. Store transaction hashes and timestamps so an operational row can be traced to its chain source. Worker endpoints validate with zod and never sign for a player.
+Signed gameplay leases are memory-only, capped at256owners and expire45seconds
+after their signed timestamp. Only signature, public owner and timestamp reach the
+worker; neither player keys nor PRF material is stored. Exact-origin admission
+checks an actual saved registry disk. Restart loses leases, never gas reservations.
 
 Drip policy: nonce0 and MON below `DRIP_MON_THRESHOLD`; three requests per IP hash per24h; global daily cap; amounts from `DRIP_MON` / `DRIP_AUSD`. Record every attempt/status. S3 measured the block-spaced twenty-player budget; S1 observed global faucet cooldown and worker backoff. See AUSD research and BLOCKERS for evidence.
 
