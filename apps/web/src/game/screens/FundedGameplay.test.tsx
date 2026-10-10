@@ -164,3 +164,86 @@ it('keyboard cannot start re-center before its exit cost is available, but accep
   press('A')
   expect(controls.recenter).toHaveBeenCalledOnce()
 })
+
+it('the live refresh key refreshes chain state and Inputs never withdraws', () => {
+  const state = actualRead()
+  const controls = actions()
+  renderScreen(<FundedLive state={state} actions={controls} />)
+  fireEvent.click(screen.getByRole('button', { name: 'SELECT Refresh' }))
+  expect(controls.refresh).toHaveBeenCalledOnce()
+  press('START')
+  press('B')
+  expect(controls.withdraw).not.toHaveBeenCalled()
+  expect(screen.getByRole('img', { name: 'Price against your range' })).toBeInTheDocument()
+})
+
+it('a failed optional results save can retry without leaving the confirmed exit', () => {
+  const state = actualRead()
+  state.result = {
+    market: testnetMarkets[0].address, openedAt: 1, closedAt: 3,
+    score: 0.001, damage: 0.0002, net: 0.0008, fills: 1,
+    receipts: [], complete: true,
+  }
+  state.saveError = 'save failed'
+  const controls = actions()
+  renderScreen(<FundedResults state={state} actions={controls} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Retry optional sealed history save' }))
+  expect(controls.retrySave).toHaveBeenCalledOnce()
+  expect(controls.back).not.toHaveBeenCalled()
+})
+
+it('range setup exposes equal manual and amount keys without inventing an unquoted ladder', () => {
+  const state = actualRead()
+  if (state.position) state.position.orders = []
+  state.basis = null
+  const controls = actions()
+  renderScreen(<FundedRange state={state} actions={controls} />)
+  expect(screen.getByText('How much?')).toBeInTheDocument()
+  expect(screen.getByText('DEMO x1 · TESTNET')).toBeInTheDocument()
+  expect(screen.getByRole('img', { name: 'Ladder unavailable until actual quote' })).toBeInTheDocument()
+  expect(screen.queryByText('YOU WILL HOLD')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'MANUAL' }))
+  expect(screen.getByRole('spinbutton', { name: 'Low price' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'MAX' }))
+  expect(controls.setAmount).toHaveBeenCalledWith(10)
+  press('A')
+  expect(controls.quote).toHaveBeenCalledOnce()
+})
+
+it('range notices and receipt states preserve accessible evidence and recovery', () => {
+  const state = actualRead()
+  const tx = `0x${'34'.repeat(32)}` as const
+  state.error = 'Card ejected. Insert the same disk to recover.'
+  state.steps = [{ step: 'deposit', state: 'confirmed', hash: tx }]
+  renderScreen(<FundedRange state={state} actions={actions()} />)
+  expect(screen.getByRole('alert')).toHaveTextContent(state.error)
+  expect(screen.getByRole('list', { name: 'Actual transaction steps' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Open transaction' })).toHaveAttribute('href', expect.stringContaining(tx))
+})
+
+it('a mined reverted receipt never appears as a successful funded step', () => {
+  const state = actualRead()
+  const hash = `0x${'56'.repeat(32)}` as const
+  state.steps = [{
+    step: 'provision', state: 'confirmed', hash,
+    receipt: { step: 'provision', hash, block: 12n, estimate: 100n, gas: 120n, gasUsed: 110n, effectiveGasPrice: 1n, status: 'reverted' },
+  }]
+  renderScreen(<FundedRange state={state} actions={actions()} />)
+  expect(screen.getByRole('list', { name: 'Actual transaction steps' })).toHaveTextContent('provision: reverted')
+})
+
+it('unavailable fill history stays unavailable in results and live Inputs, never an invented zero', () => {
+  const state = actualRead()
+  state.position = state.position && { ...state.position, historyError: 'Logs unavailable' }
+  state.result = {
+    market: testnetMarkets[0].address, openedAt: null, closedAt: 3,
+    score: null, damage: null, net: null, fills: null, receipts: [], complete: false,
+  }
+  const controls = actions()
+  const view = renderScreen(<FundedResults state={state} actions={controls} />)
+  expect(screen.getByText('Unavailable observed maker fills')).toBeInTheDocument()
+  expect(screen.queryByText('0 observed maker fills')).not.toBeInTheDocument()
+  view.rerender(<FundedLive state={state} actions={controls} />)
+  press('START')
+  expect(screen.getByText(/Unavailable observed maker fills, Unavailable flipped-origin/)).toBeInTheDocument()
+})

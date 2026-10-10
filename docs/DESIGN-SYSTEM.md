@@ -290,6 +290,17 @@ it names on the held console. Every screen change, on the page and in `/play`,
 uses the 120ms four-step wipe. The ladder illustration is labelled as not market
 data; the cast select reads its filter rows from the SDK gates, never retyped.
 
+Production gameplay screens share the fixture screens' layout, filled only with
+chain and worker reads. SET RANGE uses square amount keys (real options and MAX),
+equal WIDE / TIGHT / MANUAL keys, and a ladder bar drawn from quoted orders; before
+a quote it says the levels are not drawn yet. Receipts are a stepper whose
+confirmed, broadcast, not-sent and reverted states differ in shape, not only text.
+CURRENT POSITION puts SCORE, DAMAGE and NET at equal weight above an arena that
+fills the remaining screen; chain holdings and sources live behind START. Results
+show only measured facts: no time-in-range row exists until it is recorded.
+An empty tracker names the stricter tier honestly (EASY filters hardest) and lists
+the closest pools with the first gate each failed.
+
 ### Volume
 
 The shared VOL slider is the only visible sound control. Zero is exact silence.
