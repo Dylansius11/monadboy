@@ -103,6 +103,9 @@ export function createMirrorJob({
   executor,
   maxStepNotional,
   deviationThreshold,
+  active = () => 1,
+  intervalMs = 0,
+  target = () => mid.targetMid,
   now = Date.now,
   logger = log,
 }: {
@@ -112,6 +115,9 @@ export function createMirrorJob({
   executor: MirrorExecutor
   maxStepNotional: number
   deviationThreshold: number
+  active?: () => number
+  intervalMs?: number
+  target?: () => number | null
   now?: () => number
   logger?: Logger
 }) {
@@ -119,18 +125,23 @@ export function createMirrorJob({
     'INSERT INTO mirror_ticks (at, source_mid, testnet_mid_before, action, notional, tx_hash, error) VALUES (?, ?, ?, ?, ?, ?, ?)',
   )
   let prunedAt = 0
+  let lastActionAt = Number.NEGATIVE_INFINITY
   return async () => {
     const at = now()
+    if (active() === 0 || at - lastActionAt < intervalMs) {
+      Object.assign(state, { lastAt: at, lastAction: 'hold', lastError: null })
+      return
+    }
     let action = idle('paused', 'not-evaluated')
     let hashes: Hex[] = []
     let error: string | null = null
-    let sourceMid = mid.targetMid
+    let sourceMid = target()
     let testnetMid = mid.testnet.mid
     try {
       const inventory = await executor.inventory()
       const evaluatedAt = now()
       const testnet = testnetObservation(mid, evaluatedAt)
-      sourceMid = mid.targetMid
+      sourceMid = target()
       testnetMid = testnet.mid
       action = decideMirrorAction({
         targetMid: sourceMid,
@@ -142,13 +153,17 @@ export function createMirrorJob({
         maxStepNotional,
         inventory,
       })
-      if (action.kind !== 'paused' && action.kind !== 'hold')
+      if (action.kind !== 'paused' && action.kind !== 'hold') {
+        lastActionAt = now()
         hashes = await executor.execute(action, sourceMid ?? 0, () => {
           const checkedAt = now()
           const age = sourceAgeMs(mid, checkedAt)
+          if (active() === 0)
+            throw new Error('Gameplay demand expired before mirror signing')
           if (isSourcePaused(mid, checkedAt) || age === null || age > SOURCE_FRESH_MS)
             throw new Error('Source unavailable before mirror signing')
         })
+      }
     } catch (cause) {
       error = describeError(cause)
       if (cause instanceof Error && 'hashes' in cause && Array.isArray(cause.hashes))

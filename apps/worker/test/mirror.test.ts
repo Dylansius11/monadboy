@@ -153,6 +153,41 @@ function harness(
   })
   return { db, mid, state, job }
 }
+
+test('idle demand avoids inventory reads and transactions; renewed demand obeys action cadence', async () => {
+  let at = 10000
+  let players = 0
+  let inventoryReads = 0
+  let sends = 0
+  const db = memoryDb()
+  const mid = createMidState()
+  Object.assign(mid, { status: 'running', targetMid: 0.03, at: 10000 })
+  Object.assign(mid.testnet, { status: 'live', mid: 0.029, at: 10000 })
+  const job = createMirrorJob({
+    db, mid, state: createMirrorState(),
+    executor: {
+      inventory: async () => { inventoryReads++; return { base: 1000, quote: 100 } },
+      execute: async () => { sends++; return [] },
+    },
+    maxStepNotional: 0.06, deviationThreshold: 0.0005,
+    active: () => players, intervalMs: 30000, now: () => at, logger: quiet,
+  })
+  await job()
+  expect(inventoryReads).toBe(0)
+  expect(sends).toBe(0)
+  players = 1
+  await job()
+  expect(sends).toBe(1)
+  at += 5000
+  await job()
+  expect(sends).toBe(1)
+  at += 25000
+  mid.at = at
+  mid.testnet.at = at
+  await job()
+  expect(sends).toBe(2)
+  db.close()
+})
 const funded = { inventory: async () => ({ base: 1000, quote: 100 }) }
 
 test('every tick is a row: the action, price context, hashes and no error on success', async () => {

@@ -195,18 +195,30 @@ Monad testnet is chain 10143 and mainnet is chain 143 [V: current facts](https:/
 The testnet RPC is `https://testnet-rpc.monad.xyz`; the mainnet RPC is `https://rpc.monad.xyz` [V: same source](https://docs.monad.xyz/ai/current-facts.md).
 Deployed app addresses and transaction evidence live in README and the smart-contract document, not scattered across screens.
 
-The mirror bot targets mainnet MON_USDC, not MON_AUSD.
-The approved source choice reflects an empty MON_AUSD book; current source liveness remains [U], verified in S2 / Phase 6 before dependent play.
-The primary label is `TESTNET BOOK, MAINNET PRICE (KURU MON/USDC)`.
+The read-only source is Kuru mainnet MON_USDC, not its empty MON_AUSD book.
+Playable MON_AUSD uses a shared `DEMO x20 TESTNET` target. Raw mainnet price,
+DEMO target and actual TESTNET book remain separately inspectable.
 Treating USDC and AUSD as one USD each is an explicit conversion assumption [I], not measured parity.
 
-The worker reads the source every 5 seconds.
-When relative deviation exceeds 0.05%, the planned bot trades toward the source, within its configured notional cap.
-Thin resting quotes refresh at target +/-0.1% to support the zap.
+The persistent first-valid-source anchor defines
+`target = anchorTarget * (mainnetMid / anchorSource)^20`.
+This amplifies relative movement, not price decimals: +0.1% becomes about +2.019%.
+It does not create fills, predict prices, change actual-chain valuation or reset existing positions.
+Width advice uses observed daily volatility times20; the existing ladder clamps still apply.
+
+Source reads continue every5seconds. Mirror work requires a signed saved-disk
+heartbeat from a visible range/live screen. A45second lease expires at its signed
+deadline; replay cannot extend it. No player means no inventory polling or signing.
+Actions are at least30seconds apart, with the existing0.05% deviation threshold
+and0.06AUSD notional cap. Real resting quotes refresh at target +/-0.1%.
+The daily UTC ceiling is2MON, conservatively reserved as declared gas times
+maximum gas price before broadcast. Unknown sends remain charged across restart.
+Budget exhaustion pauses new sends; it is not a promise of continuous alignment.
 Three consecutive transport/read failures pause the bot. An empty, crossed, or source book wider than `(ask - bid) / mid > 2%` pauses immediately; a valid tight book resumes sampling. The 2% maximum is a user-approved operator policy [I], not measured market calibration.
 Health turns red and the screen says PRICE FEED PAUSED. No last-trade substitution or invented replacement price is used.
 Low bot inventory turns health amber.
-The exact execution surface and successful bot behavior are [U], settled by S2 and the Phase 6 mirror smoke.
+Funded flip execution and bounded alignment have receipts in Phase6.
+Demand-driven production cost and sustained availability require their own runtime evidence.
 
 AUSD testnet token and faucet have deployed code [V: README cast checks, 2026-10-05].
 That does not prove funding is currently obtainable.
@@ -276,6 +288,10 @@ The player controls three things, not an order-book parameter sheet:
 Manual range overrides the WIDE / TIGHT preset when enabled.
 AUTOPILOT means native re-arming after fills [V: Kuru flip orders](https://docs.kuru.io/concepts/flip-orders).
 It is not an automatic re-centering service or a discretionary user-key bot.
+An accepted in-range A press plays the existing jump animation and a short rising
+chip effect. Out-of-range A opens cost review; it never signs a range move on that press.
+Automatic re-centering remains deferred. Native flip re-arming creates the paired
+opposite-side order after a fill; it does not relocate the whole ladder.
 
 ### Arithmetic, not intelligence
 

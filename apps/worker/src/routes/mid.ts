@@ -8,14 +8,14 @@ import {
   testnetObservation,
 } from '../jobs/mid-sampler'
 import type { MidState } from '../jobs/mid-sampler'
+import type { DemoPrice } from '../jobs/demo-price'
 
-// Both names resolve to the same payload: the testnet MON market mirrors the
-// mainnet MON_USDC price, so one source answers either question.
+// Mainnet stays raw. The playable TESTNET route explicitly exposes its DEMO target.
 const query = z
   .object({ market: z.enum(['MON_USDC', 'MON_AUSD']).optional() })
   .strict()
 
-export function midRoute(state: MidState, now: () => number): RouteModule {
+export function midRoute(state: MidState, now: () => number, demo?: DemoPrice): RouteModule {
   return (app) => {
     app.get('/v1/mid', (c) => {
       if (!query.safeParse(c.req.query()).success)
@@ -24,13 +24,18 @@ export function midRoute(state: MidState, now: () => number): RouteModule {
       const ageMs = sourceAgeMs(state, at)
       const paused = isSourcePaused(state, at)
       const testnet = testnetObservation(state, at)
+      const amplified = c.req.query('market') !== 'MON_USDC' && demo
+        ? demo.read(state.targetMid) : null
       return c.json({
-        targetMid: state.targetMid,
+        targetMid: amplified ? amplified.targetMid : state.targetMid,
+        mainnetMid: state.targetMid,
+        demo: amplified,
         testnetMid: testnet.mid,
-        source: SOURCE_NAME,
+        source: amplified ? `demo-${amplified.multiplier}x:${SOURCE_NAME}` : SOURCE_NAME,
         at: state.at,
         ageMs,
-        fresh: !paused && ageMs !== null && ageMs <= SOURCE_FRESH_MS,
+        fresh: !paused && ageMs !== null && ageMs <= SOURCE_FRESH_MS &&
+          (!amplified || amplified.targetMid !== null),
         state: paused ? 'paused' : 'running',
         testnet: {
           status: testnet.status,

@@ -7,6 +7,7 @@ import type { Logger } from './logger'
 import { createMirrorExecutor } from './chain/mirror-executor'
 import { createTreasury } from './chain/treasury'
 import type { Treasury } from './chain/treasury'
+import { createGasBudget } from './chain/gas-budget'
 import { createFaucetTopup } from './jobs/faucet-topup'
 import { createTreasuryMonitor } from './jobs/treasury-monitor'
 import type { MirrorExecutor } from './jobs/mirror'
@@ -42,6 +43,7 @@ export async function createOperations({
   markets,
   now = Date.now,
   logger,
+  assertActive,
 }: {
   db: Database
   env: WorkerEnv
@@ -49,6 +51,7 @@ export async function createOperations({
   markets: readonly Market[]
   now?: () => number
   logger?: Logger
+  assertActive?: () => void
 }): Promise<Operations> {
   const off = (
     reason: string,
@@ -146,6 +149,8 @@ export async function createOperations({
         marketOrder: env.GAS_MARKET_ORDER,
         batchUpdate: env.GAS_BATCH_UPDATE,
       },
+      budget: createGasBudget(db, env.MIRROR_DAILY_GAS_MON, now),
+      assertActive,
     })
     execution = { enabled: true, reason: null }
   }

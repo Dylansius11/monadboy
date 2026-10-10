@@ -71,6 +71,46 @@ test('a crossed passive refresh is refused before signing and caps ask notional'
   db.close()
 })
 
+test('demand expiring during nonce spacing refuses the next quote signature', async () => {
+  const db = memoryDb()
+  const market = testnetMarkets[0]
+  let active = true
+  let signatures = 0
+  const client = {
+    getBlockNumber: async () => 1n,
+    readContract: async ({ functionName }: { functionName: string }) => {
+      if (functionName === 'getMarketParams')
+        return [100000000, 10000000000n, market.baseToken, 18n,
+          market.quoteToken, 6n, 1, 15000000000n, (1n << 96n) - 1n, 30n, 0n]
+      if (functionName === 'getBalance') return 10n ** 20n
+      throw new Error('Unexpected chain read')
+    },
+    simulateContract: async () => ({}),
+    estimateContractGas: async () => 100000n,
+  } as unknown as PublicClient
+  const treasury = {
+    account: { address: '0x2FBF1B1063EF5e5d0422D8c4c4357640f99F7c1F' },
+    send: async (build: (nonce: number) => Promise<unknown>) => {
+      active = false
+      await build(0)
+      throw new Error('Must refuse before broadcast')
+    },
+    wallet: { writeContract: async () => { signatures++; throw new Error('Would broadcast while idle') } },
+  } as unknown as Treasury
+  const executor = createMirrorExecutor({
+    db, client, treasury, market,
+    margin: '0xd029C2D98ff85D8F64799017fE00a59B1159CE02',
+    gas: { marketOrder: 2000000n, batchUpdate: 2000000n },
+    assertActive: () => { if (!active) throw new Error('No active gameplay') },
+  })
+  await expect(executor.execute(
+    { kind: 'quote', notional: 0, quoteNotional: 0.06, reason: 'book-empty' },
+    0.0268, () => {},
+  )).rejects.toThrow('No active gameplay')
+  expect(signatures).toBe(0)
+  db.close()
+})
+
 test('source is checked after estimation and queue awaits, before a new quote signature', async () => {
   const db = memoryDb()
   const market = testnetMarkets.find((entry) => entry.symbol === 'MON_AUSD')!

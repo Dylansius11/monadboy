@@ -50,6 +50,7 @@ const schema = z
     // Notional is quote units (USD) per mirror tick; deviation is a fraction of the target mid.
     MIRROR_MAX_STEP_NOTIONAL: z.coerce.number().positive().default(0.06),
     MIRROR_DEVIATION_THRESHOLD: z.coerce.number().positive().default(0.0005),
+    MIRROR_DAILY_GAS_MON: decimal(18, '2'),
     // Mirror ceilings bound estimation/declared limits; each actual call gets a fresh estimate +20%.
     // S2 samples are shape-specific, so never reuse partial-fill gas for a multi-level traversal.
     GAS_MARKET_ORDER: gas(boundedEstimateGasCap),

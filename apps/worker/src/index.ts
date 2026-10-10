@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { createPublicClient, http } from 'viem'
 import type { Address } from 'viem'
-import { mainnetProfile, monad, monadTestnet, scorePool } from '@monadboy/sdk'
+import { diskRegistryAbi, mainnetProfile, monad, monadTestnet, scorePool } from '@monadboy/sdk'
 import manifest from '../package.json'
 import { createApp } from './app'
 import type { HealthSections, RouteModule } from './app'
@@ -45,6 +45,9 @@ import { dripRoute } from './routes/drip'
 import { leaderboardRoute } from './routes/leaderboard'
 import { midRoute } from './routes/mid'
 import { trackerRoute } from './routes/tracker'
+import { createDemoPrice } from './jobs/demo-price'
+import { createDemand, demandRoute } from './routes/demand'
+import { createGasBudget } from './chain/gas-budget'
 
 // [V] Kuru mainnet MarginAccount holds deposited tokens: the holder for sellability eth_calls (cast code: 141 bytes).
 const MAINNET_MARGIN: Address = '0x2A68ba1833cDf93fa9Da1EEbd7F46242aD8E90c5'
@@ -72,7 +75,25 @@ const markets = loadTestnetMarkets(env.MARKETS_JSON)
 
 const mid = createMidState()
 const mirrorState = createMirrorState()
-const ops = await createOperations({ db, env, client: testnet, markets })
+const ops = await createOperations({
+  db, env, client: testnet, markets,
+  assertActive: () => {
+    if (demand.active() === 0) throw new Error('No active gameplay before mirror signing')
+  },
+})
+const demo = createDemoPrice(db, markets.find((entry) => entry.baseSymbol === 'MON')?.address ?? 'MON_AUSD')
+const demand = createDemand({
+  market: markets.find((entry) => entry.baseSymbol === 'MON')?.address ?? '',
+  savedDisk: async (owner) => {
+    if (!env.TESTNET_REGISTRY_ADDRESS) return false
+    const record = await testnet.readContract({
+      address: env.TESTNET_REGISTRY_ADDRESS, abi: diskRegistryAbi,
+      functionName: 'diskOf', args: [owner],
+    })
+    return record.createdAt > 0n
+  },
+})
+const gasBudget = createGasBudget(db, env.MIRROR_DAILY_GAS_MON)
 
 const fetcher = env.HYPERSYNC_API_TOKEN
   ? createHypersyncFetcher({
@@ -179,6 +200,9 @@ if (ops.executor)
       executor: ops.executor,
       maxStepNotional: env.MIRROR_MAX_STEP_NOTIONAL,
       deviationThreshold: env.MIRROR_DEVIATION_THRESHOLD,
+      active: demand.active,
+      intervalMs: 30_000,
+      target: () => demo.read(mid.targetMid).targetMid,
     }),
   })
 if (ops.topup)
@@ -200,6 +224,7 @@ const sections: HealthSections = {
   source: sourceSection(mid, now),
   testnet: testnetSection(mid, now),
   mirror: mirrorSection(mirrorState, ops.execution, now),
+  demo: () => ({ value: { ...demo.read(mid.targetMid), activePlayers: demand.active(), gas: gasBudget.status() } }),
   tracker: trackerSection(db, trades, now),
   treasury: treasurySection(
     ops.monitor,
@@ -224,7 +249,8 @@ const sections: HealthSections = {
   }),
 }
 const routes: RouteModule[] = [
-  midRoute(mid, now),
+  midRoute(mid, now, demo),
+  demandRoute(demand, env.APP_ORIGIN),
   trackerRoute(db, now),
   leaderboardRoute(db, now),
   dripRoute(ops.drip, env.TRUSTED_PROXY_IP),

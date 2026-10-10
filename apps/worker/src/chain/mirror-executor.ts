@@ -14,6 +14,7 @@ import type { Market, MarketParams } from '@monadboy/sdk'
 import type { MirrorAction, MirrorExecutor } from '../jobs/mirror'
 import type { Treasury } from './treasury'
 import { readActiveOrder } from './active-order'
+import type { GasBudget } from './gas-budget'
 
 // Resting quotes sit 0.1% either side of the mainnet target (SPEC 5.2).
 export const QUOTE_OFFSET = 0.001
@@ -29,6 +30,8 @@ export function createMirrorExecutor({
   market,
   margin,
   gas,
+  budget,
+  assertActive,
 }: {
   db: Database
   client: PublicClient
@@ -36,6 +39,8 @@ export function createMirrorExecutor({
   market: Market
   margin: Address
   gas: MirrorGas
+  budget?: GasBudget
+  assertActive?: () => void
 }): MirrorExecutor {
   let params: MarketParams | undefined
   const read = async () =>
@@ -72,8 +77,18 @@ export function createMirrorExecutor({
     return treasury.send(async (nonce) => {
       // Queue spacing/nonces may await: revalidate immediately before a new trade/quote.
       // Cancellation has no source guard because recovering owned resting funds is safe.
+      assertActive?.()
       await assertSource?.()
-      return treasury.wallet.writeContract({ ...request, gas: limit, nonce })
+      const fees = budget ? await client.estimateFeesPerGas({ chain: undefined, type: 'eip1559' }) : undefined
+      if (fees) await assertSource?.()
+      assertActive?.()
+      const reservation = fees && budget ? budget.reserve(limit, fees.maxFeePerGas) : null
+      const hash = await treasury.wallet.writeContract({
+        ...request, gas: limit, nonce,
+        ...(fees ? { maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas } : {}),
+      })
+      if (reservation !== null) budget!.record(reservation, hash)
+      return hash
     })
   }
 
@@ -207,6 +222,11 @@ export function createMirrorExecutor({
       const p = await read()
       const hashes: Hex[] = []
       try {
+        if (budget) {
+          const fees = await client.estimateFeesPerGas({ chain: undefined, type: 'eip1559' })
+          // Keep room for cancel + take + replacement before removing liquidity.
+          budget.assertRoom((2n * gas.batchUpdate + gas.marketOrder) * fees.maxFeePerGas)
+        }
         const canceled = await cancelOwnedQuotes()
         if (canceled) hashes.push(canceled)
         if (action.kind === 'buy' || action.kind === 'sell') {

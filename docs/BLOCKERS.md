@@ -12,7 +12,7 @@ Labels: **[V]** observed evidence; **[I]** intended behavior; **[U]** unresolved
 | B3 | RESOLVED: access/HTTPS/recovery | Lead | No remaining access gate;24-hour operations remain9.4 | Target SSH/sudo, actual unit/Caddy validation, public HTTPS health, worker restart/SQLite preservation and indexer recreation/persistent-fill recovery observed. |
 | B5 | SKIPPED | User decision / verified requirement | No current submission gate | Agora requires Mera + AUSD + Perpl; current Kuru-only scope is excluded ([SUBMISSIONS](SUBMISSIONS.md)). |
 | B8 | OPEN: remaining device proofs; S22 entry/UI user-accepted | User: devices; lead: test surface | S4 restore, iPhone and standalone PWA evidence | Tested S22 card/disk entry, sound and repaired UI accepted by user; remaining create/restore/standalone scenarios are not recorded as passed. |
-| B10 | OPEN: operating budget; bounded technical run passed | User: budget/cadence; lead: implementation | Unattended production mirror and judging-period cost | Corrected609262ms run aligned89usable samples within0.05%, cost1.247819856MON and had no self-trades/reverts. Approve sustainable operation before enabling a continuous signing loop. |
+| B10 | OPEN: demand-only runtime calibration; policy approved | Lead: execution/cost proof | Sustainable demo alignment and judging-period availability | User approved labeled amplification and demand-only signing. Implemented20x target,30second cadence,2MON/day UTC ceiling; fresh rollout/cost evidence remains. No budget-choice question is pending. |
 
 ## B1: testnet supply
 
@@ -78,7 +78,10 @@ No guessed address, fabricated receipt, fixture fill or merely configured endpoi
 - [V] Read-only indexed-path measurement took2173ms for11paced RPC requests; GraphQL answered21–73ms. Separate cold fallback without an indexer took135RPC requests/18243ms unpaced; normal indexed cost is not that fallback cost. One attempt hit the public15rps quota. These reads do not establish a VPS compute bottleneck or a new latency guarantee.
 - [V, 2026-10-09] Fresh SSH access is restored: the user authenticated directly in visible Orca terminal `MONADBOY VPS login`, and the Ubuntu24.04.4 welcome plus `ubuntu@VM-4-200-ubuntu:~$` prompt were observed. No password was read or recorded, and no VPS reboot/container change was performed. The prior restricted key remains revoked. The preceding `Connection closed by 43.129.38.115 port 22` cause is still unverified; a later successful session is not a root-cause fix. B10's engineering/safety acceptance remains lead-owned; authentication does not authorize an unattended loop or bypass the crossing guard.
 
-Bounded technical proof is recorded below; the remaining gate is an operating decision, not a new protocol login or a missing funded BOT identity. Preserve the approved notional/source/placement guards. Do not enable an unattended loop without a sustainable budget/cadence decision, or extrapolate guaranteed24-hour costs from a short controlled run.
+The user has now approved demand-only operation rather than24/7 signing. The
+remaining gate is measured runtime calibration, not an unanswered budget choice.
+Preserve the notional/source/placement guards; never extrapolate24-hour alignment
+or gas guarantees from a short controlled run.
 
 ### Latest bounded production evidence —2026-10-09 UTC
 
@@ -110,6 +113,22 @@ Bounded technical proof is recorded below; the remaining gate is an operating de
   mirror signing. The observed gas rate does not fit an assumed free or
   indefinitely funded service. Existing player positions still need manual
   re-centering; native flip re-arming is not automatic range relocation.
+
+### Approved demand-only policy —2026-10-10 UTC
+
+- User approves labeled amplification, demand-only operation and necessary role
+  reallocations; choose20x relative movement and a conservative2MON UTC/day cap.
+- Raw mainnet and actual-chain valuation stay distinct. Existing player ranges
+  are not reset; out-of-range A remains reviewed manual re-centering.
+- Visible range/live saved disks provide signed45second leases, refreshed every
+  15seconds. Idle skips mirror inventory/signing, with30second action cadence.
+- Local real HTTP admission/refusal and persistent budget regressions passed;
+  matched production rollout and new demand-only gas/alignment proof remain.
+- Role snapshot at69748178: DEPLOYER43.4829476042MON,
+  BOT42.9568720714106MON, DRIP16.913196776MON. No role transfer was needed.
+- Vercel global login `dylansiusputra` now returns HTTP200 for the original
+  MONADBOY project/team and verified canonical domain. The separate wrong-account
+  login is not used; RP ID and account/project ownership are unchanged.
 
 
 

@@ -155,6 +155,31 @@ Each treasury key sends through one queue that waits until the head is at least 
 blocks past its previous transaction (measured in blocks, re-scanned from the chain after
 a restart or a failed send). The keys must not be used from any other sender or delegated.
 
+### Demand-driven DEMO policy
+
+The approved playable policy is20x relative movement from a durable first-valid
+mainnet source anchor, not a decimal shift. `/v1/mid?market=MON_USDC` stays raw;
+MON_AUSD returns raw `mainnetMid`, explicit `demo` metadata and the DEMO target.
+Deploy the matching frontend labels/schema with this worker. Keep the canonical
+RP ID and never reset `demo_anchors` while player positions exist.
+
+For demand-only signing, configure the separate funded `BOT_PRIVATE_KEY`,
+`TESTNET_REGISTRY_ADDRESS` from the verified deployment manifest and
+`MIRROR_DAILY_GAS_MON=2`. Keep the existing DRIP key/salt and private RPC unchanged.
+`APP_ORIGIN` must exactly match the canonical frontend. Never run a second signer.
+
+The visible range/live client signs a heartbeat every15seconds, not a transaction.
+`POST /v1/mirror/demand` verifies its saved registry disk and signature; the45second
+deadline cannot be extended by replay. Foreign origins, forged/expired signatures,
+unsaved disks, excess capacity and bodies over1024bytes are refused.
+Idle means no mirror inventory reads, cancellation or signing. Actions are at least
+30seconds apart; demand is checked again inside the block-spaced signing queue.
+
+The UTC daily limit reserves declared gas times maxFeePerGas before broadcast.
+Unknown sends remain reserved after failure/restart; unused headroom is not refunded.
+Health exposes active players, persistent anchor and daily gas reservations.
+This is a bounded policy, not guaranteed depth/alignment or automatic re-centering.
+
 ## Price feed and history sources
 
 Mainnet reads use `MAINNET_RPC_URL` (public `https://rpc.monad.xyz` by default). That RPC
