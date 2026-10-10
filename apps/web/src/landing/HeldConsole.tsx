@@ -58,7 +58,13 @@ export function HeldConsole({
       ref={frame}
       className={`held-console ${className}`}
       data-hint={hint}
-      style={{ width: box.width, height: box.height, ...style }}
+      // Before the first measure (and in server HTML) the box is reserved by
+      // aspect ratio from landing.css, so hydration does not shift the page.
+      // Size containment stops the unscaled shell inside from widening or
+      // stretching that box.
+      style={box.scale
+        ? { width: box.width, height: box.height, ...style }
+        : { width: '100%', maxWidth, aspectRatio: 'var(--held-ratio)', contain: 'size', ...style }}
     >
       <div
         ref={body}

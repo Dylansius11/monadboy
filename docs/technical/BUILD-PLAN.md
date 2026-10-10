@@ -293,6 +293,17 @@ spacing applies to HTTP dispatch. Read-only measurement against the production
 RPC, worker and Envio on the same owner: median tick 1,403ms with 7 RPC requests
 before, 411ms with 2 after; a failed sub-read still rejects, never reads as zero.
 
+**2026-10-10 production UI audit:** Production range, live and results screens
+now use the fixture screens' layout with real reads only (hand-built-state
+screenshots at 1440x900, 1536x730 and 412x915, no screen-level overflow). The
+empty tracker no longer says "try an easier tier": EASY is the strictest filter,
+and the live read failed EASY on every market (MON/USDC: TVL and safety below
+the EASY floor), so it points to NORMAL/HARD and lists each pool's first failed
+gate. The no-card disk shelf offers A INSERT CARD. Landing CLS on a 412px phone
+was 0.53 because the held console reserved no box before hydration; it now
+reserves the shell's aspect ratio. Every page's HTML is cached at the Vercel edge
+until the next deployment, since no page renders per-visitor data on the server.
+
 **Production PWA proof:** Built preview manifest parsed without errors; native Chromium Page.getInstallabilityErrors returned an empty error list, with real 192/512/maskable icons. No service worker caches chain responses. Physical-phone standalone launch and Lighthouse report are not recorded, so 7.9 remains open. Live leaderboard no-market and retained OFFLINE state are rendered; no invented ranking or fill is claimed.
 
 ## Phase 8 — Envio indexer

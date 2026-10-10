@@ -20,6 +20,18 @@ body:has(.landing) {
   scrollbar-color: #4a35c4 #0e091c;
 }
 
+/* The held console's natural shell (console.css: 568x712 on the desk,
+   520x690 at phone widths). HeldConsole reserves this ratio until it has
+   measured, so server HTML and the hydrated page share one layout. */
+.held-console {
+  --held-ratio: 568 / 712;
+}
+@media (max-width: 640px) {
+  .held-console {
+    --held-ratio: 520 / 690;
+  }
+}
+
 .landing {
   --night: #0e091c;
   --night-2: #130c2c;

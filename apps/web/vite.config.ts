@@ -53,7 +53,13 @@ const config = defineConfig({
     },
     tailwindcss(),
     tanstackStart(),
-    ...(process.env.VERCEL === '1' ? [nitro({ preset: 'vercel' })] : []),
+    // Every page renders the same HTML for every visitor (card, disks and
+    // positions load in the browser), so Vercel keeps each rendered page at
+    // the edge until the next deployment instead of rendering it in iad1 on
+    // every request.
+    ...(process.env.VERCEL === '1'
+      ? [nitro({ preset: 'vercel', routeRules: { '/**': { isr: true } } })]
+      : []),
     viteReact(),
   ],
   server: {
