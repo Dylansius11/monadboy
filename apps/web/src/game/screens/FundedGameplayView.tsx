@@ -1,8 +1,13 @@
+import { mainnetMarkets, monad } from '@monadboy/sdk'
 import { explorerAddressUrl, explorerTxUrl } from '../../chain/config'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { price } from '../../lib/format'
 import { Panel, PixelText, Value } from '../../ui'
 import type { GameplayState } from '../../chain/gameplay-store'
+import type { ReactNode } from 'react'
+import './funded.css'
+
+const sourceMarket = mainnetMarkets.find((market) => market.symbol === 'MON_USDC')
 
 export type Actions = {
   quote: () => void
@@ -19,82 +24,66 @@ export type Actions = {
   openLive: () => void
 }
 export type FundedScreenProps = { state: GameplayState; actions: Actions }
-export function Header({ title, demoMultiplier = 1 }: { title: string; demoMultiplier?: number }) {
+export function Header({
+  title, demoMultiplier = 1, pair = 'MON / AUSD',
+}: { title: string; demoMultiplier?: number; pair?: string }) {
   return (
-    <header className="flex flex-wrap items-baseline justify-between gap-1">
-      <PixelText role="title" upper>
-        {title}
-      </PixelText>
-      <PixelText role="micro" upper>
-        {demoMultiplier > 1 ? `DEMO x${demoMultiplier} · TESTNET` : 'MON/AUSD TESTNET'}
-      </PixelText>
+    <header className="funded-header flex items-baseline justify-between gap-1">
+      <PixelText role="body" upper>{title}</PixelText>
+      <PixelText role="micro" tone="dim">DEMO x{demoMultiplier} · TESTNET</PixelText>
+      <PixelText role="body" upper>{pair}</PixelText>
     </header>
   )
 }
 export function ReceiptSteps({ state }: { state: GameplayState }) {
   return (
-    <div aria-live="polite" className="flex flex-col gap-1">
-      {state.steps.map((step) => (
-        <div
-          key={step.step}
-          className="flex flex-wrap items-baseline gap-1 text-micro"
-        >
-          <span>
-            {step.step}:{' '}
-            {step.state === 'checking'
-              ? 'checking cost / block spacing'
-              : step.state}
+    <ol aria-live="polite" aria-label="Actual transaction steps" className="funded-steps text-micro">
+      {state.steps.map((step, index) => (
+        <li key={step.step} className="funded-step" data-state={step.receipt?.status === 'reverted' ? 'reverted' : step.state}>
+          <span aria-hidden="true" className="funded-step-marker">
+            {step.receipt?.status === 'reverted' || step.state === 'not-sent' || step.state === 'unconfirmed' ? '!' : step.state === 'confirmed' ? 'OK' : index + 1}
           </span>
+          <div className="funded-step-copy">
+            <span>
+              {step.step}:{' '}
+              {step.receipt?.status === 'reverted' ? 'reverted' : step.state === 'checking' ? 'checking cost / block spacing'
+                : step.state === 'not-sent' ? `not sent: ${step.detail ?? 'operation interrupted'}`
+                  : step.state === 'unconfirmed' ? step.hash ? 'confirmation unavailable; check explorer' : 'outcome unknown: refresh chain state'
+                    : step.state}
+            </span>
+            {step.receipt && <span>block {step.receipt.block.toString()}, limit {step.receipt.gas.toString()}</span>}
+          </div>
           {step.hash && (
-            <a
-              className="underline"
-              href={explorerTxUrl(step.hash)}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a className="underline" href={explorerTxUrl(step.hash)} target="_blank" rel="noreferrer">
               Open transaction
             </a>
           )}
-          {step.receipt && (
-            <span>
-              block {step.receipt.block.toString()}, limit{' '}
-              {step.receipt.gas.toString()}
-            </span>
-          )}
-        </div>
+        </li>
       ))}
-    </div>
+    </ol>
   )
 }
 export function Notices({ state }: { state: GameplayState }) {
+  const hasError = state.demandError || state.error || state.readError || state.saveError || state.position?.historyError
   return (
     <>
-      {state.demandError && (
-        <PixelText role="micro" tone="loss" as="p">{state.demandError}</PixelText>
-      )}
-      {state.error && (
-        <PixelText role="micro" tone="loss" as="p" aria-live="polite">
-          {state.error}
-        </PixelText>
-      )}
-      {state.readError && (
-        <PixelText role="micro" tone="loss" as="p">
-          Latest chain read failed: {state.readError}. The last good read is
-          retained, not refreshed.
-        </PixelText>
-      )}
-      {state.saveError && (
-        <PixelText role="micro" tone="loss" as="p">
-          Optional history save failed. {state.saveError}
-        </PixelText>
+      {hasError && (
+        <div role="alert" aria-live="polite" className="funded-notices">
+          <Panel flush className="flex flex-col gap-1 p-2">
+            {state.demandError && <PixelText role="micro" tone="loss" as="p">{state.demandError}</PixelText>}
+            {state.error && <PixelText role="micro" tone="loss" as="p">{state.error}</PixelText>}
+            {state.readError && (
+              <PixelText role="micro" tone="loss" as="p">
+                Latest chain read failed: {state.readError}. The last good read is retained, not refreshed.
+              </PixelText>
+            )}
+            {state.saveError && <PixelText role="micro" tone="loss" as="p">Optional history save failed. {state.saveError}</PixelText>}
+            {state.position?.historyError && <PixelText role="micro" tone="loss" as="p">{state.position.historyError}</PixelText>}
+          </Panel>
+        </div>
       )}
       {state.saved && (
-        <a
-          className="text-micro underline"
-          href={explorerTxUrl(state.saved.hash)}
-          target="_blank"
-          rel="noreferrer"
-        >
+        <a className="funded-saved text-micro underline" href={explorerTxUrl(state.saved.hash)} target="_blank" rel="noreferrer">
           SAVED TO CARD. Matching DiskSaved receipt.
         </a>
       )}
@@ -104,23 +93,28 @@ export function Notices({ state }: { state: GameplayState }) {
 export function SourceLinks({ state }: { state: GameplayState }) {
   const position = state.position
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1 text-micro">
-      <a
+    <div className="funded-sources flex flex-wrap gap-x-3 gap-y-1 text-micro">
+      {state.market && <a
         className="underline"
-        href={explorerAddressUrl(state.market!.address)}
+        href={explorerAddressUrl(state.market.address)}
         target="_blank"
         rel="noreferrer"
       >
         TESTNET book / orders
-      </a>
-      <a
+      </a>}
+      {state.owner && <a
         className="underline"
-        href={explorerAddressUrl(state.owner!)}
+        href={explorerAddressUrl(state.owner)}
         target="_blank"
         rel="noreferrer"
       >
         Disk account / balances
-      </a>
+      </a>}
+      {sourceMarket && state.mainnetMid !== null && (
+        <a className="underline" href={`${monad.blockExplorers.default.url}/address/${sourceMarket.address}`} target="_blank" rel="noreferrer">
+          MAINNET source book
+        </a>
+      )}
       <span>
         {position?.source} / snapshot block {position?.block.toString()} /{' '}
         {position ? (position.head - position.block).toString() : 'unavailable'}{' '}
@@ -176,17 +170,21 @@ export function Numbers({
 export function Inputs({
   state,
   onClose,
+  children,
 }: {
   state: GameplayState
   onClose: () => void
+  children?: ReactNode
 }) {
   useConsoleIntent((intent) => {
     if (intent === 'B' || intent === 'START') onClose()
   })
-  const position = state.position!
+  const position = state.position
+  if (!position) return null
   return (
     <div className="screen-inputs bg-screen flex h-full w-full flex-col gap-2 overflow-y-auto p-2">
       <Header title="Actual inputs" demoMultiplier={state.demoMultiplier} />
+      {position.historyError && <div role="alert" className="funded-notices"><Panel flush className="p-2"><PixelText role="micro" tone="loss">{position.historyError}</PixelText></Panel></div>}
       <Panel flush className="flex flex-col gap-1 p-2">
         <PixelText role="micro">
           TESTNET book bid{' '}
@@ -225,6 +223,7 @@ export function Inputs({
           are not counted as zero time in range.
         </PixelText>
       </Panel>
+      {children}
       {position.orders.map((order) => (
         <PixelText key={order.id} role="micro">
           Order {order.id}: {order.isBuy ? 'buy' : 'sell'}{' '}
