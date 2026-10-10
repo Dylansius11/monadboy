@@ -162,7 +162,7 @@ const GUIDES: Record<string, ScreenGuide> = {
       ['B', 'Close details, or return to difficulty.'],
     ],
     notes: [
-      'MAINNET READ ONLY, thin books and failed filters cannot be played. If nothing passes, go back and try an easier tier.',
+      'MAINNET READ ONLY, thin books and failed filters cannot be played. EASY filters hardest; if nothing passes, go back and pick NORMAL or HARD.',
       'Source and age describe the worker read. Offline or missing markets stay unavailable; no fixture map is substituted.',
     ],
   },

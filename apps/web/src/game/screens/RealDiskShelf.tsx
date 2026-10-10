@@ -25,7 +25,10 @@ export function RealDiskShelf({ onOpen, onBack }: {
   }, [selected, proof, state.status])
   useEffect(() => { if (card.phase === 'inserted') void shelf.refresh() }, [card.serial, card.phase, shelf])
   const slot = state.shelf?.slots[selected]
+  const held = card.phase === 'inserted'
   function activate() {
+    // The card screen is where a card goes in, so A takes the player there.
+    if (!held) { onBack(); return }
     if (state.working) return
     if (slot?.kind === 'disk') onOpen(slot.disk)
     else if (slot?.kind === 'empty') void shelf.createDisk(selected)
@@ -44,7 +47,7 @@ export function RealDiskShelf({ onOpen, onBack }: {
         <PixelText role="title" upper>Save disks</PixelText><PixelText role="micro" upper>Testnet</PixelText>
       </header>
       <div className="real-shelf-body flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-        {card.phase !== 'inserted' ? <Panel>Insert your memory card to read your disks.</Panel>
+        {!held ? <Panel className="flex flex-col gap-1"><PixelText role="body" upper>No card in the slot</PixelText><PixelText as="p" role="micro">A: insert your memory card to read your three disks.</PixelText></Panel>
           : proof && slot?.kind === 'disk' ? (
             <Panel className="flex flex-col gap-2">
               <PixelText role="title">Onchain sealed disk</PixelText>
@@ -83,9 +86,9 @@ export function RealDiskShelf({ onOpen, onBack }: {
       {slot?.kind === 'disk' && !proof && <button type="button" className="pressable text-micro underline" onClick={() => setProof(true)}>START: OPEN proof</button>}
       {slot && !proof && <a className="text-micro underline" href={explorerAddressUrl(slot.address)} target="_blank" rel="noreferrer">Disk account {slot.address.slice(0, 6)}..{slot.address.slice(-4)}</a>}
       <footer className="screen-footer flex items-center justify-between gap-2">
-        <button className="pressable min-h-11 text-micro" type="button" onClick={activate} disabled={!!state.working || card.phase !== 'inserted'}>A {slot?.kind === 'disk' ? 'Open' : slot?.kind === 'empty' ? 'Create' : 'Retry'}</button>
+        <button className="pressable min-h-11 text-micro" type="button" onClick={activate} disabled={held && !!state.working}>A {!held ? 'Insert card' : slot?.kind === 'disk' ? 'Open' : slot?.kind === 'empty' ? 'Create' : 'Retry'}</button>
         <button className="pressable min-h-11 text-micro" type="button" onClick={onBack}>B Back</button>
-        <button className="pressable min-h-11 text-micro" type="button" onClick={() => { getCardManager().eject(); onBack() }}>Eject</button>
+        {held && <button className="pressable min-h-11 text-micro" type="button" onClick={() => { getCardManager().eject(); onBack() }}>Eject</button>}
       </footer>
     </div>
   )

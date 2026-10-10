@@ -171,9 +171,14 @@ export function PoolTracker({
   // exactly as real a state as "here is the map." Not a blank plot: a map
   // with zero live pins looks like a bug, this looks like a sentence.
   if (passing.length === 0) {
+    // EASY filters hardest, so "try an easier tier" would point the wrong way.
+    // The playable pools come first: they are the ones another tier can open.
+    const closest = [...pools]
+      .sort((a, b) => Number(isTestnet(b)) - Number(isTestnet(a)) || a.gates.failures.length - b.gates.failures.length)
+      .slice(0, 3)
     return (
       <div className="bg-screen flex h-full w-full flex-col items-center justify-center gap-3 p-4">
-        <Panel className="flex flex-col gap-2">
+        <Panel className="flex w-full max-w-[34rem] flex-col gap-2">
           <PixelText role="title" upper>
             Nothing passed
           </PixelText>
@@ -181,12 +186,33 @@ export function PoolTracker({
             {provenanceLine(provenance)}
           </PixelText>
           <PixelText role="body">
-            {character.label}&apos;s filter removed every pool at this
-            difficulty. Try an easier tier.
+            {character.label}&apos;s {character.tier} filter removed every pool.{' '}
+            {character.tier === 'HARD'
+              ? 'HARD is already the loosest filter; nothing on the market passes right now.'
+              : character.tier === 'EASY'
+                ? 'EASY filters hardest. NORMAL and HARD let more pools through.'
+                : 'HARD lets more pools through.'}
           </PixelText>
+          {closest.length > 0 && (
+            <ul className="border-edge flex flex-col border-t pt-1">
+              {closest.map((entry) => (
+                <li key={entry.pool.pairAddress} className="flex flex-wrap items-baseline justify-between gap-x-2 py-0.5">
+                  <PixelText role="micro" upper>
+                    {entry.pool.tokenX.symbol} / {entry.pool.tokenY.symbol}
+                    {isTestnet(entry) ? ' · TESTNET' : ' · MAINNET ONLY'}
+                  </PixelText>
+                  {entry.gates.failures[0] && (
+                    <PixelText role="micro" tone="loss">
+                      {GATE_COPY[entry.gates.failures[0]]}
+                    </PixelText>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </Panel>
         <PixelText role="micro" tone="dim" upper>
-          B back
+          B back · pick another Monanimal
         </PixelText>
       </div>
     )

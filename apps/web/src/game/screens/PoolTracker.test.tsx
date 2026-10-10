@@ -231,6 +231,26 @@ describe('missing data, Gate 2.4', () => {
     press('B')
     expect(onBack).toHaveBeenCalledTimes(1)
   })
+
+  it('points an empty EASY map at the looser tiers and names why the pool failed', () => {
+    const { getByText, queryByText } = renderTracker({
+      pools: [scoredPool({ failures: ['tvl-too-low'] })],
+    })
+
+    expect(getByText(/NORMAL and HARD let more pools through/)).toBeInTheDocument()
+    expect(queryByText(/easier tier/i)).not.toBeInTheDocument()
+    expect(getByText(GATE_COPY['tvl-too-low'])).toBeInTheDocument()
+  })
+
+  it('does not send a HARD player to a looser tier that does not exist', () => {
+    const { getByText } = renderTracker({
+      pools: [scoredPool({ failures: ['tvl-too-low'] })],
+      characterId: 'mouch',
+      gates: fixtureGates('hard'),
+    })
+
+    expect(getByText(/HARD is already the loosest filter/)).toBeInTheDocument()
+  })
 })
 
 describe('the field states the rule it is judging pools by', () => {
