@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { CityCanvas } from '../city/CityCanvas'
 import { HeldConsole } from '../HeldConsole'
@@ -40,17 +40,8 @@ export function Hero({ onStart }: { onStart: () => void }) {
   }, [reduced])
 
   return (
-    <section className="hero" aria-labelledby="hero-title">
+    <section id="top" className="hero" aria-labelledby="hero-title">
       <CityCanvas fillSignal={lights} className="hero-city" />
-
-      <header className="topbar">
-        <span className="topbar-mark">{brand.CONSOLE_NAME}</span>
-        <nav className="topbar-nav" aria-label="Page">
-          <a href="#how">How it plays</a>
-          <a href="#real">What is real</a>
-          <span className="tag">Testnet</span>
-        </nav>
-      </header>
 
       <div className="hero-grid">
         <div className="hero-copy">
@@ -86,6 +77,61 @@ export function Hero({ onStart }: { onStart: () => void }) {
           <div className="street-shadow" aria-hidden="true" />
         </div>
       </div>
+
+      <Billboard />
     </section>
+  )
+}
+
+/** What the console is built from, said once, the way a street sign says it. */
+const SIGN = [
+  brand.CARTRIDGE_01,
+  'Kuru flip orders on Monad testnet',
+  `Passkey ${brand.WALLET_UNIT.toLowerCase()}s by Mera`,
+  'Envio-indexed leaderboard',
+  'Test tokens only',
+]
+
+/**
+ * An LED crawl on the street below the console. It moves in whole pixels:
+ * the animation has one step per pixel of travel, so the letters never land
+ * between columns and blur.
+ */
+function Billboard() {
+  const first = useRef<HTMLDivElement>(null)
+  const [travel, setTravel] = useState(0)
+
+  useLayoutEffect(() => {
+    const el = first.current
+    if (!el) return
+    const measure = () => setTravel(Math.round(el.offsetWidth))
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  const line = SIGN.map((s) => (
+    <span key={s}>
+      {s}
+      <i aria-hidden="true" />
+    </span>
+  ))
+  return (
+    <div className="billboard" role="marquee" aria-label={SIGN.join('. ')}>
+      <div
+        className="billboard-crawl"
+        aria-hidden="true"
+        style={{
+          ['--travel' as string]: `${travel}px`,
+          ['--steps' as string]: travel || 1,
+          // 48 px a second: slow enough to read while walking past
+          ['--crawl-ms' as string]: `${Math.max(1, travel) * 21}ms`,
+        }}
+      >
+        <div ref={first} className="billboard-line">{line}</div>
+        <div className="billboard-line">{line}</div>
+      </div>
+    </div>
   )
 }

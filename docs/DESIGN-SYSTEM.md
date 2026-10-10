@@ -282,6 +282,13 @@ The landing page preserves the same city, console and factual copy. Its primary
 PRESS START action has a 64px minimum height; short phones use 16px action text
 to keep the label on one line. Hero copy has a protected dark reading area,
 and tablet/phone sections reflow without turning the site into a generic card grid.
+A fixed top bar turns solid once the page moves and shows a small START key after
+the hero leaves. An LED sign under the hero crawls one whole pixel per step.
+The how-it-plays rail pins the real console through four beats (card, tracker,
+range, live); the rail fill is the scroll position, and each beat rings the keys
+it names on the held console. Every screen change, on the page and in `/play`,
+uses the 120ms four-step wipe. The ladder illustration is labelled as not market
+data; the cast select reads its filter rows from the SDK gates, never retyped.
 
 ### Volume
 

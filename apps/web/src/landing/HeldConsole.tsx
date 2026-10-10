@@ -18,6 +18,7 @@ export function HeldConsole({
   maxWidth = 568,
   powered = true,
   className = '',
+  hint,
   style,
 }: {
   children: ReactNode
@@ -26,6 +27,8 @@ export function HeldConsole({
   powered?: boolean
   className?: string
   style?: CSSProperties
+  /** Space-separated controls to light as a teaching cue: a, b, dpad, select. */
+  hint?: string
 }) {
   const frame = useRef<HTMLDivElement>(null)
   const body = useRef<HTMLDivElement>(null)
@@ -54,6 +57,7 @@ export function HeldConsole({
     <div
       ref={frame}
       className={`held-console ${className}`}
+      data-hint={hint}
       style={{ width: box.width, height: box.height, ...style }}
     >
       <div

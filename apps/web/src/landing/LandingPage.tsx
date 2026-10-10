@@ -4,6 +4,7 @@ import { HowItPlays } from './sections/HowItPlays'
 import { WhatIsReal } from './sections/WhatIsReal'
 import { Cast } from './sections/Cast'
 import { Closing } from './sections/Closing'
+import { Topbar } from './Topbar'
 import { useStart } from './useStart'
 import './landing.css'
 
@@ -31,6 +32,7 @@ export function LandingPage() {
 
   return (
     <main className="landing">
+      <Topbar onStart={start} />
       <Hero onStart={start} />
       <HowItPlays />
       <WhatIsReal />
