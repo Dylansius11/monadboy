@@ -66,3 +66,12 @@ it('an incomplete recovered run preserves unavailable totals instead of writing 
     complete: false,
   })
 })
+it('seals and restores an unavailable maker fill count without inventing a numeric run', () => {
+  const sealed = appendActualRun(newDiskPlaintext(1), {
+    market, openedAt: null, closedAt: 3, score: null, damage: null, net: null,
+    fills: null, receipts: [tx], complete: false,
+  })
+  const restored = zDiskPlaintext.parse(sealed)
+  expect(restored.runs).toEqual([])
+  expect(restored.lastExit?.fills).toBeNull()
+})

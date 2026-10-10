@@ -10,7 +10,7 @@ import {
 import { decodeEventLog, formatUnits } from 'viem'
 import { z } from 'zod'
 import deployments from '../../../../packages/sdk/src/deployments.testnet.json'
-import type { Address, Hex, PublicClient } from 'viem'
+import type { Address, ContractFunctionReturnType, Hex, PublicClient } from 'viem'
 import type { Deposit, Fill, Holdings, Market } from '@monadboy/sdk'
 
 export const MARGIN = '0xd029C2D98ff85D8F64799017fE00a59B1159CE02' as const
@@ -56,6 +56,7 @@ export type PositionRead = {
   fills: Fill[]
   missingOrigins: number[]
   complete: boolean
+  historyError?: string
   source: 'INDEXED' | 'INDEXER OFFLINE'
   coverageFrom: bigint
   valuation: ReturnType<typeof scoreCard> | null
@@ -365,6 +366,7 @@ type HistoryProjection = {
   fills: Fill[]
   missingOrigins: readonly (string | number)[]
   complete: boolean
+  historyError?: string
 }
 export async function chooseHistory(
   indexed: (() => Promise<HistoryProjection>) | undefined,
@@ -379,7 +381,18 @@ export async function chooseHistory(
       /* A failed public indexer read switches to bounded actual logs. */
     }
   }
-  return { ...(await direct()), source: 'INDEXER OFFLINE' as const }
+  try {
+    return { ...(await direct()), source: 'INDEXER OFFLINE' as const }
+  } catch {
+    // Current balances and orders remain usable even when historical RPC logs are unavailable.
+    return {
+      fills: [],
+      missingOrigins: [],
+      complete: false,
+      source: 'INDEXER OFFLINE' as const,
+      historyError: 'Maker fill history unavailable. Actual chain balances and orders remain recoverable; fill counts and totals are unavailable.',
+    }
+  }
 }
 
 /** Chain-owned current orders are read even when all indexed/log history is unavailable. */
@@ -416,13 +429,44 @@ export function createPositionReader(
         ? await indexedSnapshotBlock(indexerUrl, head).catch(() => null)
         : null
     const block = synced ?? head
-    const counter = await client.readContract({
-      address: market.address,
-      abi: kuruOrderbookAbi,
-      functionName: 's_orderIdCounter',
-      blockNumber: block,
-    })
-    const rawOrders = new Map<number, { next: number }>()
+    // Independent reads use the same pinned block and share one paced HTTP batch.
+    const [counter, marginBaseRaw, marginQuoteRaw, walletBaseRaw, walletQuoteRaw, rawBook] = await Promise.all([
+      client.readContract({
+        address: market.address,
+        abi: kuruOrderbookAbi,
+        functionName: 's_orderIdCounter',
+        blockNumber: block,
+      }),
+      client.readContract({
+        address: MARGIN,
+        abi: kuruMarginAccountAbi,
+        functionName: 'getBalance',
+        args: [owner, market.baseToken],
+        blockNumber: block,
+      }),
+      client.readContract({
+        address: MARGIN,
+        abi: kuruMarginAccountAbi,
+        functionName: 'getBalance',
+        args: [owner, market.quoteToken],
+        blockNumber: block,
+      }),
+      client.getBalance({ address: owner, blockNumber: block }),
+      client.readContract({
+        address: market.quoteToken,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [owner],
+        blockNumber: block,
+      }),
+      client.readContract({
+        address: market.address,
+        abi: kuruOrderbookAbi,
+        functionName: 'bestBidAsk',
+        blockNumber: block,
+      }),
+    ])
+    const rawOrders = new Map<number, ContractFunctionReturnType<typeof kuruOrderbookAbi, 'view', 's_orders'>>()
     const pricePoints = new Map<string, Set<number>>()
     const membership = async (price: number, isBuy: boolean) => {
       const key = `${isBuy}:${price}`
@@ -438,18 +482,18 @@ export function createPositionReader(
       const links = new Map<number, { next: number }>()
       for (let id = Number(pointHead); id !== 0;) {
         if (links.has(id)) throw new Error('Current order list has a cycle.')
-        let order = rawOrders.get(id)
-        if (!order) {
-          const raw = await client.readContract({
+        let raw = rawOrders.get(id)
+        if (!raw) {
+          raw = await client.readContract({
             address: market.address,
             abi: kuruOrderbookAbi,
             functionName: 's_orders',
             args: [id],
             blockNumber: block,
           })
-          order = { next: Number(raw[3]) }
-          rawOrders.set(id, order)
+          rawOrders.set(id, raw)
         }
+        const order = { next: Number(raw[3]) }
         links.set(id, order)
         id = order.next
       }
@@ -459,14 +503,14 @@ export function createPositionReader(
     }
     const orders: ActiveOrder[] = []
     const readOrder = async (id: number) => {
-      const raw = await client.readContract({
+      const raw = rawOrders.get(id) ?? await client.readContract({
         address: market.address,
         abi: kuruOrderbookAbi,
         functionName: 's_orders',
         args: [id],
         blockNumber: block,
       })
-      rawOrders.set(id, { next: Number(raw[3]) })
+      rawOrders.set(id, raw)
       if (raw[0].toLowerCase() !== owner.toLowerCase()) return
       owned.add(id)
       if (raw[1] === 0n || !(await membership(raw[5], raw[7])).has(id)) return
@@ -499,22 +543,12 @@ export function createPositionReader(
       await readOrder(id)
       scanned = id
     }
-    const balance = (token: Address) =>
-      client.readContract({
-        address: MARGIN,
-        abi: kuruMarginAccountAbi,
-        functionName: 'getBalance',
-        args: [owner, token],
-        blockNumber: block,
-      })
     let restingBase = 0
     let restingQuote = 0
     for (const order of orders) {
       if (order.isBuy) restingQuote += order.size * order.price
       else restingBase += order.size
     }
-    const marginBaseRaw = await balance(market.baseToken)
-    const marginQuoteRaw = await balance(market.quoteToken)
     const holdings = {
       marginBase: Number(
         formatUnits(marginBaseRaw, market.params.baseDecimals),
@@ -525,32 +559,11 @@ export function createPositionReader(
       restingBase,
       restingQuote,
     }
-    const walletBase = Number(
-      formatUnits(
-        await client.getBalance({ address: owner, blockNumber: block }),
-        18,
-      ),
-    )
+    const walletBase = Number(formatUnits(walletBaseRaw, 18))
     const walletQuote = Number(
-      formatUnits(
-        await client.readContract({
-          address: market.quoteToken,
-          abi: erc20Abi,
-          functionName: 'balanceOf',
-          args: [owner],
-          blockNumber: block,
-        }),
-        market.params.quoteDecimals,
-      ),
+      formatUnits(walletQuoteRaw, market.params.quoteDecimals),
     )
-    const book = bestBidAsk1e18(
-      await client.readContract({
-        address: market.address,
-        abi: kuruOrderbookAbi,
-        functionName: 'bestBidAsk',
-        blockNumber: block,
-      }),
-    )
+    const book = bestBidAsk1e18(rawBook)
     const mid =
       book.bid !== null &&
       book.ask !== null &&
@@ -669,6 +682,7 @@ export function createPositionReader(
       fills,
       missingOrigins,
       complete,
+      historyError: history.historyError,
       source,
       coverageFrom:
         source === 'INDEXED'

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { planLadder, scoreFromFills, testnetMarkets } from '@monadboy/sdk'
-import { createPublicClient, custom, encodeAbiParameters } from 'viem'
+import { kuruMarginAccountAbi, kuruOrderbookAbi, planLadder, scoreFromFills, testnetMarkets } from '@monadboy/sdk'
+import { createPublicClient, custom, decodeFunctionData, encodeAbiParameters } from 'viem'
 import { quoteFunding } from './market-execution'
 import type { Hex } from 'viem'
 import type { PositionRead } from './gameplay'
@@ -9,6 +9,8 @@ import {
   projectMarketEvents,
   rawQuoteCeil,
   bufferedGas,
+  createPositionReader,
+  MARGIN,
 } from './gameplay'
 
 const owner = '0x1111111111111111111111111111111111111111' as const
@@ -154,6 +156,56 @@ describe('real gameplay consumer boundaries', () => {
     expect(quote.zapRaw).toBe(121654n)
     expect(quote.depositRaw).toBe(241654n)
     expect(quote.takerFeeQuote).toBeCloseTo(0.00036134651496390335, 12)
+  })
+  it('recovers margin funds without any ladder or sealed basis from public chain balances', async () => {
+    let failHistory = false
+    let failBalance = false
+    const client = createPublicClient({
+      transport: custom({
+        request: async ({ method, params }) => {
+          if (method === 'eth_blockNumber') return '0x1000'
+          if (method === 'eth_getBalance') return '0x0'
+          if (method === 'eth_getLogs') {
+            if (failHistory) throw new Error('Log history unavailable')
+            return []
+          }
+          if (method !== 'eth_call') throw new Error(`Unexpected read ${method}`)
+          const [call, snapshotBlock] = params as [{ to: string; data: Hex }, string]
+          expect(snapshotBlock).toBe('0x1000')
+          let amount = 0n
+          if (call.to.toLowerCase() === MARGIN.toLowerCase()) {
+            if (failBalance) throw new Error('Balance unavailable')
+            const decoded = decodeFunctionData({ abi: kuruMarginAccountAbi, data: call.data })
+            if (decoded.functionName !== 'getBalance') throw new Error('Unexpected margin read')
+            amount = decoded.args[1].toLowerCase() === market.baseToken.toLowerCase()
+              ? 2n * 10n ** BigInt(market.params.baseDecimals)
+              : 120000n
+          } else if (call.to.toLowerCase() === market.address.toLowerCase()) {
+            const decoded = decodeFunctionData({ abi: kuruOrderbookAbi, data: call.data })
+            if (decoded.functionName === 'bestBidAsk')
+              return encodeAbiParameters([{ type: 'uint256' }, { type: 'uint256' }], [0n, 0n])
+            if (decoded.functionName !== 's_orderIdCounter')
+              throw new Error('Unexpected order read')
+          }
+          return encodeAbiParameters([{ type: 'uint256' }], [amount])
+        },
+      }),
+    })
+    const position = await createPositionReader(client, market, owner)(null)
+    expect(position.orders).toEqual([])
+    expect(position.holdings).toMatchObject({ marginBase: 2, marginQuote: 0.12 })
+    expect(position.valuation).toBeNull()
+    failHistory = true
+    const recovered = await createPositionReader(client, market, owner)(null)
+    expect(recovered).toMatchObject({
+      orders: [],
+      holdings: { marginBase: 2, marginQuote: 0.12 },
+      complete: false,
+      historyError: expect.any(String),
+      valuation: null,
+    })
+    failBalance = true
+    await expect(createPositionReader(client, market, owner)(null)).rejects.toThrow('Balance unavailable')
   })
 })
 

@@ -53,7 +53,8 @@ export function appendActualRun(
     result.openedAt !== null &&
     result.score !== null &&
     result.damage !== null &&
-    result.net !== null
+    result.net !== null &&
+    result.fills !== null
       ? [
           ...rest.runs,
           {

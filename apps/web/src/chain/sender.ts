@@ -28,23 +28,20 @@ export function delay(ms: number): Promise<void> {
   setTimeout(resolve, ms)
   return promise
 }
-/** One paced browser transport prevents parallel shelf/poll reads exceeding public RPC 15 rps. */
+/** Shared HTTP pacing keeps batched browser reads below the public RPC request limit. */
 let nextRequestAt = 0
 export function browserTransport(url: string) {
-  const base = http(url, { retryCount: 1 })
-  return (options: Parameters<typeof base>[0]) => {
-    const transport = base(options)
-    return {
-      ...transport,
-      request: (async (...args: Parameters<typeof transport.request>) => {
-        const now = Date.now()
-        const at = Math.max(now, nextRequestAt)
-        nextRequestAt = at + 200
-        if (at > now) await delay(at - now)
-        return transport.request(...args)
-      }) as typeof transport.request,
-    }
-  }
+  return http(url, {
+    batch: true,
+    retryCount: 1,
+    fetchFn: async (input, init) => {
+      const now = Date.now()
+      const at = Math.max(now, nextRequestAt)
+      nextRequestAt = at + 200
+      if (at > now) await delay(at - now)
+      return fetch(input, init)
+    },
+  })
 }
 
 export function gameplayClient(url: string) {
@@ -106,7 +103,12 @@ export async function waitForSender(
     }
   }
   const previous = lastBlocks.get(key)
+  const deadline = Date.now() + 30_000
   while (previous !== undefined && head < previous + 3n) {
+    if (Date.now() >= deadline)
+      throw new Error(
+        'Block spacing unavailable. No transaction signed. Refresh chain state before retrying.',
+      )
     await delay(450)
     check()
     head = await client.getBlockNumber({ cacheTime: 0 })
