@@ -79,11 +79,6 @@
   .screen-scroll > * { flex-shrink: 0; }
   .screen-inputs { overflow-y: auto; padding: 12px; }
 
-  .screen-boot { gap: 32px; padding: 16px; }
-  .boot-wordmark { font-size: 33px; letter-spacing: 0.12em; }
-  .boot-cast { gap: 24px; }
-  .screen-boot > div:last-of-type { flex-wrap: wrap; gap: 8px; }
-
   .screen-memory { gap: 12px; }
   .memory-art { border: 0; background: var(--color-screen); }
   .memory-art::before {

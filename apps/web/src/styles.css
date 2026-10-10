@@ -181,52 +181,6 @@ canvas {
   animation: card-insert 0.5s steps(6, end) 1;
 }
 
-/* The boot. The wordmark drops in eight discrete frames, the cast hops in two,
-   and the prompt blinks in two states: every step is a whole frame, so nothing
-   in the boot ever renders between pixels. */
-@keyframes boot-drop {
-  from {
-    transform: translateY(-140px);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-.boot-drop {
-  animation: boot-drop 1s steps(8, end) 1 both;
-}
-
-@keyframes boot-pop {
-  from {
-    transform: translateY(16px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-.boot-pop {
-  display: inline-block;
-  animation: boot-pop 0.24s steps(2, end) 1 both;
-}
-
-.boot-blink {
-  animation: caret 1s steps(1, end) infinite;
-}
-
-@keyframes boot-warm {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0.6;
-  }
-}
-.boot-warm {
-  animation: boot-warm 0.24s steps(3, end) 1 both;
-}
-
 @media (prefers-reduced-motion: reduce) {
   /* Everything that moves without the player asking it to.
      `.sprite-pair` is here because S7 runs a two frame loop continuously for
@@ -235,10 +189,6 @@ canvas {
      state. The screen used to substitute a different FRAME instead, and that
      is how a character ended up smiling while the price walked off the edge:
      a motion preference must never change what a screen is saying. */
-  .boot-drop,
-  .boot-pop,
-  .boot-blink,
-  .boot-warm,
   .card-insert,
   .nad-pulse,
   .sprite-pair,
