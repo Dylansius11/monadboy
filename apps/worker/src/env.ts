@@ -47,14 +47,25 @@ const schema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((value) => value === 'true'),
-    // Notional is quote units (USD) per mirror tick; deviation is a fraction of the target mid.
-    MIRROR_MAX_STEP_NOTIONAL: z.coerce.number().positive().default(0.06),
-    MIRROR_DEVIATION_THRESHOLD: z.coerce.number().positive().default(0.0005),
-    MIRROR_DAILY_GAS_MON: decimal(18, '2'),
-    // Mirror ceilings bound estimation/declared limits; each actual call gets a fresh estimate +20%.
+    // Quote units (AUSD). Side notional: what each side of the resting ladder aims to hold,
+    // bounded by inventory. Step notional: the most one tick takes from other makers.
+    MIRROR_SIDE_NOTIONAL: z.coerce.number().positive().default(4),
+    MIRROR_MAX_STEP_NOTIONAL: z.coerce.number().positive().default(5),
+    // Shortest gap between ladder checks while a player is active, and the fraction the DEMO
+    // target must move from the last signed ladder before a new one is signed. A check inside
+    // the deadband reads only. Replaying 24h of mainnet mids at 50x: 60 s and 1% cost about
+    // 6 MON/h of active play; 30 s about 9; 15 s about 28 (102 gwei, measured gas shapes).
+    MIRROR_INTERVAL_MS: z.coerce.number().int().min(5_000).max(600_000).default(60_000),
+    MIRROR_DEADBAND: z.coerce.number().min(0).max(0.05).default(0.01),
+    // Relative-movement amplification of the playable DEMO target (1 = mainnet movement).
+    DEMO_MULTIPLIER: z.coerce.number().int().min(1).max(50).default(50),
+    MIRROR_DAILY_GAS_MON: decimal(18, '10'),
+    // Mirror ceilings bound estimation; each send declares a fresh estimate +10% (mirror-executor).
     // S2 samples are shape-specific, so never reuse partial-fill gas for a multi-level traversal.
     GAS_MARKET_ORDER: gas(boundedEstimateGasCap),
-    GAS_BATCH_UPDATE: gas(boundedEstimateGasCap),
+    // A full 6+6 ladder seed extrapolates to about 1.5M gas from measured batchUpdate shapes
+    // (about 310k for the first order, 117k for each further one); 4M leaves room.
+    GAS_BATCH_UPDATE: gas(4_000_000n),
     GAS_ERC20: gas(measuredTestnetGas.erc20Transfer.gasLimit),
     GAS_FAUCET: gas(measuredTestnetGas.faucet.gasLimit),
     DRIP_MON: decimal(18, '0.5'),
