@@ -55,6 +55,28 @@ describe('amplified demo price', () => {
     expect(next.read(0.2424 * 1.001).targetMid! / before).toBeCloseTo(1.001 ** 50, 8)
     db.close()
   })
+
+  it('an idle rebase starts the next run at the book and reverts to that level, not to mainnet', () => {
+    const db = memoryDb()
+    let at = 1000
+    const demo = createDemoPrice(db, market, 20, { now: () => at, reversionMs: 3_600_000 })
+    demo.read(0.0269)
+    // The idle book sat 25% above mainnet: the target starts there, not 14% away from it.
+    demo.rebase(0.0269, 0.0336)
+    expect(demo.read(0.0269).targetMid).toBeCloseTo(0.0336, 10)
+    // Amplified moves still drive it from the book.
+    expect(demo.read(0.0269 * 1.001).targetMid! / 0.0336).toBeCloseTo(1.001 ** 20, 6)
+    // Hours later, with mainnet back where it was, it rests at the book's level, not at mainnet.
+    at += 10 * 3_600_000
+    expect(demo.read(0.0269).targetMid).toBeCloseTo(0.0336, 6)
+    // The level survives a restart; invalid observations change nothing.
+    const restarted = createDemoPrice(db, market, 20, { now: () => at })
+    restarted.rebase(0.0269, null)
+    restarted.rebase(null, 0.03)
+    expect(restarted.read(0.0269).targetMid).toBeCloseTo(0.0336, 6)
+    expect(restarted.read(0.0269).level).toBeCloseTo(0.0336 / 0.0269, 10)
+    db.close()
+  })
 })
 
 describe('signed gameplay demand', () => {

@@ -65,6 +65,10 @@ export function createMirrorExecutor({
   deadband?: number
 }): MirrorExecutor {
   let center: number | null = null
+  // The book has not yet reached the signed center: other makers still rest on the wrong side
+  // of it (a take was unfunded, failed or only took a gas-bounded slice). The deadband must not
+  // hide that, or the bot stops walking the book while the target sits still.
+  let pending = false
   let params: MarketParams | undefined
   const read = async () =>
     (params ??= await readMarketParams(client, market.address))
@@ -206,65 +210,85 @@ export function createMirrorExecutor({
       const hashes: Hex[] = []
       try {
         let view = await observe()
+        let first: Hex | null = null
         // Inside the deadband the ladder stays centered where it was signed, and only rungs that
         // fills ate are refilled around that same center. A player's zap takes the inner asks;
         // refilling them on the next tick, while that player's heartbeat is still live, leaves full
         // depth resting for whoever comes next, even after the book goes idle. An intact ladder
-        // plans nothing and signs nothing.
+        // on a book that reached its center plans nothing and signs nothing.
         if (center !== null && Math.abs(targetMid / center - 1) < deadband) {
-          const refill = await reconcile(view, center, assertSource)
-          return refill
-            ? { kind: 'quote', reason: 'ladder-refilled', notional: 0, hashes: [refill] }
-            : { kind: 'hold', reason: 'within-deadband', notional: 0, hashes }
+          // While the walk is pending, inventory goes to the take first; the refill follows it.
+          if (!pending) {
+            const refill = await reconcile(view, center, assertSource)
+            if (refill) return { kind: 'quote', reason: 'ladder-refilled', notional: 0, hashes: [refill] }
+            return { kind: 'hold', reason: 'within-deadband', notional: 0, hashes }
+          }
+        } else {
+          first = await reconcile(view, targetMid, assertSource)
+          if (first) hashes.push(first)
+          center = targetMid
         }
-        const first = await reconcile(view, targetMid, assertSource)
-        if (first) hashes.push(first)
-        center = targetMid
+        // Walk the book toward the signed center, which inside the deadband is not the newest target.
+        const aim = center
+        pending = true
         let levels = MIRROR_TAKE_LEVELS
-        let take = planTake({ target: targetMid, params: view.p, own: view.own, book: view.book, levels })
+        let take = planTake({ target: aim, params: view.p, own: view.own, book: view.book, levels })
         // Another maker's order sits on the wrong side of the target (a player's ladder). With
         // the bot's own crossed quotes gone in that batch, take it so the book walks to target.
         if (take && first) {
           view = await observe()
-          take = planTake({ target: targetMid, params: view.p, own: view.own, book: view.book, levels })
+          take = planTake({ target: aim, params: view.p, own: view.own, book: view.book, levels })
         }
-        if (!take)
+        if (!take) {
+          pending = false
+          // A pending walk inside the deadband skipped the refill above; the book has arrived.
+          if (!first) first = await reconcile(view, aim, assertSource)
+          if (first && !hashes.includes(first)) hashes.push(first)
           return {
             kind: first ? 'quote' : 'hold',
             reason: first ? 'ladder-reconciled' : 'ladder-current',
             notional: 0,
             hashes,
           }
+        }
         const p = view.p
         const minimum = Number(p.minSize) / Number(p.sizePrecision)
         let notional = 0
         let side = take.side
+        // Nothing to take with: still keep the ladder whole around the center, then retry next tick.
+        const unfunded = async (): Promise<MirrorOutcome> => {
+          if (!first) {
+            const refill = await reconcile(view, aim, assertSource)
+            if (refill) hashes.push(refill)
+          }
+          return { kind: hashes.length ? 'quote' : 'hold', reason: 'take-unfunded', notional: 0, hashes }
+        }
         // Each filled order costs gas: take fewer levels until one market order fits its ceiling.
         for (;;) {
-          if (!take) return { kind: first ? 'quote' : 'hold', reason: 'take-unfunded', notional: 0, hashes }
+          if (!take) return unfunded()
           side = take.side
           notional = take.side === 'buy'
             ? Math.min(take.quote, maxTakeNotional, view.free.quote)
-            : Math.min(take.base, maxTakeNotional / targetMid, view.free.base) * targetMid
-          if (notional < minimum * targetMid)
-            return { kind: first ? 'quote' : 'hold', reason: 'take-unfunded', notional: 0, hashes }
+            : Math.min(take.base, maxTakeNotional / aim, view.free.base) * aim
+          if (notional < minimum * aim)
+            return unfunded()
           try {
             hashes.push(await sendChecked({
               address: market.address,
               abi: kuruOrderbookAbi,
               ...(take.side === 'buy'
                 ? { functionName: 'placeAndExecuteMarketBuy', args: [quoteToUnits(notional, p), 0n, true, false] } as const
-                : { functionName: 'placeAndExecuteMarketSell', args: [sizeToUnits(notional / targetMid, p), 0n, true, false] } as const),
+                : { functionName: 'placeAndExecuteMarketSell', args: [sizeToUnits(notional / aim, p), 0n, true, false] } as const),
             }, gas.marketOrder, assertSource))
             break
           } catch (error) {
             if (!(error instanceof GasCeilingError) || levels === 1) throw error
             levels = Math.floor(levels / 2)
-            take = planTake({ target: targetMid, params: p, own: view.own, book: view.book, levels })
+            take = planTake({ target: aim, params: p, own: view.own, book: view.book, levels })
           }
         }
         // Now that the way is clear, place the rungs the first batch had to skip.
-        const second = await reconcile(await observe(), targetMid, assertSource)
+        const second = await reconcile(await observe(), aim, assertSource)
         if (second) hashes.push(second)
         return {
           kind: side,

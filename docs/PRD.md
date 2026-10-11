@@ -200,8 +200,10 @@ Playable MON_AUSD uses a shared `DEMO x20 TESTNET` target. Raw mainnet price,
 DEMO target and actual TESTNET book remain separately inspectable.
 Treating USDC and AUSD as one USD each is an explicit conversion assumption [I], not measured parity.
 
-The persistent first-valid-source anchor defines
-`target = anchorTarget * (mainnetMid / anchorSource)^20`.
+The persistent anchor defines
+`target = anchorTarget * (mainnetMid / anchorSource)^20`, with the gap to `mainnetMid * level`
+decaying over one hour. While no player is live, the anchor is reset to the actual TESTNET
+book (`level = book / mainnet`), so every run starts with target and book together.
 This amplifies relative movement, not price decimals: +0.1% becomes about +2.019%.
 It does not create fills, predict prices, change actual-chain valuation or reset existing positions.
 Width advice uses observed daily volatility times20; the existing ladder clamps still apply.

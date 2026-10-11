@@ -63,6 +63,7 @@ export function createMirrorJob({
   active = () => 1,
   intervalMs = 0,
   target = () => mid.targetMid,
+  idle = () => {},
   now = Date.now,
   logger = log,
 }: {
@@ -73,6 +74,8 @@ export function createMirrorJob({
   active?: () => number
   intervalMs?: number
   target?: () => number | null
+  // Called on every tick with no live player, before anything is signed or skipped.
+  idle?: () => void
   now?: () => number
   logger?: Logger
 }) {
@@ -83,6 +86,7 @@ export function createMirrorJob({
   let lastActionAt = Number.NEGATIVE_INFINITY
   return async () => {
     const at = now()
+    if (active() === 0) idle()
     if (active() === 0 || at - lastActionAt < intervalMs) {
       Object.assign(state, { lastAt: at, lastAction: 'hold', lastError: null })
       return

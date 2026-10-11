@@ -25,8 +25,10 @@ import { createLeaderboardJob, leaderboardSection } from './jobs/leaderboard'
 import {
   createMidSampler,
   createMidState,
+  isSourcePaused,
   SOURCE_MARKET,
   sourceSection,
+  testnetObservation,
   testnetSection,
 } from './jobs/mid-sampler'
 import {
@@ -204,6 +206,12 @@ if (ops.executor)
       active: demand.active,
       intervalMs: env.MIRROR_INTERVAL_MS,
       target: () => demo.read(mid.targetMid).targetMid,
+      // No player: the next run starts from the actual book (only a fresh source and live book).
+      idle: () => {
+        const at = Date.now()
+        const book = testnetObservation(mid, at)
+        if (!isSourcePaused(mid, at) && book.status === 'live') demo.rebase(mid.targetMid, book.mid)
+      },
     }),
   })
 if (ops.topup)

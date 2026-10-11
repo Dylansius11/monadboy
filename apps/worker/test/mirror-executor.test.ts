@@ -412,6 +412,26 @@ test('a zap that eats only the inner asks is refilled inside the deadband, aroun
   db.close()
 })
 
+test('an unfunded take keeps walking inside the deadband once inventory arrives, instead of holding forever', async () => {
+  // Production 2026-10-11: a player ladder held the book at 0.0336 while the target sat at 0.029;
+  // the bot had no free MON, its center moved to the target, and every later tick read
+  // "within-deadband" although the book never reached it.
+  const chain = fakeChain({ base: 0 })
+  for (let i = 0; i < 3; i++) chain.place(OTHER, units(0.0336 - i * 0.0002), 18500000000n, true)
+  const { db, executor } = executorFor(chain, memoryDb(), { deadband: 0.01 })
+  expect(await executor.execute(0.0308, () => {})).toMatchObject({ reason: 'take-unfunded' })
+  expect(await executor.execute(0.0308 * 1.002, () => {})).toMatchObject({ reason: 'take-unfunded' })
+  chain.free.base += 300n * 10n ** 18n
+  expect(await executor.execute(0.0308 * 1.002, () => {})).toMatchObject({ kind: 'sell', reason: 'above-target' })
+  expect([...chain.orders.values()].some((o) => o.owner === OTHER && o.price > units(0.0308))).toBe(false)
+  // The book reached the center: once that is observed, a tick inside the deadband signs nothing.
+  await executor.execute(0.0308 * 1.002, () => {})
+  const sent = chain.sends.length
+  expect(await executor.execute(0.0308 * 1.002, () => {})).toMatchObject({ kind: 'hold', reason: 'within-deadband' })
+  expect(chain.sends).toHaveLength(sent)
+  db.close()
+})
+
 test('rows for filled or foreign orders are dropped; only live owned orders are the ladder', async () => {
   const chain = fakeChain()
   const { db, executor } = executorFor(chain)
