@@ -32,8 +32,14 @@ export function Topbar({ onStart }: { onStart: () => void }) {
 
   return (
     <header className={`topbar${solid ? ' is-solid' : ''}${docked ? ' is-docked' : ''}`}>
-      <a className="topbar-mark" href="#top">
-        {brand.CONSOLE_NAME}
+      <a className="topbar-mark" href="#top" aria-label={brand.CONSOLE_NAME}>
+        <img
+          className="brand-wordmark"
+          src="/brand/monadboy-wordmark-light.png"
+          width={168}
+          height={24}
+          alt=""
+        />
       </a>
       <nav className="topbar-nav" aria-label="Page">
         <a href="#how">How it plays</a>

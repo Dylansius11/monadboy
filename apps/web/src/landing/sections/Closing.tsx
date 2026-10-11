@@ -72,7 +72,13 @@ export function Closing({ onStart }: { onStart: () => void }) {
       </div>
 
       <div className="closing-meta">
-        <span>{brand.CONSOLE_NAME}</span>
+        <img
+          className="brand-wordmark"
+          src="/brand/monadboy-wordmark-light.png"
+          width={112}
+          height={16}
+          alt={brand.CONSOLE_NAME}
+        />
         <span>Built for Monad Metropolis · Track 01</span>
         <span>Monad testnet · test tokens only</span>
         <Link to="/play">Open the console</Link>
