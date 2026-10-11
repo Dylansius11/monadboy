@@ -3,8 +3,9 @@ import {
   decideMirrorAction,
   createMirrorJob,
   createMirrorState,
+  mirrorSection,
 } from '../src/jobs/mirror'
-import type { MirrorExecutor, MirrorInput } from '../src/jobs/mirror'
+import type { MirrorExecutor, MirrorInput, MirrorOutcome } from '../src/jobs/mirror'
 import { createMidState } from '../src/jobs/mid-sampler'
 import { memoryDb, quiet, tx } from './helpers'
 
@@ -12,119 +13,30 @@ const base: MirrorInput = {
   targetMid: 0.03,
   sourceAgeMs: 1000,
   sourcePaused: false,
-  testnetMid: 0.03,
   testnetObserved: true,
-  deviationThreshold: 0.0005,
-  maxStepNotional: 2,
-  inventory: { base: 1000, quote: 100 },
 }
+const held: MirrorOutcome = { kind: 'hold', reason: 'ladder-current', notional: 0, hashes: [] }
 
-test('does nothing inside the deviation threshold, including exactly on it', () => {
-  expect(decideMirrorAction(base)).toMatchObject({
-    kind: 'hold',
-    notional: 0,
-    reason: 'within-threshold',
-  })
-  expect(
-    decideMirrorAction({ ...base, testnetMid: 0.03 * 1.0005 }),
-  ).toMatchObject({ kind: 'hold' })
-  expect(
-    decideMirrorAction({ ...base, testnetMid: 0.03 * 0.9995 }),
-  ).toMatchObject({ kind: 'hold' })
-  expect(
-    decideMirrorAction({ ...base, testnetMid: 0.03 * 1.0006 }),
-  ).toMatchObject({ kind: 'sell' })
+test('a fresh source and an observed book hand the ladder to the executor', () => {
+  expect(decideMirrorAction(base)).toEqual({ kind: 'reconcile', reason: 'source-fresh' })
+  expect(decideMirrorAction({ ...base, sourceAgeMs: 30_000 }).kind).toBe('reconcile')
 })
 
-test('trades toward the target: buy when the testnet is cheap, sell when it is dear', () => {
-  expect(decideMirrorAction({ ...base, testnetMid: 0.029 })).toMatchObject({
-    kind: 'buy',
-    reason: 'below-target',
-  })
-  expect(decideMirrorAction({ ...base, testnetMid: 0.031 })).toMatchObject({
-    kind: 'sell',
-    reason: 'above-target',
-  })
-})
-
-test('notional is capped by the step cap and by the inventory that funds that side', () => {
-  expect(decideMirrorAction({ ...base, testnetMid: 0.029 }).notional).toBe(2)
-  expect(
-    decideMirrorAction({
-      ...base,
-      testnetMid: 0.029,
-      inventory: { base: 1000, quote: 0.25 },
-    }).notional,
-  ).toBe(0.25)
-  // base inventory is valued at the target: 10 base * 0.03 = 0.3 quote units
-  expect(
-    decideMirrorAction({
-      ...base,
-      testnetMid: 0.031,
-      inventory: { base: 10, quote: 100 },
-    }).notional,
-  ).toBeCloseTo(0.3, 12)
-  expect(
-    decideMirrorAction({
-      ...base,
-      testnetMid: 0.029,
-      inventory: { base: 1000, quote: 0 },
-    }),
-  ).toMatchObject({ kind: 'hold', reason: 'no-inventory' })
-  expect(
-    decideMirrorAction({
-      ...base,
-      testnetMid: 0.031,
-      inventory: { base: 0, quote: 100 },
-    }),
-  ).toMatchObject({ kind: 'hold', reason: 'no-inventory' })
-})
-
-test('a missing, stale or paused source never trades, whatever the testnet price is', () => {
-  const far = { ...base, testnetMid: 0.01 }
+test('a missing, stale or paused source never signs', () => {
   for (const bad of [
     { targetMid: null },
     { targetMid: 0 },
     { sourceAgeMs: null },
     { sourceAgeMs: 30_001 },
     { sourcePaused: true },
-  ]) {
-    expect(decideMirrorAction({ ...far, ...bad })).toEqual({
-      kind: 'paused',
-      notional: 0,
-      quoteNotional: 0,
-      reason: 'source-unavailable',
-    })
-  }
-  expect(decideMirrorAction({ ...far, sourceAgeMs: 30_000 }).kind).toBe('buy')
-})
-
-test('an empty testnet book seeds resting quotes sized by the smaller side of the inventory', () => {
-  expect(decideMirrorAction({ ...base, testnetMid: null })).toMatchObject({
-    kind: 'quote',
-    notional: 0,
-    quoteNotional: 2,
-  })
-  expect(
-    decideMirrorAction({
-      ...base,
-      testnetMid: null,
-      inventory: { base: 10, quote: 100 },
-    }).quoteNotional,
-  ).toBeCloseTo(0.3, 12)
-  expect(
-    decideMirrorAction({
-      ...base,
-      testnetMid: null,
-      inventory: { base: 0, quote: 100 },
-    }),
-  ).toMatchObject({ kind: 'hold', reason: 'no-inventory' })
+  ])
+    expect(decideMirrorAction({ ...base, ...bad })).toEqual({ kind: 'paused', reason: 'source-unavailable' })
 })
 
 test('an unread testnet book is never treated as empty: no quotes are seeded', () => {
-  expect(
-    decideMirrorAction({ ...base, testnetMid: null, testnetObserved: false }),
-  ).toMatchObject({ kind: 'hold', notional: 0, reason: 'testnet-unavailable' })
+  expect(decideMirrorAction({ ...base, testnetObserved: false })).toEqual({
+    kind: 'hold', reason: 'testnet-unavailable',
+  })
 })
 
 function harness(
@@ -141,100 +53,75 @@ function harness(
     at: 9000,
   })
   const state = createMirrorState()
-  const job = createMirrorJob({
-    db,
-    mid,
-    state,
-    executor,
-    maxStepNotional: 2,
-    deviationThreshold: 0.0005,
-    now: () => 10_000,
-    logger: quiet,
-  })
+  const job = createMirrorJob({ db, mid, state, executor, now: () => 10_000, logger: quiet })
   return { db, mid, state, job }
 }
 
-test('idle demand avoids inventory reads and transactions; renewed demand obeys action cadence', async () => {
+test('idle demand avoids chain reads and transactions; renewed demand obeys the check cadence', async () => {
   let at = 10000
   let players = 0
-  let inventoryReads = 0
-  let sends = 0
+  let checks = 0
   const db = memoryDb()
   const mid = createMidState()
   Object.assign(mid, { status: 'running', targetMid: 0.03, at: 10000 })
   Object.assign(mid.testnet, { status: 'live', mid: 0.029, at: 10000 })
   const job = createMirrorJob({
     db, mid, state: createMirrorState(),
-    executor: {
-      inventory: async () => { inventoryReads++; return { base: 1000, quote: 100 } },
-      execute: async () => { sends++; return [] },
-    },
-    maxStepNotional: 0.06, deviationThreshold: 0.0005,
-    active: () => players, intervalMs: 30000, now: () => at, logger: quiet,
+    executor: { execute: async () => { checks++; return held } },
+    active: () => players, intervalMs: 15000, now: () => at, logger: quiet,
   })
   await job()
-  expect(inventoryReads).toBe(0)
-  expect(sends).toBe(0)
+  expect(checks).toBe(0)
   players = 1
   await job()
-  expect(sends).toBe(1)
+  expect(checks).toBe(1)
   at += 5000
   await job()
-  expect(sends).toBe(1)
-  at += 25000
+  expect(checks).toBe(1)
+  at += 10000
   mid.at = at
   mid.testnet.at = at
   await job()
-  expect(sends).toBe(2)
+  expect(checks).toBe(2)
   db.close()
 })
-const funded = { inventory: async () => ({ base: 1000, quote: 100 }) }
 
-test('every tick is a row: the action, price context, hashes and no error on success', async () => {
-  const calls: string[] = []
-  const { db, state, job } = harness(
-    {
-      ...funded,
-      execute: async (action, target) => {
-        calls.push(`${action.kind}@${target}`)
-        return [tx('a'), tx('b')]
-      },
+test('every tick is a row: the executed action, price context, hashes and no error on success', async () => {
+  const calls: number[] = []
+  const { db, state, job } = harness({
+    execute: async (target) => {
+      calls.push(target)
+      return { kind: 'buy', reason: 'below-target', notional: 0.4, hashes: [tx('a'), tx('b')] }
     },
-    0.029,
-  )
+  }, 0.029)
   await job()
-  expect(calls).toEqual(['buy@0.03'])
+  expect(calls).toEqual([0.03])
   expect(
-    db
-      .query(
-        'SELECT at, source_mid, testnet_mid_before, action, notional, tx_hash, error FROM mirror_ticks',
-      )
-      .all(),
-  ).toEqual([
-    {
-      at: 10_000,
-      source_mid: 0.03,
-      testnet_mid_before: 0.029,
-      action: 'buy',
-      notional: 2,
-      tx_hash: `${tx('a')},${tx('b')}`,
-      error: null,
-    },
-  ])
-  expect(state).toMatchObject({
-    attempted: 1,
-    lastAction: 'buy',
-    lastError: null,
-  })
+    db.query('SELECT at, source_mid, testnet_mid_before, action, notional, tx_hash, error FROM mirror_ticks').all(),
+  ).toEqual([{
+    at: 10_000,
+    source_mid: 0.03,
+    testnet_mid_before: 0.029,
+    action: 'buy',
+    notional: 0.4,
+    tx_hash: `${tx('a')},${tx('b')}`,
+    error: null,
+  }])
+  expect(state).toMatchObject({ attempted: 1, lastAction: 'buy', lastError: null })
+})
+
+test('a ladder that still fits the target is a hold row without hashes', async () => {
+  const { db, job } = harness({ execute: async () => held }, 0.03)
+  await job()
+  expect(db.query('SELECT action, tx_hash FROM mirror_ticks').all()).toEqual([{ action: 'hold', tx_hash: null }])
 })
 
 test('tick context remains the evaluated price when the sampler advances during signing', async () => {
   const run = harness({
-    ...funded,
     execute: async () => {
       run.mid.targetMid = 0.04
       run.mid.testnet.mid = 0.039
-      return [tx('a')]
+      return { kind: 'quote', reason: 'ladder-reconciled', notional: 0, hashes: [tx('a')] }
     },
   }, 0.029)
   await run.job()
@@ -243,66 +130,58 @@ test('tick context remains the evaluated price when the sampler advances during 
   })
 })
 
-test('the signing guard refuses a source paused while a transition awaits', async () => {
-  const run = harness({
-    ...funded,
-    execute: async (_action, _target, assertSource) => {
-      run.mid.status = 'paused'
-      await assertSource()
-      throw new Error('Must not reach signing')
-    },
-  }, 0.029)
-  await run.job()
-  expect(run.db.query('SELECT tx_hash, error FROM mirror_ticks').get()).toEqual({
-    tx_hash: null, error: 'Error: Source unavailable before mirror signing',
-  })
+test('the signing guard refuses a source paused or gone stale while the executor reads', async () => {
+  for (const spoil of [
+    (run: ReturnType<typeof harness>) => { run.mid.status = 'paused' },
+    (run: ReturnType<typeof harness>) => { run.mid.at = 10_000 - 15_001 },
+  ]) {
+    const run = harness({
+      execute: async (_target, assertSource) => {
+        spoil(run)
+        await assertSource()
+        throw new Error('Must not reach signing')
+      },
+    }, 0.029)
+    await run.job()
+    expect(run.db.query('SELECT tx_hash, error FROM mirror_ticks').get()).toEqual({
+      tx_hash: null, error: 'Error: Source unavailable before mirror signing',
+    })
+  }
 })
 
-test('hold and paused ticks are recorded without calling the executor to execute', async () => {
+test('paused and unobserved ticks are recorded without calling the executor', async () => {
   let executed = 0
-  const executor = {
-    ...funded,
-    execute: async () => {
-      executed++
-      return []
-    },
-  }
-  const held = harness(executor, 0.03)
-  await held.job()
+  const executor = { execute: async () => { executed++; return held } }
   const paused = harness(executor, 0.029, -30_000)
   await paused.job()
+  const failed = harness(executor, null)
+  failed.mid.testnet.status = 'unavailable'
+  await failed.job()
+  const stale = harness(executor, null)
+  stale.mid.testnet.at = 9000 - 31_000
+  await stale.job()
   expect(executed).toBe(0)
-  expect(held.db.query('SELECT action FROM mirror_ticks').all()).toEqual([
-    { action: 'hold' },
-  ])
-  expect(
-    paused.db.query('SELECT action, tx_hash FROM mirror_ticks').all(),
-  ).toEqual([{ action: 'paused', tx_hash: null }])
+  expect(paused.db.query('SELECT action, tx_hash FROM mirror_ticks').all()).toEqual([{ action: 'paused', tx_hash: null }])
+  for (const { db } of [failed, stale])
+    expect(db.query('SELECT action FROM mirror_ticks').all()).toEqual([{ action: 'hold' }])
 })
 
 test('an executor failure is stored on the tick row with the URL stripped, and the job survives', async () => {
-  const { db, state, job } = harness(
-    {
-      ...funded,
-      execute: async () => {
-        throw new Error('POST https://rpc.example/?apikey=s3cret refused')
-      },
+  const { db, state, job } = harness({
+    execute: async () => {
+      throw new Error('POST https://rpc.example/?apikey=s3cret refused')
     },
-    0.029,
-  )
+  }, 0.029)
   await job()
-  expect(
-    db.query('SELECT action, tx_hash, error FROM mirror_ticks').all(),
-  ).toEqual([
-    { action: 'buy', tx_hash: null, error: 'Error: POST <url> refused' },
+  expect(db.query('SELECT action, tx_hash, error FROM mirror_ticks').all()).toEqual([
+    { action: 'hold', tx_hash: null, error: 'Error: POST <url> refused' },
   ])
   expect(state.lastError).toBe('Error: POST <url> refused')
 })
 
-test('a confirmed take survives a failed quote refresh in the SQL ledger', async () => {
+test('a confirmed send survives a later failure in the SQL ledger', async () => {
   const hash = tx('a')
   const { db, job } = harness({
-    ...funded,
     execute: async () => {
       throw Object.assign(new Error('Quote preflight refused'), { hashes: [hash] })
     },
@@ -313,57 +192,13 @@ test('a confirmed take survives a failed quote refresh in the SQL ledger', async
   })
 })
 
-test('a failed or stale testnet read holds the tick instead of seeding quotes', async () => {
-  let executed = 0
-  const executor = {
-    ...funded,
-    execute: async () => {
-      executed++
-      return []
-    },
-  }
-  const failed = harness(executor, null)
-  failed.mid.testnet.status = 'unavailable'
-  await failed.job()
-  const stale = harness(executor, null)
-  stale.mid.testnet.at = 9000 - 31_000
-  await stale.job()
-  expect(executed).toBe(0)
-  for (const { db } of [failed, stale])
-    expect(db.query('SELECT action FROM mirror_ticks').all()).toEqual([
-      { action: 'hold' },
-    ])
-})
-
-test('an inventory read that outlasts the source freshness never executes', async () => {
-  const db = memoryDb()
-  let at = 1000
-  let executed = false
-  const mid = createMidState()
-  Object.assign(mid, { status: 'running', targetMid: 0.03, at })
-  mid.testnet = { status: 'empty', mid: null, at, market: 'MON_AUSD' }
+test('health calls an exhausted gas budget degraded, not an unknown mirror error', () => {
   const state = createMirrorState()
-  try {
-    await createMirrorJob({
-      db, mid, state, maxStepNotional: 1, deviationThreshold: 0.0005,
-      now: () => at, logger: quiet,
-      executor: {
-        inventory: async () => {
-          at += 30_001
-          return { base: 100, quote: 10 }
-        },
-        execute: async () => {
-          executed = true
-          return []
-        },
-      },
-    })()
-    expect(executed).toBe(false)
-    expect(state.lastAction).toBe('paused')
-    expect(db.query('SELECT action, tx_hash FROM mirror_ticks').all()).toEqual([
-      { action: 'paused', tx_hash: null },
-    ])
-  } finally {
-    db.close()
-  }
+  state.lastError = 'Error: Mirror daily gas budget exhausted'
+  const gas = { capWei: '10', reservedWei: '10', exhausted: true, dayUTC: '2026-10-11' }
+  const section = mirrorSection(state, { enabled: true, reason: null }, () => 0, () => gas)()
+  expect(section.amber).toBe('mirror-gas-exhausted')
+  expect(section.value).toMatchObject({ gas })
+  state.lastError = 'Error: other'
+  expect(mirrorSection(state, { enabled: true, reason: null }, () => 0, () => null)().amber).toBe('mirror-error')
 })
