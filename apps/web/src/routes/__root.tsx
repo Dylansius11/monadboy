@@ -21,6 +21,10 @@ interface MyRouterContext {
   queryClient: QueryClient
 }
 
+const OG_IMAGE = 'https://monadboy-play.vercel.app/og-image.png'
+const OG_DESCRIPTION =
+  'Market making, played like a pocket game. Real Kuru orders on Monad TESTNET.'
+
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   head: () => ({
     meta: [
@@ -35,17 +39,26 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       {
         title: `${brand.CONSOLE_NAME} · ${brand.CARTRIDGE_01}`,
       },
+      { name: 'description', content: OG_DESCRIPTION },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:site_name', content: brand.CONSOLE_NAME },
+      { property: 'og:title', content: brand.CONSOLE_NAME },
+      { property: 'og:description', content: OG_DESCRIPTION },
+      { property: 'og:image', content: OG_IMAGE },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: brand.CONSOLE_NAME },
+      { name: 'twitter:description', content: OG_DESCRIPTION },
+      { name: 'twitter:image', content: OG_IMAGE },
     ],
     links: [
       {
         rel: 'stylesheet',
         href: appCss,
       },
-      {
-        rel: 'icon',
-        type: 'image/png',
-        href: '/sprites/molandak-64/idle-0.png',
-      },
+      { rel: 'icon', href: '/favicon.ico', sizes: '48x48' },
+      { rel: 'icon', type: 'image/png', href: '/favicon-32.png', sizes: '32x32' },
       { rel: 'manifest', href: '/manifest.webmanifest' },
       { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png' },
     ],
