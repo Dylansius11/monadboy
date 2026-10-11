@@ -196,9 +196,9 @@ export function PriceField({
             x2={plotWidth}
             y1={targetY}
             y2={targetY}
-            stroke="var(--color-ink-dim)"
-            strokeWidth={1}
-            strokeDasharray="2 6"
+            stroke="var(--color-warn)"
+            strokeWidth={2}
+            strokeDasharray="6 4"
             shapeRendering="crispEdges"
           />
         )}
@@ -222,16 +222,16 @@ export function PriceField({
       <EdgeLabel top={Math.min(height - LABEL_HEIGHT, bottomY + 2)} value={bottom} label="Low" />
       {target && targetY !== null && (
         <div
-          className="price-field-label price-field-target-label absolute flex items-center gap-1 px-1"
+          className="price-field-target-label absolute flex items-center gap-1 px-1"
           style={{
             right: width - plotWidth + 20,
             top: targetAbove ? 0 : targetBelow ? height - LABEL_HEIGHT : Math.max(0, Math.min(height - LABEL_HEIGHT, targetY - LABEL_HEIGHT)),
           }}
         >
-          <PixelText role="micro" tone="dim" upper>
+          <PixelText role="micro" upper>
             {targetAbove ? '▲ ' : targetBelow ? '▼ ' : ''}{target.label}
           </PixelText>
-          <PixelText role="micro" tone="dim" className="tabular-nums">
+          <PixelText role="micro" className="tabular-nums">
             {fmt(target.price)}
           </PixelText>
         </div>

@@ -51,11 +51,11 @@ it('the run is judged on the TESTNET book: a DEMO target above the range is a pi
   const state = { ...liveState(), sourceMid: 0.0354, demoMultiplier: 20 }
   render(<ConsoleInputProvider><FundedLive state={state} actions={actions} /></ConsoleInputProvider>)
   expect(screen.getByText('IN RANGE · earning on flips')).toBeInTheDocument()
-  expect(screen.getByText('▲ DEMO x20')).toBeInTheDocument()
+  expect(screen.getByText('▲ Target')).toBeInTheDocument()
 })
 it('a stale source hides the target rule but does not pause a fresh book read', () => {
   const state = { ...liveState(), sourceFresh: false, sourceMid: 0.0354, demoMultiplier: 20 }
   render(<ConsoleInputProvider><FundedLive state={state} actions={actions} /></ConsoleInputProvider>)
   expect(screen.queryByText('PRICE FEED PAUSED')).not.toBeInTheDocument()
-  expect(screen.queryByText('▲ DEMO x20')).not.toBeInTheDocument()
+  expect(screen.queryByText('▲ Target')).not.toBeInTheDocument()
 })

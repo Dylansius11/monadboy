@@ -3,6 +3,8 @@
 .price-field-line { will-change: transform; }
 .price-field-character { transition: transform 240ms steps(4, end); will-change: transform; }
 .price-field-label { background: var(--color-screen); }
+/* The target the book is pulled toward: an amber chip, distinct from the purple band and the ink line. */
+.price-field-target-label { background: var(--color-warn); }
 .price-field[data-earning='true'] .price-field-edge { animation: price-field-march 600ms steps(2, end) infinite; }
 
 @keyframes price-field-march {

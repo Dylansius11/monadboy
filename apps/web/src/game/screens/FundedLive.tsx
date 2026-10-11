@@ -61,7 +61,7 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
     position.paused ||
     Date.now() - position.observedAt > 15000
   const target = state.sourceFresh && state.sourceMid !== null ? state.sourceMid : null
-  const targetLabel = state.demoMultiplier > 1 ? `DEMO x${state.demoMultiplier}` : 'MAINNET'
+  const targetLabel = 'Target'
   // A paused read is not a price: the line holds its last observed sample.
   useEffect(() => {
     if (mid !== null && !paused) setSamples((old) => ({ series: [...old.series.slice(1 - SAMPLE_CAPACITY), mid], newestAt: Date.now() }))
@@ -152,7 +152,7 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
           : `History has unavailable gaps before block ${position.coverageFrom.toString()}. SCORE/DAMAGE/NET are unavailable, not zero.`}
       </PixelText>
       <PixelText role="micro">
-        The field draws the actual TESTNET book mid: your orders fill there and SCORE/DAMAGE are valued there. {state.demoMultiplier > 1 ? `The dashed rule is the DEMO x${state.demoMultiplier} target; while you play, the mirror pulls the book toward it.` : 'The dashed rule is the mainnet source the mirror follows.'} Linked flip orders re-arm on chain. The field holds the newest 5s sample until the next one.
+        The field draws the actual TESTNET book mid: your orders fill there and SCORE/DAMAGE are valued there. {state.demoMultiplier > 1 ? `The amber dashed TARGET line is the DEMO x${state.demoMultiplier} target: it starts at the book when a run begins, moves with mainnet x${state.demoMultiplier}, and while you play the mirror trades the book toward it.` : 'The amber dashed TARGET line is the mainnet source the mirror follows.'} Linked flip orders re-arm on chain. The field holds the newest 5s sample until the next one.
       </PixelText>
       <dl className="funded-live-sources">
         <div><dt>Mainnet</dt><dd>{state.mainnetMid === null ? 'unavailable' : price(state.mainnetMid)}</dd></div>
