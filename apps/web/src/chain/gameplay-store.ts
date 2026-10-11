@@ -5,10 +5,12 @@ import {
   gatesFor,
   mainnetMarkets,
   mainnetProfile,
+  measuredTestnetGas,
   openDisk,
   planLadder,
   testnetMarkets,
 } from '@monadboy/sdk'
+import { formatUnits } from 'viem'
 import { z } from 'zod'
 import { getCardManager } from './card-store'
 import {
@@ -123,6 +125,24 @@ function errorCopy(error: unknown) {
       ? error.shortMessage
       : error.message
   return 'The TESTNET operation could not complete. Refresh chain state before retrying.'
+}
+
+// [V] 2026-10-11 TESTNET disk saves declared 242,123 gas; rounded up for a disk carrying a basis.
+const SAVE_GAS = 300_000n
+
+/**
+ * MON the disk must hold before entering: the entry steps, the exit (cancel and withdraw) and the
+ * two saves this store makes (after confirm and after exit), at the quote's live gas price plus
+ * the 20% every signed step declares on top of its estimate. Monad bills the declared limit.
+ * [V] A 0.5 MON drip ran out: entry 3,235,437 + cancel 1,205,181 + withdraw 156,807 declared gas
+ * at 102 gwei left 0.006 MON without the two saves.
+ */
+export function roundTripGasMon(quote: FundingQuote): number {
+  const cancel = quote.ladder.levels <= 2
+    ? measuredTestnetGas.cancelLinked4.gasLimit
+    : measuredTestnetGas.cancel16.gasLimit
+  const gas = quote.sampleGas + cancel + measuredTestnetGas.withdrawBounded.gasLimit + 2n * SAVE_GAS
+  return Number(formatUnits(((gas * 120n + 99n) / 100n) * quote.gasPrice, 18))
 }
 
 export function createGameplayController() {
@@ -394,9 +414,10 @@ export function createGameplayController() {
         throw new Error(
           'This disk does not hold enough TESTNET AUSD for the actual quote plus fee/slippage.',
         )
-      if (position.walletBase <= funding.gasCostMon)
+      const needMon = roundTripGasMon(funding)
+      if (position.walletBase < needMon)
         throw new Error(
-          'This disk does not hold enough TESTNET MON for the measured-shape fee estimate.',
+          `Not enough TESTNET MON for gas to enter AND exit: need about ${needMon.toFixed(3)} MON, have ${position.walletBase.toFixed(3)} MON. No funds moved.`,
         )
       store.setState({ quote: funding })
     } catch (error) {

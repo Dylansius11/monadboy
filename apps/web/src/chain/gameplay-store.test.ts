@@ -7,14 +7,15 @@ import type { ExecutionStep, FundingQuote } from './market-execution'
 import type * as Sdk from '@monadboy/sdk'
 import type * as Config from './config'
 
-const dependencies = vi.hoisted(() => ({ card: { getState: vi.fn(), subscribe: vi.fn(), lease: vi.fn() }, reader: vi.fn(), fund: vi.fn(), withdraw: vi.fn(), openDisk: vi.fn() }))
+const dependencies = vi.hoisted(() => ({ card: { getState: vi.fn(), subscribe: vi.fn(), lease: vi.fn() }, reader: vi.fn(), fund: vi.fn(), withdraw: vi.fn(), openDisk: vi.fn(), quoteFunding: vi.fn() }))
 vi.mock('./card-store', () => ({ getCardManager: () => dependencies.card }))
 vi.mock('./config', async (original) => ({ ...await original<typeof Config>(), readChainEnv: () => ({}), resolveRpcUrl: () => 'https://rpc.example', resolveWorkerUrl: () => 'https://worker.example', resolveRegistryAddress: () => '0x0000000000000000000000000000000000000001' }))
 vi.mock('./registry', () => ({ createViemChain: () => ({ diskOf: async () => ({ createdAt: 1n, sealedData: '0x' }) }), verifyRegistry: async () => ({ address: '0x0000000000000000000000000000000000000001', chainId: 10143 }), saveDisk: vi.fn() }))
-vi.mock('@monadboy/sdk', async (original) => ({ ...await original<typeof Sdk>(), openDisk: dependencies.openDisk }))
+vi.mock('@monadboy/sdk', async (original) => ({ ...await original<typeof Sdk>(), openDisk: dependencies.openDisk, evaluateGates: () => ({ passed: true }), planLadder: () => ({ levels: 8 }) }))
+vi.mock('../lib/worker/schemas', () => ({ parseTracker: () => ({ ageMs: 1000, markets: [{ market: 'MON_USDC', status: 'live', playable: true, score: { honeypotClean: true }, inputs: { realizedVol24h: 0.5 } }] }) }))
 vi.mock('./gameplay', () => ({ createPositionReader: () => dependencies.reader }))
 vi.mock('./sender', () => ({ gameplayClient: () => ({ getBlock: async () => ({ timestamp: 123n }) }), delay: vi.fn() }))
-vi.mock('./market-execution', () => ({ verifyMarket: async (_client: unknown, market: unknown) => market, fundAndProvision: dependencies.fund, cancelAndWithdraw: dependencies.withdraw, quoteExitCost: vi.fn(), quoteFunding: vi.fn() }))
+vi.mock('./market-execution', () => ({ verifyMarket: async (_client: unknown, market: unknown) => market, fundAndProvision: dependencies.fund, cancelAndWithdraw: dependencies.withdraw, quoteExitCost: vi.fn(), quoteFunding: dependencies.quoteFunding }))
 vi.mock('./mirror-demand', () => ({ createMirrorDemand: () => ({ pulse: async () => {}, stop: vi.fn() }) }))
 
 const market = testnetMarkets[0]
@@ -91,4 +92,23 @@ it('replacing the held card with the same serial discards the revoked gameplay l
   live = true
   await instance.open(market.address, 1)
   expect(instance.useState.getState().status).toBe('ready')
+})
+it('quote refuses when the disk cannot pay gas to enter AND exit, naming the need and the balance', async () => {
+  const mid = { targetMid: 0.035, mainnetMid: 0.026, demo: { multiplier: 20 }, source: 'kuru-mainnet:MON_USDC', fresh: true, state: 'running', at: 1, ageMs: 1000 }
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, json: async () => (url.includes('/v1/mid') ? mid : {}) })))
+  // The 2026-10-11 TESTNET round trip: 8-level entry shape at 102 gwei.
+  dependencies.quoteFunding.mockResolvedValue({ at: Date.now(), ladder: { levels: 8 }, sampleGas: 3_203_156n, gasPrice: 102_000_000_000n, gasCostMon: 0.327, quoteRequired: 2 })
+  const position = (walletBase: number) => ({ orders: [], holdings: { marginBase: 0, marginQuote: 0, restingBase: 0, restingQuote: 0 }, block: 10n, fills: [], valuation: null, mid: 0.035, paused: false, walletBase, walletQuote: 10 })
+  // A 0.5 MON drip after the first disk save covers the entry alone, not the exit and saves.
+  dependencies.reader.mockResolvedValue(position(0.475))
+  const instance = createGameplayController()
+  await instance.open(market.address, 1)
+  await instance.quote()
+  expect(instance.useState.getState()).toMatchObject({
+    quote: null,
+    error: 'Not enough TESTNET MON for gas to enter AND exit: need about 0.612 MON, have 0.475 MON. No funds moved.',
+  })
+  dependencies.reader.mockResolvedValue(position(0.975))
+  await instance.quote()
+  expect(instance.useState.getState()).toMatchObject({ error: null, quote: { sampleGas: 3_203_156n } })
 })
