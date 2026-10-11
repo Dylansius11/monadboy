@@ -107,7 +107,7 @@ const EMPTY: GameplayState = {
 const sourceSchema = z.object({
   targetMid: z.number().finite().positive().nullable(),
   mainnetMid: z.number().finite().positive().nullable(),
-  demo: z.object({ multiplier: z.number().int().min(1).max(20) }).nullable(),
+  demo: z.object({ multiplier: z.number().int().min(1).max(50) }).nullable(),
   source: z.string(),
   fresh: z.boolean(),
   state: z.enum(['running', 'paused']),
@@ -519,6 +519,9 @@ export function createGameplayController() {
         fills: exited.position.historyError ? null : exited.position.fills.length,
         receipts: exited.receipts.map((receipt) => receipt.hash),
         complete: totals !== null,
+        // Every order is cancelled before withdrawal, so a cancel receipt is
+        // exactly "something was resting on the book".
+        onBook: exited.receipts.some((receipt) => receipt.step.startsWith('Cancel')),
       }
       // No new signature after eject; retain already-broadcast receipt evidence via publish.
       active.lease.assertLive()

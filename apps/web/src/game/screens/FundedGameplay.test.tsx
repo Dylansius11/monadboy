@@ -117,10 +117,11 @@ it('confirmed partial funding exposes recovery and never makes the optional fail
   state.position!.holdings.marginQuote = 0.12
   const controls = actions()
   renderScreen(<FundedRange state={state} actions={controls} />)
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Withdraw confirmed partial funds' }),
-  )
+  fireEvent.click(screen.getByRole('button', { name: 'Withdraw to disk' }))
   expect(controls.withdraw).toHaveBeenCalledOnce()
+  press('A')
+  expect(controls.withdraw).toHaveBeenCalledTimes(2)
+  expect(controls.quote).not.toHaveBeenCalled()
   expect(controls.confirm).not.toHaveBeenCalled()
 })
 it('an unavailable recovered result links the real successful exit and allows play to leave while sealed-save retry stays optional', () => {
@@ -157,7 +158,7 @@ it('keyboard cannot start re-center before its exit cost is available, but accep
   press('A')
   expect(controls.recenter).not.toHaveBeenCalled()
   expect(
-    screen.getByRole('button', { name: 'A Exit and review re-center' }),
+    screen.getByRole('button', { name: 'Exit and re-center' }),
   ).toBeDisabled()
   view.rerender(
     <FundedLive state={{ ...state, exitCostMon: 0 }} actions={controls} />,
@@ -170,7 +171,7 @@ it('the live refresh key refreshes chain state and Inputs never withdraws', () =
   const state = actualRead()
   const controls = actions()
   renderScreen(<FundedLive state={state} actions={controls} />)
-  fireEvent.click(screen.getByRole('button', { name: 'SELECT Refresh' }))
+  press('SELECT')
   expect(controls.refresh).toHaveBeenCalledOnce()
   press('START')
   press('B')
@@ -204,6 +205,10 @@ it('range setup exposes equal manual and amount keys without inventing an unquot
   expect(screen.getByRole('img', { name: 'Ladder unavailable until actual quote' })).toBeInTheDocument()
   expect(screen.queryByText('YOU WILL HOLD')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'MANUAL' }))
+  // Opening MANUAL applies editable edges around the book mid at once.
+  const [applied] = controls.setManual.mock.calls[0]
+  expect(applied.low).toBeLessThan(0.033)
+  expect(applied.high).toBeGreaterThan(0.033)
   expect(screen.getByRole('spinbutton', { name: 'Low price' })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'MAX' }))
   expect(controls.setAmount).toHaveBeenCalledWith(10)
@@ -245,9 +250,72 @@ it('unavailable fill history stays unavailable in results and live Inputs, never
   }
   const controls = actions()
   const view = renderScreen(<FundedResults state={state} actions={controls} />)
-  expect(screen.getByText('Unavailable observed maker fills')).toBeInTheDocument()
-  expect(screen.queryByText('0 observed maker fills')).not.toBeInTheDocument()
+  expect(screen.getByText('Observed maker fills').nextElementSibling).toHaveTextContent('Unavailable')
+  expect(screen.queryByText('Run aborted')).not.toBeInTheDocument()
   view.rerender(<FundedLive state={state} actions={controls} />)
   press('START')
   expect(screen.getByText(/Unavailable observed maker fills, Unavailable flipped-origin/)).toBeInTheDocument()
+})
+
+function quoted(state: GameplayState): NonNullable<GameplayState['quote']> {
+  return {
+    ladder: { step: 0.02, levels: 2, low: 0.0317, high: 0.0343, clamped: true, baseNeeded: 3.6, quoteNeeded: 0.12, zapQuote: 0.12,
+      orders: [0.0317, 0.0324, 0.0336, 0.0343].map((price, index) => ({ price, flipPrice: price, size: 1, isBuy: index < 2, priceUnits: 0, flipUnits: 0, sizeUnits: 0n })) },
+    block: state.position!.block, at: Date.now(), zapRaw: 1n, depositRaw: 1n, minimumBaseRaw: 1n, quotedBase: 3.6,
+    takerFeeQuote: 0.0004, gasPrice: 1n, sampleGas: 1n, gasCostMon: 0.15, quoteRequired: 0.24,
+  }
+}
+
+it('confirming ticks off the actual steps in order, with the ones still to run listed as waiting', () => {
+  const state = actualRead()
+  state.position!.orders = []
+  state.quote = quoted(state)
+  state.busy = true
+  const hash = `0x${'78'.repeat(32)}` as const
+  state.steps = [
+    { step: 'Approve AUSD', state: 'confirmed', hash, receipt: { step: 'Approve AUSD', hash, block: 12n, estimate: 1n, gas: 2n, gasUsed: 1n, effectiveGasPrice: 1n, status: 'success' } },
+    { step: 'Deposit AUSD', state: 'broadcast' },
+  ]
+  renderScreen(<FundedRange state={state} actions={actions()} />)
+  const rows = [...screen.getByRole('list', { name: 'Actual transaction steps' }).querySelectorAll('li')]
+  expect(rows.map((row) => [row.querySelector('.funded-step-name')!.textContent, row.dataset.state])).toEqual([
+    ['Approve AUSD', 'confirmed'],
+    ['Deposit AUSD', 'broadcast'],
+    ['Zap MON to margin', 'waiting'],
+    ['Provision flip ladder', 'waiting'],
+  ])
+  expect(rows[0]).toHaveTextContent('#12')
+  expect(screen.queryByRole('button', { name: 'MAX' })).not.toBeInTheDocument()
+})
+
+it('a quote is reviewed in place: A confirms, B returns to editing instead of leaving', () => {
+  const state = actualRead()
+  state.position!.orders = []
+  state.quote = quoted(state)
+  const controls = actions()
+  renderScreen(<FundedRange state={state} actions={controls} />)
+  expect(screen.getByText('Capped by depth or minimum order size. These are the actual edges.')).toBeInTheDocument()
+  expect(screen.getByText('0.150000 MON, not a ceiling')).toBeInTheDocument()
+  press('B')
+  expect(controls.clearQuote).toHaveBeenCalledOnce()
+  expect(controls.back).not.toHaveBeenCalled()
+  press('A')
+  expect(controls.confirm).toHaveBeenCalledOnce()
+})
+
+it('an exit with nothing on the book and no fills is an aborted run with funds returned, not three unavailable totals', () => {
+  const state = actualRead()
+  state.result = {
+    market: testnetMarkets[0].address, openedAt: null, closedAt: 3,
+    score: null, damage: null, net: null, fills: 0, receipts: [], complete: false, onBook: false,
+  }
+  const view = renderScreen(<FundedResults state={state} actions={actions()} />)
+  expect(screen.getAllByText('Run aborted').length).toBeGreaterThan(0)
+  expect(screen.getByText('Funds returned')).toBeInTheDocument()
+  expect(screen.queryByText('Unavailable')).not.toBeInTheDocument()
+  expect(screen.getByText('AUSD').nextElementSibling).toHaveTextContent('10.000000')
+  // A real run, or a save from before the flag existed, keeps its measured figures.
+  view.rerender(<FundedResults state={{ ...state, result: { ...state.result, onBook: true } }} actions={actions()} />)
+  expect(screen.queryByText('Funds returned')).not.toBeInTheDocument()
+  expect(screen.getAllByText('Unavailable')).toHaveLength(3)
 })

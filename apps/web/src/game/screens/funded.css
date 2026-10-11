@@ -40,50 +40,57 @@
 @keyframes funded-step-live { 50% { background: var(--color-panel); color: var(--color-ink); } }
 @media (prefers-reduced-motion: reduce) { .funded-step-marker { animation: none !important; } }
 
-.screen-funded-range .funded-range-body { display: flex; flex: 1; flex-direction: column; min-height: 0; gap: 4px; overflow-y: auto; }
-.funded-range-choices { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); gap: 8px; }
-.funded-range-setup > summary { display: none; }
-.screen-funded-range[data-recovered='true'] .funded-range-setup > summary { display: flex; align-items: center; gap: 4px; cursor: pointer; }
-.screen-funded-range[data-recovered='true'] .funded-range-setup > summary::before { content: '+'; }
-.screen-funded-range[data-recovered='true'] .funded-range-setup[open] > summary::before { content: '-'; }
-.funded-manual { margin-top: 4px; }
-.funded-range-choice { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0 4px; }
-.funded-range-choice[data-focused='true'] { background: var(--color-sunk); box-shadow: inset 4px 0 var(--color-ink); padding-left: 8px; }
-.funded-range-choice > :first-child { min-height: 20px; }
+/* Cards: one subject, one head line, label/value facts, at most one action. */
+.funded-card { display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--color-edge); background: var(--color-panel); box-shadow: var(--shadow-hard); }
+.funded-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.funded-card p { margin: 0; }
+.funded-recovery { padding-left: 12px; box-shadow: inset 4px 0 var(--color-accent), var(--shadow-hard); }
+.funded-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0 12px; margin: 0; font-size: var(--text-micro); line-height: var(--text-micro--line-height); }
+.funded-facts dt { color: var(--color-ink-dim); }
+.funded-facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.funded-primary { min-height: 44px; border: 1px solid var(--color-edge); padding: 4px 8px; background: var(--color-accent); color: var(--color-ink-invert); font-size: var(--text-body); line-height: var(--text-body--line-height); text-transform: uppercase; }
+.funded-primary:disabled { background: var(--color-sunk); color: var(--color-ink-dim); }
+.funded-primary:focus-visible, .funded-key:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+
+/* S6 body: the one region that gives up height, scrolling as a last resort. */
+.screen-funded-range .funded-range-body { display: flex; flex: 1; flex-direction: column; min-height: 0; gap: 8px; overflow-x: hidden; overflow-y: auto; }
+.funded-choices { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); gap: 8px; }
+.funded-choice { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 4px; }
+.funded-choice[data-focused='true'] { background: var(--color-sunk); box-shadow: inset 4px 0 var(--color-ink); padding-left: 8px; }
+.funded-choice-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; white-space: nowrap; }
 .funded-amount-keys, .funded-width-keys { display: grid; gap: 4px; }
 .funded-amount-keys { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .funded-width-keys { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.funded-key { border: 1px solid var(--color-edge); padding: 4px; background: var(--color-panel); color: var(--color-ink); }
+.funded-key { min-height: 44px; border: 1px solid var(--color-edge); padding: 4px; background: var(--color-panel); color: var(--color-ink); font-size: var(--text-body); line-height: var(--text-body--line-height); }
 .funded-key[aria-pressed='true'] { background: var(--color-accent); color: var(--color-ink-invert); }
 .funded-key:disabled { background: var(--color-sunk); color: var(--color-ink-dim); opacity: 0.65; }
-.funded-key:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
-.screen-funded-range .funded-range-picture { display: flex; flex: 1 1 auto; flex-direction: column; min-height: min-content; gap: 0; }
-.funded-ladder { display: flex; flex: 1; align-items: stretch; gap: 1px; min-height: 24px; padding: 4px; border: 1px solid var(--color-edge); background: var(--color-panel); }
-.funded-ladder > span:not(.font-pixel) { flex: 1; }
-.funded-range-picture > :not(.funded-ladder) { flex-shrink: 0; }
-.funded-ladder > .font-pixel { margin: auto; text-align: center; }
-.funded-ladder-key { display: flex; align-items: center; gap: 4px; color: var(--color-ink-dim); }
+.funded-manual { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.funded-manual label { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* 16px keeps mobile browsers from zooming the page on focus. */
+.funded-manual input { width: 100%; min-height: 44px; border: 1px solid var(--color-edge); padding: 0 8px; background: var(--color-panel); color: var(--color-ink); font: 16px/1 var(--font-pixel); }
+
+.funded-ladder-card { display: flex; flex: 1 0 auto; flex-direction: column; gap: 4px; }
+.funded-ladder-card p { margin: 0; }
+.funded-ladder-edges { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; white-space: nowrap; }
+.funded-ladder-key { display: flex; align-items: center; gap: 4px; color: var(--color-ink-dim); font-size: var(--text-micro); line-height: var(--text-micro--line-height); }
 .funded-ladder-key i { display: inline-block; width: 8px; height: 8px; border: 1px solid var(--color-edge); background: var(--color-sunk); }
 .funded-ladder-key i:last-of-type { background: var(--color-accent); }
-.funded-now { position: relative; height: 12px; flex-shrink: 0; color: var(--color-ink-dim); }
-.funded-now > span { position: absolute; display: flex; align-items: center; gap: 4px; transform: translateX(-50%); }
+/* The ladder is the picture of the decision: it takes the screen's spare height. */
+.funded-ladder { display: flex; flex: 0 0 44px; align-items: stretch; gap: 2px; max-height: 176px; padding: 4px; border: 1px dashed var(--color-ink-dim); background: var(--color-panel); }
+.funded-ladder:has(> span:not(.font-pixel)) { flex: 1 0 44px; border: 1px solid var(--color-edge); }
+.funded-ladder > span:not(.font-pixel) { flex: 1; border: 1px solid var(--color-edge); }
+.funded-ladder > .font-pixel { margin: auto; text-align: center; }
+.funded-now { position: relative; height: 16px; }
+.funded-now > span { position: absolute; top: 0; display: flex; align-items: center; gap: 4px; transform: translateX(-4px); }
+.funded-now > span[data-side='left'] { flex-direction: row-reverse; transform: translateX(calc(-100% + 4px)); }
 .funded-now i { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 4px solid var(--color-ink); }
+.funded-hold-figures { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
 .funded-range-alert { border: 1px solid var(--color-edge); border-left-width: 4px; padding: 8px; color: var(--color-loss); background: var(--color-panel); }
-.screen-funded-range .funded-range-funding { padding: 4px 8px; gap: 0; }
-.funded-range-receipts { flex: 1 1 auto !important; min-height: 44px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-.funded-range-footer { display: flex; align-items: center; justify-content: space-between; gap: 4px; flex-shrink: 0; }
-.funded-range-footer button { min-width: 0; text-align: left; text-transform: uppercase; }
-.screen-funded-range[data-executing='true'] .funded-range-setup { display: none; }
-.screen-funded-range[data-executing='true'] .funded-range-picture { flex: 0 0 auto; }
+
+/* START inputs: a scrolling evidence list above the pinned key strip. */
+.funded-inputs-body { display: flex; flex: 1; flex-direction: column; min-height: 0; gap: 8px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.funded-inputs-body > * { flex-shrink: 0; }
+
 @container game-screen (max-width: 440px) and (min-height: 340px) {
-  .screen-funded-range .funded-range-body { gap: 8px; }
-  .funded-range-choices { grid-template-columns: 1fr; gap: 4px; }
-  .funded-range-choice { gap: 4px; }
-  .funded-range-choice > :first-child { min-height: 16px; }
-  .screen-funded-range .funded-range-picture { min-height: 88px; }
-  .funded-now { height: 16px; }
-  .funded-holdings > :first-child { width: 100%; }
-  .funded-range-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
-  .funded-range-footer > span { display: none; }
-  .funded-range-footer button { min-height: 44px; }
+  .funded-choices { grid-template-columns: 1fr; gap: 4px; }
 }

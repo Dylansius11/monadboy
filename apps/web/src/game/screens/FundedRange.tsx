@@ -1,10 +1,19 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { price, usdFine } from '../../lib/format'
-import { Panel, PixelText, Value } from '../../ui'
+import { KeyHints, Panel, PixelText, Value } from '../../ui'
 import { Header, Inputs, Notices, ReceiptSteps } from './FundedGameplayView'
 import type { FundedScreenProps } from './FundedGameplayView'
 
+const AMOUNTS = [0.24, 0.48, 1, 2]
+
+/**
+ * S6 on a funded disk. One decision read top to bottom: how much, how wide,
+ * the ladder those two choices draw, then what you will hold and pay. A
+ * quote turns the same screen into the confirmation; confirming turns it into
+ * the step checklist. A run that stopped partway is a recovery card with one
+ * primary action, never a wall of red text.
+ */
 export function FundedRange({ state, actions }: FundedScreenProps) {
   const [focus, setFocus] = useState<'amount' | 'width'>('amount')
   const [manual, setManual] = useState(false)
@@ -13,7 +22,10 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
   const position = state.position
   const quote = state.quote
   const orders = useMemo(() => quote?.ladder.orders.slice().sort((a, b) => a.price - b.price) ?? [], [quote])
-  const recovered = Boolean(position && (position.orders.length > 0 || position.holdings.marginBase > 0 || position.holdings.marginQuote > 0))
+  const onBook = Boolean(position?.orders.length)
+  const stranded = Boolean(position && !onBook && (position.holdings.marginBase > 0 || position.holdings.marginQuote > 0))
+  const funding = state.busy && quote !== null
+  const recovery = stranded && !funding && !quote && !editRecovery && !manual
   const body = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     if (body.current) body.current.scrollTop = 0
@@ -22,12 +34,27 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
     const el = body.current
     if (!el?.clientHeight) return
     el.querySelector<HTMLElement>('[data-focused="true"]')?.scrollIntoView({ block: 'nearest' })
-  }, [focus, editRecovery])
+  }, [focus, editRecovery, manual])
+  // A finished withdrawal leaves nothing to recover; the next run starts at setup.
+  useEffect(() => {
+    if (!stranded) setEditRecovery(false)
+  }, [stranded])
+  const blocked = !state.sourceFresh || Boolean(position?.paused) || !state.allowed
   const primary = () => {
     if (state.busy || !position) return
-    if (position.orders.length) actions.openLive()
+    if (onBook) actions.openLive()
+    else if (recovery) actions.withdraw()
+    else if (blocked) return
     else if (quote) actions.confirm()
     else actions.quote()
+  }
+  // Opening MANUAL applies editable edges at once, so the ladder, the pressed
+  // key and the next quote all describe the same range.
+  const toggleManual = () => {
+    const mid = position?.mid
+    if (!manual && state.manual === null && mid)
+      actions.setManual({ low: Number((mid * 0.995).toPrecision(4)), high: Number((mid * 1.005).toPrecision(4)) })
+    setManual(!manual)
   }
   useConsoleIntent((intent) => {
     if (intent === 'START') {
@@ -38,23 +65,28 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
       if (intent === 'B') setInspect(false)
       return
     }
+    if (state.busy) return
     if (intent === 'B') {
-      if (!state.busy) actions.back()
+      if (quote) actions.clearQuote()
+      else actions.back()
       return
     }
-    if (state.busy) return
     if (intent === 'A') {
       primary()
       return
     }
+    if (onBook) return
     if (intent === 'UP' || intent === 'DOWN' || intent === 'LEFT' || intent === 'RIGHT') setEditRecovery(true)
     if (intent === 'UP' || intent === 'DOWN')
       setFocus((row) => (row === 'amount' ? 'width' : 'amount'))
     if (intent === 'LEFT' || intent === 'RIGHT') {
       if (focus === 'amount') actions.setAmount(Math.max(0, Math.round((state.amount + (intent === 'RIGHT' ? 0.12 : -0.12)) * 100) / 100))
-      else actions.setWidth(state.width === 'wide' ? 'tight' : 'wide')
+      else {
+        setManual(false)
+        actions.setWidth(state.width === 'wide' ? 'tight' : 'wide')
+      }
     }
-    if (intent === 'SELECT') setManual((open) => !open)
+    if (intent === 'SELECT') toggleManual()
   })
   if (!position) return null
   const low = quote?.ladder.low ?? state.manual?.low ?? state.basis?.low ?? null
@@ -89,82 +121,114 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
       </Panel>}
     </Inputs>
   )
+  const planned = quote ? [
+    ...(quote.depositRaw > 0n ? ['Deposit AUSD'] : []),
+    ...(quote.zapRaw > 0n ? ['Zap MON to margin'] : []),
+    'Provision flip ladder',
+  ] : []
+  const title = funding ? 'Funding' : onBook ? 'Run on book' : recovery ? 'Recovery' : quote ? 'Confirm' : 'Set range'
+  const primaryLabel = state.busy ? 'Working' : onBook ? 'Open run' : recovery ? 'Withdraw' : quote ? 'Confirm' : 'Quote'
+  const showSetup = !funding && !onBook && !recovery
   return (
-    <div className="screen-range screen-funded-range bg-screen flex h-full w-full flex-col gap-1 p-2" data-executing={state.busy && state.steps.length > 0} data-recovered={recovered}>
-      <Header title={quote ? 'Confirm real steps' : 'Set range'} demoMultiplier={state.demoMultiplier} />
+    <div className="screen-range screen-funded-range bg-screen flex h-full w-full flex-col gap-1 p-2" data-mode={funding ? 'funding' : quote ? 'confirm' : 'setup'}>
+      <Header title={title} demoMultiplier={state.demoMultiplier} />
       <div ref={body} className="funded-body funded-range-body">
-        <Notices state={state} />
-        {recovered && <Panel flush className="funded-range-recovery flex flex-col gap-1 p-2">
-          <PixelText role="body">Chain recovery available</PixelText>
-          <PixelText role="micro">{position.orders.length} active orders; free margin {position.holdings.marginBase.toFixed(8)} MON + {position.holdings.marginQuote.toFixed(6)} AUSD TESTNET. Re-quote only the missing funds or withdraw.</PixelText>
+        <Notices state={state} error={!stranded} />
+        {funding && <ReceiptSteps steps={state.steps} planned={planned} />}
+        {onBook && <section className="funded-card">
+          <PixelText role="body" upper>Your run is on the book</PixelText>
+          <PixelText role="micro">{position.orders.length} TESTNET flip orders are resting. A opens the run; withdraw from there.</PixelText>
+        </section>}
+        {stranded && !funding && <section className="funded-card funded-recovery" data-compact={!recovery}>
+          <div className="funded-card-head">
+            <PixelText role="body" upper>Funds in margin</PixelText>
+            <PixelText role="micro" tone="dim">TESTNET</PixelText>
+          </div>
+          {recovery && state.error && <PixelText role="micro" tone="loss" as="p">{state.error}</PixelText>}
+          <dl className="funded-facts">
+            <dt>AUSD</dt><dd>{position.holdings.marginQuote.toFixed(6)}</dd>
+            <dt>MON</dt><dd>{position.holdings.marginBase.toFixed(8)}</dd>
+          </dl>
           {!state.allowed && <PixelText role="micro" tone="loss">{state.gateReason}</PixelText>}
-          <button className="funded-key pressable min-h-11 text-micro" disabled={state.busy} onClick={actions.withdraw}>Withdraw confirmed partial funds</button>
-        </Panel>}
-        <details className="funded-range-setup" open={!recovered || editRecovery || manual}>
-          <summary className="pressable min-h-11 text-micro" onClick={(event) => { event.preventDefault(); setEditRecovery((open) => !open) }}>Edit amount and width</summary>
-        <div className="funded-range-choices">
-          <section className="funded-range-choice" data-focused={focus === 'amount'}>
-            <div className="flex items-baseline justify-between gap-1">
+          <button className="funded-primary pressable" disabled={state.busy} onClick={actions.withdraw}>Withdraw to disk</button>
+          {recovery && <PixelText role="micro" tone="dim">Nothing is on the book. Withdraw, or use the D-pad to set a new range with these funds.</PixelText>}
+        </section>}
+        {stranded && !funding && state.steps.length > 0 && <ReceiptSteps steps={state.steps} />}
+        {showSetup && <div className="funded-choices">
+          <section className="funded-choice" data-focused={focus === 'amount'}>
+            <div className="funded-choice-head">
               <PixelText role="micro" tone="dim" upper>How much?</PixelText>
               <Value amount={state.amount} decimals={2} suffix=" AUSD" />
             </div>
             <div className="funded-amount-keys">
-              {[0.24, 0.48, 1, 2].map((amount) => <button key={amount} className="funded-key pressable min-h-11 text-micro" aria-pressed={state.amount === amount} disabled={state.busy} onClick={() => actions.setAmount(amount)}>{amount}</button>)}
-              <button className="funded-key pressable min-h-11 text-micro" aria-pressed={state.amount === position.walletQuote} disabled={state.busy} onClick={() => actions.setAmount(position.walletQuote)}>MAX</button>
+              {AMOUNTS.map((amount) => <button key={amount} className="funded-key pressable" aria-pressed={state.amount === amount} disabled={state.busy} onClick={() => actions.setAmount(amount)}>{amount}</button>)}
+              <button className="funded-key pressable" aria-pressed={state.amount === position.walletQuote} disabled={state.busy} onClick={() => actions.setAmount(position.walletQuote)}>MAX</button>
             </div>
-            <PixelText role="micro" tone="dim">Disk TESTNET: {position.walletQuote.toFixed(6)} AUSD + {position.walletBase.toFixed(6)} MON</PixelText>
+            {!quote && <PixelText role="micro" tone="dim">Disk holds {position.walletQuote.toFixed(2)} AUSD · {position.walletBase.toFixed(4)} MON</PixelText>}
           </section>
-          <section className="funded-range-choice" data-focused={focus === 'width'}>
-            <PixelText role="micro" tone="dim" upper>How wide?</PixelText>
+          <section className="funded-choice" data-focused={focus === 'width'}>
+            <div className="funded-choice-head">
+              <PixelText role="micro" tone="dim" upper>How wide?</PixelText>
+              <PixelText role="micro" tone="dim">{state.manual ? 'Your own edges' : state.width === 'wide' ? 'More room' : 'Closer edges'}</PixelText>
+            </div>
             <div className="funded-width-keys">
-              {(['wide', 'tight'] as const).map((width) => <button key={width} className="funded-key pressable min-h-11 text-micro" aria-pressed={state.width === width && state.manual === null} disabled={state.busy} onClick={() => actions.setWidth(width)}>{width.toUpperCase()}</button>)}
-              <button className="funded-key pressable min-h-11 text-micro" aria-pressed={manual || state.manual !== null} aria-expanded={manual} onClick={() => setManual((open) => !open)}>MANUAL</button>
+              {(['wide', 'tight'] as const).map((width) => <button key={width} className="funded-key pressable" aria-pressed={state.width === width && state.manual === null} disabled={state.busy} onClick={() => { setManual(false); actions.setWidth(width) }}>{width.toUpperCase()}</button>)}
+              <button className="funded-key pressable" aria-pressed={state.manual !== null} aria-expanded={manual} disabled={state.busy} onClick={toggleManual}>MANUAL</button>
             </div>
-            <PixelText role="micro" tone="dim">WIDE more room · TIGHT closer edges</PixelText>
+            {manual && <div className="funded-manual" data-focused="true">
+              <label>
+                <PixelText role="micro" tone="dim" upper>Low price</PixelText>
+                <input aria-label="Low price" type="number" step="0.000001" inputMode="decimal" defaultValue={state.manual?.low ?? ''} onChange={(event) => actions.setManual({ low: Number(event.target.value), high: state.manual?.high ?? (mid ?? 0) * 1.005 })} />
+              </label>
+              <label>
+                <PixelText role="micro" tone="dim" upper>High price</PixelText>
+                <input aria-label="High price" type="number" step="0.000001" inputMode="decimal" defaultValue={state.manual?.high ?? ''} onChange={(event) => actions.setManual({ high: Number(event.target.value), low: state.manual?.low ?? (mid ?? 0) * 0.995 })} />
+              </label>
+            </div>}
           </section>
-        </div>
-        {state.sigmaDaily === null && state.manual === null && <PixelText role="micro" tone="loss">No volatility reading. Use manual edges.</PixelText>}
-        {manual && <Panel flush className="funded-manual grid grid-cols-2 gap-2 p-2">
-          <label className="text-micro">Low price <input aria-label="Low price" className="bg-sunk border-edge min-h-11 w-full border px-2" type="number" step="0.000001" defaultValue={state.manual?.low ?? (mid ? mid * 0.995 : '')} onChange={(event) => actions.setManual({ low: Number(event.target.value), high: state.manual?.high ?? (mid ?? 0) * 1.005 })} /></label>
-          <label className="text-micro">High price <input aria-label="High price" className="bg-sunk border-edge min-h-11 w-full border px-2" type="number" step="0.000001" defaultValue={state.manual?.high ?? (mid ? mid * 1.005 : '')} onChange={(event) => actions.setManual({ high: Number(event.target.value), low: state.manual?.low ?? (mid ?? 0) * 0.995 })} /></label>
-        </Panel>}
-        </details>
-        {(!recovered || quote) && <div className="funded-range-picture">
-          <div className="flex items-baseline justify-between gap-1 text-micro">
-            <span>{low === null ? 'Low: unquoted' : price(low)}</span>
-            <span className="funded-ladder-key"><i aria-hidden="true" /> AUSD <i aria-hidden="true" /> MON</span>
-            <span>{high === null ? 'High: unquoted' : price(high)}</span>
+          {state.sigmaDaily === null && state.manual === null && <PixelText role="micro" tone="loss">No volatility reading. Use manual edges.</PixelText>}
+        </div>}
+        {!onBook && !recovery && <section className="funded-ladder-card">
+          <div className="funded-ladder-edges">
+            <span><PixelText role="micro" tone="dim">LOW </PixelText><PixelText role="micro">{low === null ? 'unquoted' : price(low)}</PixelText></span>
+            <span className="funded-ladder-key" aria-hidden="true"><i /> AUSD <i /> MON</span>
+            <span><PixelText role="micro" tone="dim">HIGH </PixelText><PixelText role="micro">{high === null ? 'unquoted' : price(high)}</PixelText></span>
           </div>
           <div className="funded-ladder" role="img" aria-label={quote ? `Actual ladder from ${low} to ${high}, ${quote.ladder.levels} levels per side` : 'Ladder unavailable until actual quote'}>
-            {orders.length > 0 ? orders.map((order, index) => <span key={index} className={order.isBuy ? 'bg-sunk' : 'bg-accent'} title={`${order.isBuy ? 'BUY' : 'SELL'} ${price(order.price)}`} />) : <PixelText role="micro" tone="dim">{state.manual ? 'MANUAL EDGES · LEVELS NOT QUOTED' : state.basis ? 'LAST FUNDED EDGES · LEVELS NOT QUOTED' : 'GET ACTUAL QUOTE TO DRAW LEVELS'}</PixelText>}
+            {orders.length > 0 ? orders.map((order, index) => <span key={index} className={order.isBuy ? 'bg-sunk' : 'bg-accent'} />) : <PixelText role="micro" tone="dim">{state.manual ? 'MANUAL EDGES · LEVELS NOT QUOTED' : state.basis ? 'LAST FUNDED EDGES · LEVELS NOT QUOTED' : 'A QUOTE DRAWS THE REAL LEVELS'}</PixelText>}
           </div>
-          <div className="funded-now text-micro">
-            {now !== null && <span style={{ left: `${now}%` }}><i aria-hidden="true" /> now</span>}
+          <div className="funded-now">
+            {now !== null && <span style={{ left: `${now}%` }} data-side={now > 70 ? 'left' : 'right'}><i aria-hidden="true" /><PixelText role="micro" tone="dim">now</PixelText></span>}
           </div>
-          <PixelText role="micro" tone="dim">Book mid {mid === null ? 'unavailable' : price(mid)}{quote && <> · {(quote.ladder.step * 100).toFixed(2)}% steps · {quote.ladder.levels} buy + {quote.ladder.levels} sell flip levels</>}</PixelText>
-          {quote?.ladder.clamped && <PixelText role="micro" tone="loss">Capped by depth or minimum order size. Review actual edges.</PixelText>}
-        </div>}
-        {quote && <Panel flush className="funded-range-funding flex flex-col gap-1 p-2">
-          <div className="funded-holdings flex flex-wrap items-baseline gap-1">
-            <PixelText role="micro" tone="dim" upper>YOU WILL HOLD</PixelText>
-            <span className="inline-flex items-baseline gap-1"><Value amount={quote.ladder.quoteNeeded} decimals={4} /><PixelText role="micro" tone="dim">AUSD</PixelText></span>
-            <PixelText role="micro">+</PixelText>
-            <span className="inline-flex items-baseline gap-1"><Value amount={quote.ladder.baseNeeded} decimals={6} /><PixelText role="micro" tone="dim">MON</PixelText></span>
+          <PixelText role="micro" tone="dim">Book mid {mid === null ? 'unavailable' : price(mid)}{quote && <> · {(quote.ladder.step * 100).toFixed(2)}% steps · {quote.ladder.levels}+{quote.ladder.levels} levels</>}</PixelText>
+          {quote?.ladder.clamped && <PixelText role="micro" tone="loss" as="p">Capped by depth or minimum order size. These are the actual edges.</PixelText>}
+        </section>}
+        {quote && <section className="funded-card funded-hold">
+          <div className="funded-card-head">
+            <PixelText role="micro" tone="dim" upper>You will hold</PixelText>
+            <PixelText role="micro" tone="dim">TESTNET</PixelText>
           </div>
-          <PixelText role="micro" tone="dim">{quote.zapRaw > 0n ? <>Swap fee est. {usdFine(quote.takerFeeQuote)} + 1% quote headroom.</> : 'No swap needed; existing MON margin covers sells.'}</PixelText>
-          <PixelText role="micro" tone="dim">Gas fee est. {quote.gasCostMon.toFixed(6)} MON, not a ceiling.</PixelText>
-          <PixelText role="micro">Separate transactions, not atomic. Confirmed partial funds can be withdrawn.</PixelText>
-        </Panel>}
-        {(!state.sourceFresh || position.paused) && <div className="funded-range-alert text-micro">PRICE FEED PAUSED. Empty/crossed/stale or spread above 2%. Withdrawal remains available.</div>}
-        {!state.allowed && !recovered && <div className="funded-range-alert text-micro">{state.gateReason}</div>}
-        {state.steps.length > 0 && <div className="funded-range-receipts"><ReceiptSteps steps={state.steps} /></div>}
+          <div className="funded-hold-figures">
+            <span><Value amount={quote.ladder.quoteNeeded} decimals={4} /><PixelText role="micro" tone="dim"> AUSD</PixelText></span>
+            <PixelText role="micro" tone="dim">+</PixelText>
+            <span><Value amount={quote.ladder.baseNeeded} decimals={6} /><PixelText role="micro" tone="dim"> MON</PixelText></span>
+          </div>
+          <dl className="funded-facts">
+            <dt>Swap fee est.</dt><dd>{quote.zapRaw > 0n ? `${usdFine(quote.takerFeeQuote)} + 1% headroom` : 'none, margin covers sells'}</dd>
+            <dt>Gas est.</dt><dd>{quote.gasCostMon.toFixed(6)} MON, not a ceiling</dd>
+            <dt>Steps</dt><dd>separate txs, not atomic</dd>
+          </dl>
+        </section>}
+        {!funding && !onBook && (!state.sourceFresh || position.paused) && <div className="funded-range-alert text-micro">PRICE FEED PAUSED. Empty/crossed/stale or spread above 2%. Withdrawal remains available.</div>}
+        {!funding && !stranded && !onBook && !state.allowed && <div className="funded-range-alert text-micro">{state.gateReason}</div>}
+        {!funding && !stranded && state.steps.length > 0 && <ReceiptSteps steps={state.steps} />}
       </div>
-      <footer className="screen-footer funded-range-footer text-micro">
-        <button className="pressable min-h-11" disabled={state.busy || (!position.orders.length && (!state.sourceFresh || position.paused || !state.allowed))} onClick={primary}>A {state.busy ? 'Working' : position.orders.length ? 'Open position' : quote ? 'Confirm steps' : 'Get actual quote'}</button>
-        <span aria-hidden="true">·</span><button className="pressable min-h-11" disabled={state.busy} onClick={actions.back}>B Back</button>
-        <span aria-hidden="true">·</span><button className="pressable min-h-11" disabled={state.busy} onClick={() => setManual((open) => !open)}>SELECT Manual</button>
-        <span aria-hidden="true">·</span><button className="pressable min-h-11" onClick={() => setInspect(true)}>START Inputs</button>
-      </footer>
+      <KeyHints hints={[
+        { key: 'A', label: primaryLabel, disabled: state.busy || (!onBook && !recovery && blocked) },
+        { key: 'B', label: quote ? 'Edit' : 'Back', disabled: state.busy },
+        ...(!funding && !onBook ? [{ key: 'SELECT' as const, label: 'Manual', disabled: state.busy }] : []),
+        { key: 'START', label: 'Inputs' },
+      ]} />
     </div>
   )
 }

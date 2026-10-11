@@ -19,6 +19,8 @@ export const zActualExit = z.object({
   market: zMarket, openedAt: z.number().nullable(), closedAt: z.number().finite(),
   score: z.number().finite().nullable(), damage: z.number().finite().nullable(), net: z.number().finite().nullable(),
   fills: z.number().int().nonnegative().nullable(), receipts: z.array(zReceipt), complete: z.boolean(),
+  /** Whether the exit had orders to cancel. Absent on saves written before it existed. */
+  onBook: z.boolean().optional(),
 })
 
 const zRun = z.object({
