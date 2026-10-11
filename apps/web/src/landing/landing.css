@@ -22,12 +22,13 @@ body:has(.landing) {
 
 /* The held console's natural shell (console.css: 568x712 on the desk,
    520x690 at phone widths). HeldConsole reserves this ratio until it has
-   measured, so server HTML and the hydrated page share one layout. */
-.held-console {
+   measured, so server HTML and the hydrated page share one layout; the
+   how-it-plays stage turns its height budget into a width with it. */
+.landing {
   --held-ratio: 568 / 712;
 }
 @media (max-width: 640px) {
-  .held-console {
+  .landing {
     --held-ratio: 520 / 690;
   }
 }
@@ -339,6 +340,7 @@ body:has(.landing) {
   min-height: 44px;
   font-size: 11px;
 }
+
 .landing .hero-console {
   display: grid;
   justify-items: center;
@@ -617,6 +619,10 @@ body:has(.landing) {
   width: 100%;
   max-width: min(580px, calc((100svh - var(--bar) - 76px) / 1.254));
 }
+.landing .how-stage,
+.landing .how-fit {
+  width: 100%;
+}
 /* the keys the current beat names, ringed on the held console */
 .landing .how-held[data-hint~='a'] .ab-well button[aria-label^='A'],
 .landing .how-held[data-hint~='b'] .ab-well button[aria-label^='B'],
@@ -806,41 +812,6 @@ body:has(.landing) {
     gap: 16px;
   }
 
-  /* The console pins on top; the beat it shows reads underneath. */
-  .landing .how-pin {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    align-content: start;
-    gap: 20px;
-  }
-  .landing .how-console {
-    align-self: start;
-  }
-  .landing .how-copy {
-    order: 2;
-    align-self: start;
-  }
-  .landing .how-copy .heading {
-    display: none;
-  }
-  .landing .how-rail {
-    padding-left: 0;
-  }
-  .landing .rail-track,
-  .landing .beat-node,
-  .landing .beat:not(.is-on) {
-    display: none;
-  }
-  .landing .beat-head {
-    min-height: 0;
-    cursor: default;
-  }
-  .landing .beat-body {
-    transition: none;
-  }
-  .landing .fixture-note {
-    margin-top: 14px;
-  }
   .landing .part a {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px 16px;
@@ -858,15 +829,104 @@ body:has(.landing) {
   }
 }
 
-@media (max-width: 900px) and (max-height: 740px) {
+/* ---- how it plays, one beat at a time ---------------------------------- */
+
+/* A portrait phone or tablet stacks the console over the copy; a short
+   landscape screen keeps two columns. Neither has the height for the whole
+   rail, so only the current beat reads. Every beat holds its place, so the
+   copy keeps the height of the longest one, and the console scales into the
+   height that is left instead of pushing the copy out of the pinned box. */
+@media (max-width: 900px) and (orientation: portrait),
+  (orientation: landscape) and (max-height: 640px) {
   .landing .how-pin {
     gap: 12px;
-    padding-bottom: 12px;
+    padding-bottom: 16px;
   }
   .landing .how-console {
-    width: 100%;
-    max-width: min(100%, calc((100svh - 300px) * 1.2));
-    justify-self: center;
+    display: contents;
+  }
+  .landing .how-stage {
+    align-self: stretch;
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    container-type: size;
+  }
+  .landing .how-fit {
+    width: min(100%, 100cqh * var(--held-ratio));
+  }
+  .landing .how-copy .heading,
+  .landing .rail-track,
+  .landing .beat-node {
+    display: none;
+  }
+  .landing .how-rail {
+    padding-left: 0;
+  }
+  .landing .beats {
+    grid-template-areas: 'beat';
+  }
+  .landing .beat {
+    grid-area: beat;
+  }
+  .landing .beat:not(.is-on) {
+    visibility: hidden;
+  }
+  .landing .beat-head {
+    min-height: 0;
+    cursor: default;
+  }
+  .landing .beat-body {
+    grid-template-rows: 1fr;
+    transition: none;
+  }
+  .landing .beat-inner > p:first-child {
+    line-height: 1.5;
+  }
+  .landing .beat-keys {
+    margin: 12px 0 0;
+  }
+  /* one line at 360px: the dots and the label read as a single caption */
+  .landing .fixture-note {
+    justify-content: center;
+    gap: 10px;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  .landing .beat-count {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .landing .how-pin {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto auto;
+  }
+  .landing .fixture-note {
+    order: 1;
+  }
+  .landing .how-copy {
+    order: 2;
+  }
+}
+
+/* the copy beside the console, its caption under it */
+@media (orientation: landscape) and (max-height: 640px) {
+  .landing .how-pin {
+    grid-template-areas:
+      'copy stage'
+      'copy note';
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .landing .how-copy {
+    grid-area: copy;
+  }
+  .landing .how-stage {
+    grid-area: stage;
+  }
+  .landing .fixture-note {
+    grid-area: note;
   }
 }
 

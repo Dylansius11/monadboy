@@ -126,50 +126,56 @@ export function HowItPlays() {
         </div>
 
         <div className="how-console">
-          <HeldConsole maxWidth={580} className="how-held" hint={hint}>
-            <div key={beat} className="screen-wipe">
-              {beat === 0 && <MemoryCard cardAddress={null} onInsert={noop} onBack={noop} />}
-              {beat === 1 && (
-                <PoolTracker
-                  pools={pools}
-                  characterId="molandak"
-                  gates={fixtureGates('easy')}
-                  provenance={FIXTURE_PROVENANCE}
-                  onPlayPool={noop}
-                  onBack={noop}
-                />
-              )}
-              {beat === 2 && (
-                <SetRange
-                  pool={playable}
-                  balance={250}
-                  amount={100}
-                  width="wide"
-                  manualRange={null}
-                  autopilot
-                  onChangeAmount={noop}
-                  onChangeWidth={noop}
-                  onChangeManualRange={noop}
-                  onToggleAutopilot={noop}
-                  onConfirm={noop}
-                  onBack={noop}
-                />
-              )}
-              {beat === 3 && (
-                <InRange
-                  pool={playable}
-                  amount={100}
-                  width="wide"
-                  manualRange={null}
-                  autopilot
-                  characterId="molandak"
-                  onWithdraw={noop}
-                  onRebalance={noop}
-                  onBack={noop}
-                />
-              )}
+          {/* On phones the stage is the height left over after the copy; the fit
+              box turns that height into the width HeldConsole measures. */}
+          <div className="how-stage">
+            <div className="how-fit">
+              <HeldConsole maxWidth={580} className="how-held" hint={hint}>
+                <div key={beat} className="screen-wipe">
+                  {beat === 0 && <MemoryCard cardAddress={null} onInsert={noop} onBack={noop} />}
+                  {beat === 1 && (
+                    <PoolTracker
+                      pools={pools}
+                      characterId="molandak"
+                      gates={fixtureGates('easy')}
+                      provenance={FIXTURE_PROVENANCE}
+                      onPlayPool={noop}
+                      onBack={noop}
+                    />
+                  )}
+                  {beat === 2 && (
+                    <SetRange
+                      pool={playable}
+                      balance={250}
+                      amount={100}
+                      width="wide"
+                      manualRange={null}
+                      autopilot
+                      onChangeAmount={noop}
+                      onChangeWidth={noop}
+                      onChangeManualRange={noop}
+                      onToggleAutopilot={noop}
+                      onConfirm={noop}
+                      onBack={noop}
+                    />
+                  )}
+                  {beat === 3 && (
+                    <InRange
+                      pool={playable}
+                      amount={100}
+                      width="wide"
+                      manualRange={null}
+                      autopilot
+                      characterId="molandak"
+                      onWithdraw={noop}
+                      onRebalance={noop}
+                      onBack={noop}
+                    />
+                  )}
+                </div>
+              </HeldConsole>
             </div>
-          </HeldConsole>
+          </div>
           <p className="fixture-note">
             <span className="beat-count" aria-hidden="true">
               {BEATS.map((b, i) => (
