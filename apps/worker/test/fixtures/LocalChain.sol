@@ -117,8 +117,8 @@ contract MockBook {
     }
 
     function placeAndExecuteMarketBuy(uint96 quoteSize, uint256, bool, bool) external payable returns (uint256 output) {
-        _assertNoOwnOrders();
         require(ask > 0, "no external ask");
+        _assertNoOwnOrdersBefore(false, ask);
         uint256 quoteRaw = uint256(quoteSize) / 100;
         output = quoteRaw * 1e30 / ask;
         require(externalBase >= output, "external base");
@@ -126,11 +126,12 @@ contract MockBook {
         externalQuote += quoteRaw;
         buys++;
         lastBuyQuote = quoteSize;
+        ask = 0;
     }
 
     function placeAndExecuteMarketSell(uint96 size, uint256, bool, bool) external payable returns (uint256 output) {
-        _assertNoOwnOrders();
         require(bid != type(uint256).max && bid > 0, "no external bid");
+        _assertNoOwnOrdersBefore(true, bid);
         uint256 baseRaw = uint256(size) * 1e8;
         output = baseRaw * bid / 1e30;
         require(externalQuote >= output, "external quote");
@@ -138,11 +139,38 @@ contract MockBook {
         externalBase += baseRaw;
         sells++;
         lastSellSize = size;
+        bid = type(uint256).max;
     }
 
-    function _assertNoOwnOrders() private view {
-        for (uint40 id = 1; id < nextId; id++)
-            require(s_orders[id].owner != msg.sender || !_linked(id), "self trade");
+    // A taker walks the best prices first: the caller's own resting order at or better than the
+    // external level would be hit before it. Orders behind that level are untouched.
+    function _assertNoOwnOrdersBefore(bool isBuy, uint256 external1e18) private view {
+        for (uint40 id = 1; id < nextId; id++) {
+            Order memory order = s_orders[id];
+            if (order.owner != msg.sender || order.isBuy != isBuy || !_linked(id)) continue;
+            uint256 price = uint256(order.price) * 1e10;
+            require(isBuy ? price < external1e18 : price > external1e18, "self trade");
+        }
+    }
+
+    // Kuru layout: block word, bid (price, size) pairs, a zero word, ask pairs. Unaggregated here.
+    function getL2Book() external view returns (bytes memory book) {
+        book = abi.encodePacked(block.number);
+        if (bid != type(uint256).max && bid > 0)
+            book = abi.encodePacked(book, bid / 1e10, externalQuote * 1e22 / bid / 2);
+        book = _appendOwn(book, true);
+        book = abi.encodePacked(book, uint256(0));
+        if (ask > 0) book = abi.encodePacked(book, ask / 1e10, externalBase / 2 / 1e8);
+        book = _appendOwn(book, false);
+    }
+
+    function _appendOwn(bytes memory book, bool isBuy) private view returns (bytes memory) {
+        for (uint40 id = 1; id < nextId; id++) {
+            Order memory order = s_orders[id];
+            if (order.size == 0 || order.isBuy != isBuy || !_linked(id)) continue;
+            book = abi.encodePacked(book, uint256(order.price), uint256(order.size));
+        }
+        return book;
     }
 
     function batchCancelOrders(uint40[] calldata ids) external {

@@ -5,8 +5,6 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import {
   erc20Abi,
   testnetMarkets,
-  priceToUnits,
-  sizeToUnits,
 } from '@monadboy/sdk'
 import type { Market } from '@monadboy/sdk'
 import { createTransferProbe } from '../src/chain/transfer-check'
@@ -187,181 +185,74 @@ describe.skipIf(!hasAnvil)(
       expect(await nonces()).toEqual(afterFirst)
     }, 60_000)
 
-    test('mirror takes liquidity toward the target with explicit gas, refreshes quotes, cancels the old ones, and spaces every send', async () => {
-      await chain.write(margin, 'MockMargin', 'setBalance', [
-        bot.address,
-        zeroAddress,
-        parseEther('100'),
-      ])
-      await chain.write(margin, 'MockMargin', 'setBalance', [
-        bot.address,
-        ausd,
-        1000n * 10n ** 6n,
-      ])
+    test('mirror seeds a two-sided ladder, takes a player ask in the way between two atomic batches, holds without sending, and spaces every send', async () => {
+      await chain.write(margin, 'MockMargin', 'setBalance', [bot.address, zeroAddress, parseEther('100')])
+      await chain.write(margin, 'MockMargin', 'setBalance', [bot.address, ausd, 1000n * 10n ** 6n])
       const mid = createMidState()
       const state = createMirrorState()
-      const job = createMirrorJob({
-        db,
-        mid,
-        state,
-        executor: ops.executor!,
-        maxStepNotional: 1,
-        deviationThreshold: 0.0005,
-        logger: quiet,
-      })
-      const feed = (target: number, testnet: number | null, at = Date.now()) =>
+      let target = 0.03
+      const job = createMirrorJob({ db, mid, state, executor: ops.executor!, target: () => target, logger: quiet })
+      const feed = (at = Date.now()) =>
         Object.assign(mid, {
           status: 'running',
           targetMid: target,
           at,
-          testnet: {
-            ...mid.testnet,
-            status: testnet === null ? 'empty' : 'live',
-            mid: testnet,
-            at: Date.now(),
-          },
+          testnet: { ...mid.testnet, status: 'live', mid: target, at: Date.now() },
         })
       const ticks = () =>
-        db
-          .query<
-            {
-              action: string
-              notional: number
-              tx_hash: string | null
-              error: string | null
-            },
-            []
-          >(
-            'SELECT action, notional, tx_hash, error FROM mirror_ticks ORDER BY id',
-          )
-          .all()
+        db.query<{ action: string; notional: number; tx_hash: string | null; error: string | null }, []>(
+          'SELECT action, notional, tx_hash, error FROM mirror_ticks ORDER BY id',
+        ).all()
       const counts = async () => ({
         buys: await read<bigint>(book, 'MockBook', 'buys'),
         sells: await read<bigint>(book, 'MockBook', 'sells'),
       })
-      const order = (id: number) =>
-        read<
-          readonly [
-            Address,
-            bigint,
-            number,
-            number,
-            number,
-            number,
-            number,
-            boolean,
-          ]
-        >(book, 'MockBook', 's_orders', [id])
+      const quoteRows = () => db.query('SELECT order_id FROM mirror_quotes').all().length
 
-      await chain.write(book, 'MockBook', 'setBook', [parseEther('0.03'), parseEther('0.033')])
-      const externalBeforeBuy = await read<bigint>(book, 'MockBook', 'externalBase')
-      feed(0.033, 0.03)
-      await job()
-      expect(ticks().at(-1)).toMatchObject({
-        action: 'buy',
-        notional: 1,
-        error: null,
-      })
-      expect(await counts()).toEqual({ buys: 1n, sells: 0n })
-      expect(await read<bigint>(book, 'MockBook', 'lastBuyQuote')).toBe(
-        100_000_000n,
-      )
-      expect(await read<bigint>(book, 'MockBook', 'externalBase')).toBeLessThan(externalBeforeBuy)
-      const [bid, ask] = [await order(1), await order(2)]
-      expect([bid[0], bid[5], bid[7]]).toEqual([
-        bot.address,
-        priceToUnits(0.033 * 0.999, market.params, 'down'),
-        true,
-      ])
-      expect([ask[0], ask[5], ask[7]]).toEqual([
-        bot.address,
-        priceToUnits(0.033 * 1.001, market.params, 'up'),
-        false,
-      ])
-      expect(
-        db
-          .query(
-            'SELECT order_id FROM mirror_quotes ORDER BY CAST(order_id AS INTEGER)',
-          )
-          .all(),
-      ).toEqual([{ order_id: '1' }, { order_id: '2' }])
-
-      await chain.write(book, 'MockBook', 'setBook', [parseEther('0.033'), parseEther('0.039')])
-      const externalBeforeSell = await read<bigint>(book, 'MockBook', 'externalBase')
-      feed(0.033, 0.036)
-      await job()
-      expect(ticks().at(-1)).toMatchObject({ action: 'sell', error: null })
-      expect(await counts()).toEqual({ buys: 1n, sells: 1n })
-      expect(await read<bigint>(book, 'MockBook', 'lastSellSize')).toBe(
-        sizeToUnits(1 / 0.033, market.params),
-      )
-      expect(await read<bigint>(book, 'MockBook', 'externalBase')).toBeGreaterThan(externalBeforeSell)
-      expect(await read<bigint>(book, 'MockBook', 'canceled')).toBe(2n)
-      expect((await order(1))[0]).toBe(zeroAddress)
-      expect(
-        db
-          .query(
-            'SELECT order_id FROM mirror_quotes ORDER BY CAST(order_id AS INTEGER)',
-          )
-          .all(),
-      ).toEqual([{ order_id: '3' }, { order_id: '4' }])
-
-      const before = await counts()
-      const sent = db
-        .query<{ n: number }, []>('SELECT COUNT(*) AS n FROM mirror_ticks')
-        .get()!.n
-      feed(0.033, 0.033)
-      await job()
-      feed(0.033, 0.01, Date.now() - 60_000)
-      await job()
-      expect(
-        ticks()
-          .slice(sent)
-          .map((tick) => [tick.action, tick.tx_hash]),
-      ).toEqual([
-        ['hold', null],
-        ['paused', null],
-      ])
-      expect(await counts()).toEqual(before)
-
-      const hashes = ticks().flatMap((tick) =>
-        tick.tx_hash ? tick.tx_hash.split(',') : [],
-      ) as `0x${string}`[]
-      expect(hashes).toHaveLength(5)
-      const receipts = await Promise.all(
-        hashes.map((hash) => chain.client.getTransactionReceipt({ hash })),
-      )
-      expect(receipts.every((receipt) => receipt.status === 'success')).toBe(
-        true,
-      )
-      const blocks = receipts.map((receipt) => receipt.blockNumber)
-      for (let i = 1; i < blocks.length; i++)
-        expect(blocks[i] - blocks[i - 1]).toBeGreaterThanOrEqual(3n)
-      const gasLimits = await Promise.all(
-        hashes.map(
-          async (hash) => (await chain.client.getTransaction({ hash })).gas,
-        ),
-      )
-      expect(gasLimits.every((gas) => gas > 0n && gas <= 2_000_000n)).toBe(true)
-      // Remove real fixture external liquidity while keeping BOT quotes. The next
-      // transition cancels them and must not trade against itself or an empty side.
+      // No external liquidity: one batch seeds six rungs a side.
       await chain.write(book, 'MockBook', 'setBook', [(1n << 256n) - 1n, 0n])
-      await chain.write(book, 'MockBook', 'fillPlain', [4])
-      expect((await order(4))[1]).toBeGreaterThan(0n)
-      const beforeEmpty = await counts()
-      const externalBeforeEmpty = [
-        await read<bigint>(book, 'MockBook', 'externalBase'),
-        await read<bigint>(book, 'MockBook', 'externalQuote'),
-      ]
-      feed(0.034, 0.033)
+      feed()
+      await job()
+      expect(ticks().at(-1)).toMatchObject({ action: 'quote', error: null })
+      expect(ticks().at(-1)!.tx_hash!.split(',')).toHaveLength(1)
+      expect(quoteRows()).toBe(12)
+
+      // Unchanged target: the ladder fits, nothing is signed.
+      const before = await nonceOf(bot.address)
+      feed()
+      await job()
+      expect(ticks().at(-1)).toMatchObject({ action: 'hold', tx_hash: null, error: null })
+      expect(await nonceOf(bot.address)).toBe(before)
+
+      // A player's ask rests between the old and new target: batch, take, batch.
+      await chain.write(book, 'MockBook', 'setBook', [(1n << 256n) - 1n, parseEther('0.0302')])
+      target = 0.0306
+      feed()
       await job()
       expect(ticks().at(-1)).toMatchObject({ action: 'buy', error: null })
-      expect(ticks().at(-1)!.tx_hash!.split(',')).toHaveLength(2)
-      expect(await counts()).toEqual(beforeEmpty)
-      expect([
-        await read<bigint>(book, 'MockBook', 'externalBase'),
-        await read<bigint>(book, 'MockBook', 'externalQuote'),
-      ]).toEqual(externalBeforeEmpty)
+      expect(await counts()).toEqual({ buys: 1n, sells: 0n })
+      const hashes = ticks().at(-1)!.tx_hash!.split(',') as `0x${string}`[]
+      expect(hashes).toHaveLength(3)
+      const receipts = await Promise.all(hashes.map((hash) => chain.client.getTransactionReceipt({ hash })))
+      expect(receipts.every((receipt) => receipt.status === 'success')).toBe(true)
+      for (let i = 1; i < receipts.length; i++)
+        expect(receipts[i].blockNumber - receipts[i - 1].blockNumber).toBeGreaterThanOrEqual(3n)
+      const gasLimits = await Promise.all(hashes.map(async (hash) => (await chain.client.getTransaction({ hash })).gas))
+      expect(gasLimits.every((gas) => gas > 0n && gas <= 4_000_000n)).toBe(true)
+      const own = await Promise.all(
+        db.query<{ order_id: string }, []>('SELECT order_id FROM mirror_quotes').all()
+          .map((row) => read<readonly [string, bigint, number, number, number, number, number, boolean]>(book, 'MockBook', 's_orders', [Number(row.order_id)])),
+      )
+      expect(own.filter((order) => order[7]).length).toBeGreaterThanOrEqual(6)
+      expect(own.filter((order) => !order[7]).length).toBeGreaterThanOrEqual(6)
+      expect(own.every((order) => order[7] ? order[5] / 1e8 < 0.0306 : order[5] / 1e8 > 0.0306)).toBe(true)
+
+      // A stale source pauses without touching the chain.
+      const sent = await nonceOf(bot.address)
+      feed(Date.now() - 60_000)
+      await job()
+      expect(ticks().at(-1)).toMatchObject({ action: 'paused', tx_hash: null })
+      expect(await nonceOf(bot.address)).toBe(sent)
     }, 90_000)
 
     test('sellability probe: clean tokens pass, a token returning false or reverting is refused, an empty holder is unusable', async () => {
