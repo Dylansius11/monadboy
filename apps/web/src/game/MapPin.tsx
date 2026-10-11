@@ -34,6 +34,12 @@ export const PIN_SIZE_SELECTED = 20
 /** Four corner brackets standing off the disc: the playable reticle. */
 const RETICLE = 'M-3 2V-3H2M18 -3H23V2M23 18V23H18M2 23H-3V18'
 
+/** How far from its centre a pin draws: the reticle and its 4px halo reach
+ * 5 units past the 20-unit disc box, so a playable pin is 3/4 of its size. */
+export function pinRadius(size: number, playable: boolean): number {
+  return playable ? (size * 3) / 4 : size / 2
+}
+
 export function MapPin({
   band,
   filtered = false,

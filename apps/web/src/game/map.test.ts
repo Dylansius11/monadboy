@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nextPin, panFor, riskBand, scoreToPosition } from './map'
+import { keepInside, nextPin, panFor, placePinLabel, riskBand, scoreToPosition } from './map'
 import type { MapPin } from './map'
 
 describe('scoreToPosition', () => {
@@ -117,5 +117,54 @@ describe('panFor', () => {
         expect(zoom * (100 + pan)).toBeGreaterThanOrEqual(100 - 1e-9)
       }
     }
+  })
+})
+
+describe('keepInside', () => {
+  it('holds a SAFETY 100 pin far enough in that its whole mark shows', () => {
+    expect(keepInside(276, 15, 276)).toBe(261)
+    expect(keepInside(0, 15, 276)).toBe(15)
+    expect(keepInside(140, 15, 276)).toBe(140)
+  })
+
+  it('centres the pin when the plot is narrower than the mark', () => {
+    expect(keepInside(5, 15, 20)).toBe(10)
+  })
+})
+
+describe('placePinLabel', () => {
+  const plot = { width: 276, height: 212 }
+  const label = { width: 30, height: 18 }
+  const inside = (box: { x: number; y: number }) =>
+    box.x >= 0 && box.y >= 0 && box.x + label.width <= plot.width && box.y + label.height <= plot.height
+
+  it('names an open-water pin centred below it', () => {
+    expect(placePinLabel({ x: 100, y: 100, radius: 15 }, label, [], plot)).toEqual({ x: 85, y: 117 })
+  })
+
+  it('keeps the name inside the frame for a pin on the right coast', () => {
+    const box = placePinLabel({ x: 261, y: 100, radius: 15 }, label, [], plot)
+    expect(inside(box)).toBe(true)
+    expect(box.y).toBe(117)
+  })
+
+  it('moves off a neighbour below, the tracker case at SAFETY 97 and 98', () => {
+    // The selected pin at the right edge with a neighbour 48px under it: the
+    // name below would sit on the neighbour, so it goes above instead.
+    const pin = { x: 261, y: 100, radius: 15 }
+    const neighbour = { x: 266, y: 136, radius: 8 }
+    const box = placePinLabel(pin, label, [neighbour], plot)
+    expect(inside(box)).toBe(true)
+    expect(box.y + label.height).toBeLessThanOrEqual(pin.y - pin.radius)
+  })
+
+  it('takes a side when both above and below are crowded', () => {
+    const pin = { x: 100, y: 100, radius: 15 }
+    const crowd = [
+      { x: 100, y: 126, radius: 8 },
+      { x: 100, y: 74, radius: 8 },
+    ]
+    const box = placePinLabel(pin, label, crowd, plot)
+    expect(box).toEqual({ x: 117, y: 91 })
   })
 })

@@ -1,13 +1,13 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { characterQuotes, characters } from '../../config/brand'
 import { GATE_COPY, UNVERIFIED_COPY } from '@monadboy/sdk'
 import { ageInDays, compactUsd } from '../../lib/format'
 import { provenanceBadge, provenanceLine, provenanceShort } from '../data/provenance'
 import { isBookThin, isExecutable, isTestnet } from '../eligibility'
-import { nextPin, panFor, riskBand, scoreToPosition } from '../map'
+import { keepInside, nextPin, panFor, placePinLabel, riskBand, scoreToPosition } from '../map'
 import { BAND_FILL, WorldMap } from '../WorldMap'
-import { MapPin, PIN_SIZE, PIN_SIZE_SELECTED } from '../MapPin'
+import { MapPin, PIN_SIZE, PIN_SIZE_SELECTED, pinRadius } from '../MapPin'
 import { KeyHints, Meter, PixelText, Sprite } from '../../ui'
 import type { ReactNode } from 'react'
 import type { CharacterId } from '../../config/brand'
@@ -367,17 +367,77 @@ function Plot({
   gates: GateSet
   zoom: number
 }) {
+  const plot = useRef<HTMLDivElement>(null)
+  const name = useRef<HTMLDivElement>(null)
+  const [box, setBox] = useState({ width: 0, height: 0 })
+  const [nameSize, setNameSize] = useState({ width: 0, height: 0 })
+  useLayoutEffect(() => {
+    const el = plot.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const measure = () => {
+      const next = { width: el.clientWidth, height: el.clientHeight }
+      setBox((current) => (current.width === next.width && current.height === next.height ? current : next))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  const symbol = cursorIndex === null ? null : pools[cursorIndex].pool.tokenX.symbol
+  useLayoutEffect(() => {
+    const el = name.current
+    if (!el) return
+    const next = { width: el.offsetWidth, height: el.offsetHeight }
+    setNameSize((current) => (current.width === next.width && current.height === next.height ? current : next))
+  }, [symbol])
+
   const cursor = cursorIndex === null ? null : scoreToPosition(pools[cursorIndex].score)
   // The map slides under a fixed window rather than the window moving over a
   // fixed map, so the plot box, the pins, and the minimap all keep working in
   // the same 0-100 space at every zoom level.
   const panX = cursor ? panFor(cursor.leftPct, zoom) : 0
   const panY = cursor ? panFor(cursor.topPct, zoom) : 0
+  const measured = box.width > 0 && box.height > 0
+  // Each pin in score-space pixels, held in by its own drawn radius so a pool
+  // at SAFETY 100 or HEAT 0 shows its whole mark. The pins cancel the zoom,
+  // so that radius is divided by it here.
+  const placed = pools.map((entry, index) => {
+    const { leftPct, topPct } = scoreToPosition(entry.score)
+    const playable = isExecutable(entry)
+    const selected = index === cursorIndex
+    const size = selected ? PIN_SIZE_SELECTED : PIN_SIZE
+    const radius = pinRadius(size, playable)
+    return {
+      entry,
+      index,
+      playable,
+      selected,
+      size,
+      radius,
+      x: keepInside((leftPct / 100) * box.width, radius / zoom, box.width),
+      y: keepInside((topPct / 100) * box.height, radius / zoom, box.height),
+      leftPct,
+      topPct,
+    }
+  })
+  // Where each pin lands in the visible window, after the zoom and pan.
+  const onScreen = placed.map((pin) => ({
+    x: zoom * (pin.x + (panX / 100) * box.width),
+    y: zoom * (pin.y + (panY / 100) * box.height),
+    radius: pin.radius,
+  }))
+  const named =
+    cursorIndex === null
+      ? null
+      : placePinLabel(
+          onScreen[cursorIndex],
+          nameSize,
+          onScreen.filter((_, index) => index !== cursorIndex),
+          box,
+        )
   // Playable pins draw last, so a reticle is never hidden under a neighbour.
-  const order = pools
-    .map((entry, index) => ({ entry, index }))
-    .sort((a, b) => Number(isExecutable(a.entry)) - Number(isExecutable(b.entry)))
-
+  const order = [...placed].sort((a, b) => Number(a.playable) - Number(b.playable))
+  const scoreSpace = { transform: `scale(${zoom}) translate(${panX}%, ${panY}%)`, transformOrigin: '0 0' }
   return (
     <div className="tracker-map-region flex gap-1">
       {/* HEAT, one letter per row rather than a rotated string: a bitmap
@@ -392,63 +452,17 @@ function Plot({
       </div>
 
       <div
+        ref={plot}
         className="tracker-plot border-edge relative flex-1 overflow-hidden border"
         style={{ height: PLOT_HEIGHT }}
       >
-        {/* Everything that lives in score space moves together. The minimap
-            and the zoom badge sit OUTSIDE this, which is what keeps them
-            readable while the map is panned. */}
-        <div
-          className="absolute inset-0"
-          style={{
-            transform: `scale(${zoom}) translate(${panX}%, ${panY}%)`,
-            transformOrigin: '0 0',
-          }}
-        >
+        {/* Everything that lives in score space moves together, in two
+            layers with one transform: the map under the coastline names, the
+            pins over them, so a pool near HEAT 0 is never hidden by its
+            caption. The minimap and the name tag sit OUTSIDE, which is what
+            keeps them readable while the map is panned. */}
+        <div className="absolute inset-0" style={scoreSpace}>
           <WorldMap minSafety={gates.minSafety} maxHeat={gates.maxHeat} />
-
-          {order.map(({ entry, index }) => {
-            const { leftPct, topPct } = scoreToPosition(entry.score)
-            const selected = index === cursorIndex
-            const playable = isExecutable(entry)
-            return (
-              <div
-                key={entry.pool.pairAddress}
-                className="absolute"
-                style={{
-                  left: `${leftPct}%`,
-                  top: `${topPct}%`,
-                  // The pin rides in score space with the map, so the zoom
-                  // would double its size too and turn the map into
-                  // fourteen discs touching each other. Cancelling the zoom
-                  // here keeps the glyph one size at every level and lets
-                  // the zoom do the only job it exists for, which is
-                  // separating pins that overlap.
-                  transform: `translate(-50%, -50%) scale(${1 / zoom})`,
-                }}
-              >
-                <MapPin
-                  band={riskBand(entry.score.safety)}
-                  filtered={!entry.passes}
-                  selected={selected}
-                  playable={playable}
-                  size={selected ? PIN_SIZE_SELECTED : PIN_SIZE}
-                />
-                {/* Only the selected pool names itself. Fourteen labels is
-                    not a map, it is a list with coordinates. A playable one
-                    names itself inverted, the same tag the card uses, and a
-                    pool near either coast anchors its name inward so the
-                    frame never cuts it. */}
-                {selected ? (
-                  <div className={`absolute top-full mt-1 whitespace-nowrap px-0.5 ${leftPct > 80 ? 'right-0' : leftPct < 20 ? 'left-0' : 'left-1/2 -translate-x-1/2'} ${playable ? 'bg-accent' : ''}`}>
-                    <PixelText role="micro" tone={playable ? 'invert' : 'ink'} upper>
-                      {entry.pool.tokenX.symbol}
-                    </PixelText>
-                  </div>
-                ) : null}
-              </div>
-            )
-          })}
         </div>
 
         {/* The coastline, named. The axes are still readable off the line
@@ -464,7 +478,52 @@ function Plot({
           </PixelText>
         </div>
 
+        <div className="absolute inset-0" style={scoreSpace}>
+          {order.map(({ entry, selected, playable, size, x, y, leftPct, topPct }) => (
+            <div
+              key={entry.pool.pairAddress}
+              className="absolute"
+              style={{
+                left: measured ? x : `${leftPct}%`,
+                top: measured ? y : `${topPct}%`,
+                // The pin rides in score space with the map, so the zoom
+                // would double its size too and turn the map into
+                // fourteen discs touching each other. Cancelling the zoom
+                // here keeps the glyph one size at every level and lets
+                // the zoom do the only job it exists for, which is
+                // separating pins that overlap.
+                transform: `translate(-50%, -50%) scale(${1 / zoom})`,
+              }}
+            >
+              <MapPin
+                band={riskBand(entry.score.safety)}
+                filtered={!entry.passes}
+                selected={selected}
+                playable={playable}
+                size={size}
+              />
+            </div>
+          ))}
+        </div>
+
         <Minimap pools={pools} cursorIndex={cursorIndex} zoom={zoom} />
+
+        {/* Only the selected pool names itself. Fourteen labels is not a map,
+            it is a list with coordinates. A playable one names itself
+            inverted, the same tag the card uses. It sits outside the zoomed
+            layer, in the window's own pixels, on whichever side of the pin
+            stays inside the frame and off every neighbour. */}
+        {cursorIndex !== null && named ? (
+          <div
+            ref={name}
+            className={`absolute whitespace-nowrap px-0.5 ${placed[cursorIndex].playable ? 'bg-accent' : ''}`}
+            style={{ left: named.x, top: named.y, visibility: measured ? undefined : 'hidden' }}
+          >
+            <PixelText role="micro" tone={placed[cursorIndex].playable ? 'invert' : 'ink'} upper>
+              {symbol}
+            </PixelText>
+          </div>
+        ) : null}
       </div>
     </div>
   )
