@@ -391,6 +391,19 @@ gas reserved 1.886 to 2.406 MON of the 10 MON cap. Asks held 2.67 to 2.71 AUSD (
 AUSD fundable, every sample above the 2 AUSD largest fixed preset); bids 6.7 to 11.1 AUSD.
 The same window before the fix had the 2,478,352 error and asks as low as 0.06 AUSD.
 
+[V, 2026-10-11] The book froze at 0.03365 for over 20 minutes while the DEMO
+target sat 14% lower: BOT margin held 0.00000000003 MON, every sell was `take-unfunded`, and
+the executor then held `within-deadband` against its own recorded center. Fixed in the worker
+(a walk stays pending until the book arrives; the idle target re-anchors at the book, migration
+008) and 65 MON was deposited from the BOT wallet into its Kuru margin with
+`sweep.ts --deposit-bot 65`
+(`0xa442f65c900b023653b4a92df454efc5c593af16ce2bb16cd42769d69c3f7fb4`, block 70189530,
+TESTNET): wallet 106.76 to 41.75 MON, margin 0 to 65 MON, AUSD unchanged. Production now runs
+`MIRROR_INTERVAL_MS=30000` and `MIRROR_DEADBAND=0.005` (was 60 s and 1%), so a three-minute
+run sees about six chances for the book to move; batches cost 0.07 to 0.11 MON each at
+102 gwei, inside the 10 MON daily cap. After restart, idle health read anchorTarget equal to the
+book (0.033651505, level 1.259), green.
+
 [V, 2026-10-11] Real TESTNET player path against this worker and book, driven through the
 web chain modules with a disposable key (`0x63d70FE36a940f6a786F2B22a0613A001401D75C`).
 Gate PLAYABLE/live/honeypot-clean, source fresh at x20. 2 AUSD WIDE, 8 levels; book before
