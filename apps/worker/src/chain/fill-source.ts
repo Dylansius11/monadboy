@@ -188,22 +188,22 @@ export function createDirectFillSource({
         }),
       ) /
       10 ** decimals
+    // Started together so the batched client folds them into shared Multicall3 calls.
+    const [orders, marginBase, marginQuote] = await Promise.all([
+      Promise.all([...ids].map((id) => readActiveOrder(client, market.address, id, blockNumber))),
+      balance(market.baseToken, p.baseDecimals),
+      balance(market.quoteToken, p.quoteDecimals),
+    ])
     let restingBase = 0
     let restingQuote = 0
-    for (const id of ids) {
-      const order = await readActiveOrder(client, market.address, id, blockNumber)
+    for (const order of orders) {
       if (!order || order[0].toLowerCase() !== owner.toLowerCase())
         continue
       const size = Number(order[1]) / Number(p.sizePrecision)
       if (order[7]) restingQuote += size * (order[5] / Number(p.pricePrecision))
       else restingBase += size
     }
-    return {
-      marginBase: await balance(market.baseToken, p.baseDecimals),
-      marginQuote: await balance(market.quoteToken, p.quoteDecimals),
-      restingBase,
-      restingQuote,
-    }
+    return { marginBase, marginQuote, restingBase, restingQuote }
   }
 
   function assemble(
@@ -317,16 +317,15 @@ export function createDirectFillSource({
         const disks: DiskFills[] = []
         for (const market of markets) {
           complete = (await ingest(market, head)) && complete
-          for (const { ids, ...disk } of assemble(market, head).values()) {
-            disks.push({
-              ...disk,
-              tag: await tag(disk.disk as Address),
-              deposit: netDeposit(market, disk.disk, head),
-              holdings: await holdings(market, disk.disk as Address, ids, head).catch(
-                () => null,
-              ),
-            })
-          }
+          const assembled = [...assemble(market, head).values()]
+          disks.push(...await Promise.all(assembled.map(async ({ ids, ...disk }) => ({
+            ...disk,
+            tag: await tag(disk.disk as Address),
+            deposit: netDeposit(market, disk.disk, head),
+            holdings: await holdings(market, disk.disk as Address, ids, head).catch(
+              () => null,
+            ),
+          }))))
         }
         return { status: complete ? 'complete' : 'partial', at: now(), disks }
       } catch (error) {

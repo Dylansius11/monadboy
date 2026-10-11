@@ -67,8 +67,11 @@ const mainnetHistory = createPublicClient({
   chain: monad,
   transport: http(env.MAINNET_RPC_URL, { timeout: 25_000, retryCount: 0 }),
 })
+// Reads issued together at one block share a Multicall3 eth_call: order-membership
+// walks for every disk cost one call per step instead of one per order.
 const testnet = createPublicClient({
   chain: monadTestnet,
+  batch: { multicall: { batchSize: 4096 } },
   transport: http(env.TESTNET_RPC_URL, { timeout: 8_000, retryCount: 0, fetchFn: testnetRpcFetch }),
 })
 const markets = loadTestnetMarkets(env.MARKETS_JSON)

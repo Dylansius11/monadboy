@@ -92,16 +92,21 @@ export function createMirrorExecutor({
     })
   }
 
-  async function cancelOwnedQuotes(): Promise<Hex | undefined> {
-    const ids: number[] = []
-    const blockNumber = await client.getBlockNumber({ cacheTime: 0 })
-    for (const row of db.query<{ order_id: string }, [string]>(
+  // Started together so the batched client folds them into shared Multicall3 calls.
+  function quotes(blockNumber: bigint) {
+    const rows = db.query<{ order_id: string }, [string]>(
       'SELECT order_id FROM mirror_quotes WHERE market = ?',
-    ).all(market.address)) {
-      const order = await readActiveOrder(client, market.address, Number(row.order_id), blockNumber)
-      if (order && order[0].toLowerCase() === bot.toLowerCase())
-        ids.push(Number(row.order_id))
-    }
+    ).all(market.address)
+    return Promise.all(rows.map(async (row) => {
+      const id = Number(row.order_id)
+      return { id, order: await readActiveOrder(client, market.address, id, blockNumber) }
+    }))
+  }
+
+  async function cancelOwnedQuotes(): Promise<Hex | undefined> {
+    const blockNumber = await client.getBlockNumber({ cacheTime: 0 })
+    const ids = (await quotes(blockNumber))
+      .flatMap(({ id, order }) => order && order[0].toLowerCase() === bot.toLowerCase() ? [id] : [])
     let hash: Hex | undefined
     if (ids.length) {
       hash = (await sendChecked({
@@ -203,14 +208,16 @@ export function createMirrorExecutor({
     inventory: async () => {
       const p = await read()
       const blockNumber = await client.getBlockNumber({ cacheTime: 0 })
-      let base = await balance(market.baseToken, p.baseDecimals, blockNumber)
-      let quote = await balance(market.quoteToken, p.quoteDecimals, blockNumber)
+      const [marginBase, marginQuote, owned] = await Promise.all([
+        balance(market.baseToken, p.baseDecimals, blockNumber),
+        balance(market.quoteToken, p.quoteDecimals, blockNumber),
+        quotes(blockNumber),
+      ])
+      let base = marginBase
+      let quote = marginQuote
       // Decision inventory includes funds that execute() will release by canceling
       // owned quotes. A filled storage row or someone else's order is not inventory.
-      for (const row of db.query<{ order_id: string }, [string]>(
-        'SELECT order_id FROM mirror_quotes WHERE market = ?',
-      ).all(market.address)) {
-        const order = await readActiveOrder(client, market.address, Number(row.order_id), blockNumber)
+      for (const { order } of owned) {
         if (!order || order[0].toLowerCase() !== bot.toLowerCase()) continue
         const size = Number(order[1]) / Number(p.sizePrecision)
         if (order[7]) quote += size * (order[5] / Number(p.pricePrecision))
