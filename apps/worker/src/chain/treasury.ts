@@ -89,9 +89,10 @@ export type Treasury = {
   account: PrivateKeyAccount
   wallet: WalletClient<HttpTransport, typeof monadTestnet, PrivateKeyAccount>
   // Spaced, nonce-managed, confirmed send. `build` must pass the nonce and an explicit gas limit.
+  // gasUsed x effectiveGasPrice is what the chain billed (Monad bills the declared limit).
   send: (
     build: (nonce: number) => Promise<Hex>,
-  ) => Promise<{ hash: Hex; blockNumber: bigint }>
+  ) => Promise<{ hash: Hex; blockNumber: bigint; gasUsed: bigint; effectiveGasPrice: bigint }>
 }
 
 export function createTreasury({
@@ -144,7 +145,12 @@ export function createTreasury({
             blockNumber: receipt.blockNumber,
           })
         }
-        return { hash, blockNumber: receipt.blockNumber }
+        return {
+          hash,
+          blockNumber: receipt.blockNumber,
+          gasUsed: receipt.gasUsed,
+          effectiveGasPrice: receipt.effectiveGasPrice,
+        }
       }),
   }
 }

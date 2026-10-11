@@ -29,8 +29,20 @@ export function createGasBudget(db: Database, capWei: bigint, now = Date.now) {
     record(id: number, hash: Hex) {
       db.query('UPDATE mirror_gas_reservations SET tx_hash = ? WHERE id = ?').run(hash, id)
     },
+    // A confirmed receipt replaces the declared ceiling (limit x maxFee) with the billed cost,
+    // which never exceeds it. Unknown or failed sends keep their full reservation.
+    settle(id: number, costWei: bigint) {
+      if (costWei < 0n) throw new Error('Invalid mirror gas settlement')
+      db.query('UPDATE mirror_gas_reservations SET max_cost_wei = ? WHERE id = ?').run(costWei.toString(), id)
+    },
     status() {
-      return { capWei: capWei.toString(), reservedWei: spent(now()).toString(), dayUTC: new Date(now()).toISOString().slice(0, 10) }
+      const spentWei = spent(now())
+      return {
+        capWei: capWei.toString(),
+        reservedWei: spentWei.toString(),
+        exhausted: spentWei >= capWei,
+        dayUTC: new Date(now()).toISOString().slice(0, 10),
+      }
     },
   }
 }
