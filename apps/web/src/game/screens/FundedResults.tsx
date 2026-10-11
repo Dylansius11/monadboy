@@ -14,6 +14,25 @@ import {
 import type { FundedScreenProps } from './FundedGameplayView'
 import './funded-live.css'
 
+type Outcome = { tone: 'gain' | 'loss' | 'ink'; title: string; line: string }
+
+/**
+ * One title and one sentence, each a restatement of the measured numbers: NET against
+ * holding the deposit, and whether any flips filled. Nothing here is a prediction or a
+ * rating; with any total unavailable there is no outcome to state.
+ */
+export function outcomeOf(result: { score: number | null; net: number | null; fills: number | null; complete: boolean }): Outcome | null {
+  const { score, net, fills } = result
+  if (!result.complete || score === null || net === null || fills === null) return null
+  const tone = net > 0 ? 'gain' : net < 0 ? 'loss' : 'ink'
+  const title = net > 0 ? 'Ahead of hold' : net < 0 ? 'Behind hold' : 'Level with hold'
+  const filled = fills === 0 ? 'No maker fills, so SCORE stayed at zero.'
+    : `${fills} maker fill${fills === 1 ? '' : 's'} observed.`
+  const against = net > 0 ? 'NET beat simply holding the deposit.'
+    : net < 0 ? 'NET is behind simply holding the deposit.' : 'NET matched simply holding the deposit.'
+  return { tone, title, line: `${filled} ${against}` }
+}
+
 export function FundedResults({ state, actions }: FundedScreenProps) {
   const [inspect, setInspect] = useState(false)
   const character = useSession((session) => session.characterId)
@@ -47,6 +66,7 @@ export function FundedResults({ state, actions }: FundedScreenProps) {
   )
   if (inspect) return <Inputs state={state} onClose={() => setInspect(false)}>{detail}</Inputs>
   const position = state.position
+  const outcome = result && !aborted ? outcomeOf(result) : null
   return (
     <div className="screen-results screen-funded-results bg-screen flex h-full w-full flex-col gap-1 p-2">
       <Header title={result ? 'Session over' : 'No confirmed exit'} demoMultiplier={state.demoMultiplier} />
@@ -72,10 +92,21 @@ export function FundedResults({ state, actions }: FundedScreenProps) {
           </section>}
         </>}
         {result && !aborted && <>
-          <div className="funded-result-hero">
-            <Sprite character={character} animation={result.net === null || result.net < 0 ? 'sit' : 'idle'} size={64} />
+          {outcome ? <>
+            <section className="funded-result-banner" data-tone={outcome.tone}>
+              <Sprite character={character} animation={outcome.tone === 'gain' ? 'happy' : outcome.tone === 'loss' ? 'sit' : 'idle'} size={64} />
+              <div>
+                <PixelText role="title" upper as="p">{outcome.title}</PixelText>
+                <PixelText role="micro" as="p">{outcome.line}</PixelText>
+              </div>
+            </section>
             <Numbers score={result.score} damage={result.damage} net={result.net} />
-          </div>
+          </> : (
+            <div className="funded-result-hero">
+              <Sprite character={character} animation="sit" size={64} />
+              <Numbers score={result.score} damage={result.damage} net={result.net} />
+            </div>
+          )}
           <dl className="funded-facts">
             <dt>Observed maker fills</dt><dd>{result.fills ?? 'Unavailable'}</dd>
             <dt>Elapsed</dt><dd>{elapsed ?? 'unavailable'}</dd>

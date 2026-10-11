@@ -69,11 +69,14 @@
 .funded-secondary:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
 
 /* Results: the outcome first, then the receipts, then the card save. */
-.funded-results-body { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 8px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.funded-results-body { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 6px; overscroll-behavior: contain; scrollbar-width: thin; }
 .funded-results-body > * { flex-shrink: 0; }
 .funded-results-body p { margin: 0; }
 .funded-result-hero { display: grid; flex: 1 0 auto; grid-template-columns: 64px minmax(0, 1fr); align-content: center; align-items: center; gap: 8px; }
 .funded-result-banner { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 12px; padding: 8px; border: 1px solid var(--color-edge); background: var(--color-panel); box-shadow: inset 4px 0 var(--color-gain), var(--shadow-hard); }
+.funded-result-banner[data-tone='loss'] { box-shadow: inset 4px 0 var(--color-loss), var(--shadow-hard); }
+.funded-result-banner[data-tone='ink'] { box-shadow: inset 4px 0 var(--color-ink-dim), var(--shadow-hard); }
+.funded-result-banner > div { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
 .screen-funded-results .funded-numbers { gap: 0 8px; padding: 4px 8px; }
 .screen-funded-results .funded-numbers > span { align-self: center; }
 .screen-funded-results .funded-numbers > div { display: flex; align-items: center; justify-content: end; overflow-wrap: normal; white-space: nowrap; }
