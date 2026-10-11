@@ -149,14 +149,20 @@ export function PoolTracker({
 }: PoolTrackerProps) {
   const [view, setView] = useState<'map' | 'inspect'>('map')
   // The cursor opens on the market the player can actually play, when there
-  // is one: that is the pin this screen exists to find.
-  const [cursorIndex, setCursorIndex] = useState(() => Math.max(0, pools.findIndex(isExecutable)))
+  // is one: that is the pin this screen exists to find. A live read can bring
+  // that pool in after the first paint, so until the player moves or opens a
+  // pin the cursor keeps following it. Once they have, it is pinned to their
+  // pool by address, so a refresh that reorders the list never moves it.
+  const [pickedAddress, setPickedAddress] = useState<string | null>(null)
   const [zoomStep, setZoomStep] = useState(0)
   const zoom = ZOOM_LEVELS[zoomStep]
 
   const character = characters[characterId]
   const passing = pools.filter((p) => p.passes)
-  const cursor = Math.max(0, Math.min(cursorIndex, pools.length - 1))
+  const pickedIndex = pickedAddress === null
+    ? -1
+    : pools.findIndex((entry) => entry.pool.pairAddress === pickedAddress)
+  const cursor = pickedIndex >= 0 ? pickedIndex : Math.max(0, pools.findIndex(isExecutable))
   const selected = pools[cursor]
   const nextCharacter = looserTier ? characters[CHARACTER_BY_DIFFICULTY[looserTier]] : null
 
@@ -190,6 +196,7 @@ export function PoolTracker({
       return
     }
     if (intent === 'A') {
+      setPickedAddress(selected.pool.pairAddress)
       setView('inspect')
       return
     }
@@ -201,13 +208,12 @@ export function PoolTracker({
       return
     }
     if (DIRECTIONS.has(intent as CursorDirection)) {
-      setCursorIndex((current) =>
-        nextPin(
-          pools.map((p) => p.score),
-          Math.min(current, pools.length - 1),
-          intent as CursorDirection,
-        ),
+      const next = nextPin(
+        pools.map((p) => p.score),
+        cursor,
+        intent as CursorDirection,
       )
+      setPickedAddress(pools[next].pool.pairAddress)
     }
   })
 

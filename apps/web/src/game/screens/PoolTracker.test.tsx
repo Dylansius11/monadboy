@@ -542,6 +542,39 @@ describe('fixture source and deployment boundaries', () => {
     expect(getByText(GATE_COPY['heat-too-high'])).toBeInTheDocument()
     expect(getByText(/buzz 50 \(offline\)/)).toBeInTheDocument()
   })
+
+  describe('a playable pool that arrives after the first paint', () => {
+    const tracker = (pools: Array<TrackerPool>) => (
+      <PoolTracker
+        pools={pools}
+        characterId="molandak"
+        gates={fixtureGates('easy')}
+        provenance={FIXTURE_PROVENANCE}
+        onPlayPool={vi.fn()}
+        onBack={vi.fn()}
+      />
+    )
+
+    it('moves the untouched cursor onto it', () => {
+      const entry = playable()
+      const { queryByText, rerender } = renderScreen(tracker([PASSING_LOW, FILTERED_DEGRADED]))
+      expect(queryByText(/^Playable · Testnet$/i)).toBeNull()
+
+      rerender(tracker([PASSING_LOW, FILTERED_DEGRADED, entry]))
+      expect(queryByText(/^Playable · Testnet$/i)).toBeInTheDocument()
+    })
+
+    it('never yanks a cursor the player has already moved, even when the read reorders', () => {
+      const entry = playable()
+      const { getAllByText, queryByText, rerender } = renderScreen(tracker(THREE_POOLS))
+      press('LEFT')
+      expect(getAllByText('CCC').length).toBe(1)
+
+      rerender(tracker([entry, ...[...THREE_POOLS].reverse()]))
+      expect(getAllByText('CCC').length).toBe(1)
+      expect(queryByText(/^Playable · Testnet$/i)).toBeNull()
+    })
+  })
 })
 
 describe('a worker read says it is one', () => {
