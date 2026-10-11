@@ -92,7 +92,9 @@ export function PriceField({
   // straight to the transform: no React render, no layout, whole pixels only.
   useEffect(() => {
     const group = line.current
-    if (!group || !sampling || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    // jsdom has no matchMedia; the browser always does.
+    const still = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!group || !sampling || still) return
     let frame = 0
     let shown = -1
     const tick = () => {
