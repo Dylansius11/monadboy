@@ -14,7 +14,7 @@ import type { Treasury } from './treasury'
 import { readActiveOrder } from './active-order'
 import type { GasBudget } from './gas-budget'
 import { decodeL2Units } from './l2-book'
-import { MIRROR_LEVELS, MIRROR_TAKE_LEVELS, planMirrorLadder, planTake } from './mirror-ladder'
+import { MIRROR_TAKE_LEVELS, planMirrorLadder, planTake } from './mirror-ladder'
 import type { LadderPlan, OwnOrder } from './mirror-ladder'
 import type { L2Units } from './l2-book'
 
@@ -206,12 +206,17 @@ export function createMirrorExecutor({
       const hashes: Hex[] = []
       try {
         let view = await observe()
-        // Inside the deadband the resting ladder stays as signed: the book lags the target by at
-        // most the deadband and nothing is sent, unless fills thinned a side to under half.
-        const half = Math.ceil(MIRROR_LEVELS.length / 2)
-        const thinned = [true, false].some((isBuy) => view.own.filter((order) => order.isBuy === isBuy).length < half)
-        if (center !== null && Math.abs(targetMid / center - 1) < deadband && !thinned)
-          return { kind: 'hold', reason: 'within-deadband', notional: 0, hashes }
+        // Inside the deadband the ladder stays centered where it was signed, and only rungs that
+        // fills ate are refilled around that same center. A player's zap takes the inner asks;
+        // refilling them on the next tick, while that player's heartbeat is still live, leaves full
+        // depth resting for whoever comes next, even after the book goes idle. An intact ladder
+        // plans nothing and signs nothing.
+        if (center !== null && Math.abs(targetMid / center - 1) < deadband) {
+          const refill = await reconcile(view, center, assertSource)
+          return refill
+            ? { kind: 'quote', reason: 'ladder-refilled', notional: 0, hashes: [refill] }
+            : { kind: 'hold', reason: 'within-deadband', notional: 0, hashes }
+        }
         const first = await reconcile(view, targetMid, assertSource)
         if (first) hashes.push(first)
         center = targetMid

@@ -375,6 +375,15 @@ on every tick. The book kept 0.06 AUSD of asks and every zap quote was refused. 
 now limited to the six levels nearest the touch, halved again if an estimate still exceeds
 the ceiling, so stale bids are cleared over consecutive ticks.
 
+[V, 2026-10-11] Two more causes of thin asks, both fixed: inside the deadband only rungs
+that fills ate are refilled, around the signed center (previously a zap that ate the two
+inner asks was never refilled), and a far re-center keeps out-of-window asks while other
+makers' bids still block the new ones. The ask side is also bounded by BOT margin MON: every
+zap buys MON off the BOT and players withdraw it on exit (about 29 MON per AUSD at 0.034).
+With margin MON exhausted, 40 MON was deposited from the BOT wallet
+(`0x5f33e3d4013560519ac1fcf8e655a963854efb907e1a1dfd45db32879db85e1e`, TESTNET) with the
+funding workspace's `sweep.ts --deposit-bot <MON>`, which keeps 40 MON in the wallet.
+
 [V, 2026-10-11, after the fix] Ten minutes of `/v1/health` and `getL2Book` every 15 s with
 one live player heartbeat (13:46 to 13:56 UTC): 42/42 samples green at x20, ticks 2 to 12,
 actions 36 hold / 5 quote / 1 sell, zero `lastError`, zero ask-depth or gas-budget errors,

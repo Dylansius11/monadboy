@@ -83,6 +83,7 @@ export function planMirrorLadder(input: {
       return { level, price, size, kept: null as OwnOrder | null, worn: [] as OwnOrder[] }
     })
     const spare: { order: OwnOrder; offset: number }[] = []
+    const outside: number[] = []
     for (const order of orders) {
       const offset = offsetOf(order.price)
       if (offset < levels[0].min) {
@@ -93,7 +94,7 @@ export function planMirrorLadder(input: {
       }
       const slot = slots.find((s) => offset >= s.level.min && offset < s.level.max)
       if (!slot) {
-        optional.push(order.id)
+        outside.push(order.id)
         continue
       }
       // A rung eaten down to a quarter by fills is worn: replaced only when that is affordable.
@@ -111,6 +112,11 @@ export function planMirrorLadder(input: {
     }
     const crosses = (price: number) =>
       isBuy ? bestAsk !== null && BigInt(price) >= bestAsk : bestBid !== null && BigInt(price) <= bestBid
+    // [V] 2026-10-11: after idle the DEMO target sat 23% under the book. Re-centering cancelled
+    // every resting ask while other makers' bids still blocked the new ones, so a player's zap
+    // found 0.37 AUSD. Orders beyond the outer window stay while any rung on their side is
+    // blocked by someone else's order: they are that side's only depth until the take clears it.
+    if (!slots.some((slot) => !slot.kept && crosses(slot.price))) optional.push(...outside)
     const open = slots.filter((slot) => !slot.kept && slot.size >= p.minSize && !crosses(slot.price))
     const need = open.reduce((sum, slot) => sum + lockOf(slot.price, slot.size), 0)
     // Duplicates pile up in outer windows as the target walks. Free them, outermost first, only

@@ -296,6 +296,30 @@ test('a take that still exceeds the gas ceiling is halved before anything is sig
   db.close()
 })
 
+test('a far re-center keeps resting asks while other makers still block the new ones', async () => {
+  const chain = fakeChain()
+  const limits: bigint[] = []
+  const client = gasPerFill(chain, limits)
+  const { db, executor } = executorFor({ ...chain, client }, memoryDb(), { client })
+  // The ladder rested around 0.034 while idle; abandoned player bids sit just under it.
+  await executor.execute(0.034, () => {})
+  for (let i = 0; i < 12; i++) chain.place(OTHER, units(0.0331 - i * 0.00015), 18500000000n, true)
+  const asksNotional = () => ownSide(chain, false).reduce((sum, o) => sum + o.price / 1e8 * Number(o.size) / 1e10, 0)
+  const rested = asksNotional()
+  // The DEMO target drifted 22% lower: new asks cross those bids until the take clears them.
+  await executor.execute(0.0265, () => {})
+  expect([...chain.orders.values()].some((o) => o.owner === OTHER && o.price > units(0.0265))).toBe(true)
+  // The old asks are still the book's depth, so a zap between ticks still finds the preset.
+  expect(asksNotional()).toBeGreaterThanOrEqual(Math.min(rested, PRESET))
+  // Once the way is clear the ladder re-forms around the new target and the old asks go.
+  await executor.execute(0.0265, () => {})
+  await executor.execute(0.0265, () => {})
+  expect([...chain.orders.values()].some((o) => o.owner === OTHER && o.price > units(0.0265))).toBe(false)
+  expect(askDepthWithin(chain, 0.0265, 0.02)).toBeGreaterThanOrEqual(PRESET)
+  expect(Math.max(...ownSide(chain, false).map((o) => o.price)) / 1e8).toBeLessThan(0.0265 * 1.22)
+  db.close()
+})
+
 test('a crossed passive refresh is refused before signing and leaves the ledger unchanged', async () => {
   const chain = fakeChain()
   const client = { ...chain.client, simulateContract: async () => { throw new Error('PostOnlyError') } } as unknown as PublicClient
@@ -346,7 +370,7 @@ test('source is checked after estimation and queue awaits, before a new quote si
   db.close()
 })
 
-test('inside the deadband nothing is signed; past it, or after fills thin a side, the ladder is re-signed', async () => {
+test('inside the deadband nothing is signed; past it, or after fills eat rungs, the ladder is re-signed', async () => {
   const chain = fakeChain()
   const { db, executor } = executorFor(chain, memoryDb(), { deadband: 0.01 })
   await executor.execute(0.03, () => {})
@@ -355,12 +379,36 @@ test('inside the deadband nothing is signed; past it, or after fills thin a side
   expect(chain.sends).toHaveLength(seeded)
   // A player's zap eats four of the six asks: replenished although the target did not move.
   for (const [id] of [...chain.orders].filter(([, o]) => !o.isBuy).slice(0, 4)) chain.orders.delete(id)
-  expect(await executor.execute(0.03 * 1.009, () => {})).toMatchObject({ kind: 'quote' })
+  expect(await executor.execute(0.03 * 1.009, () => {})).toMatchObject({ kind: 'quote', reason: 'ladder-refilled' })
   expect(ownSide(chain, false).length).toBeGreaterThanOrEqual(MIRROR_LEVELS.length)
   const replenished = chain.sends.length
-  expect(await executor.execute(0.03 * 1.012, () => {})).toMatchObject({ kind: 'hold', reason: 'within-deadband' })
-  expect(await executor.execute(0.03 * 1.03, () => {})).toMatchObject({ kind: 'quote' })
+  // The refill kept the signed center (0.03): 1.2% away is past the deadband and re-centers once.
+  expect(await executor.execute(0.03 * 1.012, () => {})).toMatchObject({ kind: 'quote', reason: 'ladder-reconciled' })
+  expect(await executor.execute(0.03 * 1.018, () => {})).toMatchObject({ kind: 'hold', reason: 'within-deadband' })
   expect(chain.sends).toHaveLength(replenished + 1)
+  db.close()
+})
+
+test('a zap that eats only the inner asks is refilled inside the deadband, around the signed center', async () => {
+  const chain = fakeChain()
+  const { db, executor } = executorFor(chain, memoryDb(), { deadband: 0.01 })
+  await executor.execute(0.03, () => {})
+  const full = askDepthWithin(chain, 0.03, 0.02)
+  // A player's zap takes the two innermost asks: 60% of the side's value, only a third of its rungs.
+  for (const [id] of [...chain.orders].filter(([, o]) => o.owner === BOT && !o.isBuy).sort((a, b) => a[1].price - b[1].price).slice(0, 2))
+    chain.orders.delete(id)
+  expect(askDepthWithin(chain, 0.03, 0.02)).toBeLessThan(PRESET)
+  const seeded = chain.sends.length
+  const outcome = await executor.execute(0.03 * 1.004, () => {})
+  expect(outcome).toMatchObject({ kind: 'quote', reason: 'ladder-refilled' })
+  const [bids, , asks, , cancel] = chain.sends[seeded].args as [number[], bigint[], number[], bigint[], number[]]
+  // Only the eaten rungs, at the original center's prices: no re-centering inside the deadband.
+  expect([bids.length, asks.length, cancel.length]).toEqual([0, 2, 0])
+  expect(Math.min(...asks)).toBe(priceToUnits(0.03 * (1 + MIRROR_LEVELS[0].offset), params, 'up'))
+  expect(askDepthWithin(chain, 0.03, 0.02)).toBeCloseTo(full, 6)
+  // An intact ladder signs nothing.
+  expect(await executor.execute(0.03 * 1.004, () => {})).toMatchObject({ kind: 'hold', reason: 'within-deadband' })
+  expect(chain.sends).toHaveLength(seeded + 1)
   db.close()
 })
 
