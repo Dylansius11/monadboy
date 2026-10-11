@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import {
   HeadContent,
   Outlet,
@@ -12,6 +13,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 import { brand } from '../config/brand'
 import { SoundProvider } from '../sound/SoundProvider'
+import { registerServiceWorker } from '../pwa/install'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -53,6 +55,11 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootApp() {
+  // production builds only, so a development origin never keeps a worker
+  // registered between sessions
+  useEffect(() => {
+    if (import.meta.env.PROD) registerServiceWorker()
+  }, [])
   return <SoundProvider><Outlet /></SoundProvider>
 }
 

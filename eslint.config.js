@@ -74,6 +74,9 @@ export default [
       '**/.scratch/**',
       'indexer/generated/**',
       'indexer/.pnpm-store/**',
+      // Served as-is: the service worker is plain browser script outside the
+      // app's tsconfig.
+      'apps/web/public/**',
       'apps/web/src/routeTree.gen.ts',
     ],
   },
