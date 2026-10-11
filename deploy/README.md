@@ -346,6 +346,82 @@ exact `APP_ORIGIN`. Blank env values are unset; no operations keys are needed fo
 - Never delete `drips` rows with status `pending` after a crash: look up their hashes on
   the chain before permitting another grant to that address.
 
+### Reading mirror health
+
+`mirror` and `demo` in `/v1/health` describe the demand-only market maker:
+
+- `execution` must be `enabled`; `disabled` names its reason (for example `no-bot-key`).
+- `ticks` counts evaluated ticks since the last restart. Ticks only run while a player
+  heartbeat is live (`demo.activePlayers` above 0); with no players `lastAction` is `hold`
+  and nothing is read or signed.
+- `lastAction` is `hold` (ladder already fits, inside the deadband, or idle), `quote` (one
+  atomic `batchUpdate` re-quoted the ladder), `buy` / `sell` (another maker's orders sat on
+  the wrong side of the target and were taken; this is how player orders fill) or `paused`
+  (source stale or paused).
+- `lastError` is null when healthy; any value makes health `amber` with `mirror-error`.
+  `Mirror daily gas budget exhausted` (or `gas.exhausted: true`) means the UTC-day cap in
+  `MIRROR_DAILY_GAS_MON` is spent; the last ladder keeps resting and signing resumes at
+  00:00 UTC. `Mirror gas budget exceeded: <limit> > <ceiling>` means one transaction's
+  estimate exceeded `GAS_MARKET_ORDER` / `GAS_BATCH_UPDATE`; nothing was signed.
+- `gas.reservedWei` is today's declared-gas reservation against `gas.capWei`.
+- Book depth is not in health: read `getL2Book` on the TESTNET MON_AUSD market. The ask
+  side must hold at least half the largest funded preset (2 AUSD, so about 1 AUSD of asks
+  plus fee and 1% slippage) for a zap to fund; the web quote names the fundable amount.
+
+[V, 2026-10-11] A stale-player-bids failure looked like this: other makers' flip bids
+rested above a lower DEMO target, so post-only asks could not be placed below them, and the
+take that clears them walked twelve levels (`Mirror gas budget exceeded: 2478352 > 2000000`)
+on every tick. The book kept 0.06 AUSD of asks and every zap quote was refused. Takes are
+now limited to the six levels nearest the touch, halved again if an estimate still exceeds
+the ceiling, so stale bids are cleared over consecutive ticks.
+
+[V, 2026-10-11, after the fix] Ten minutes of `/v1/health` and `getL2Book` every 15 s with
+one live player heartbeat (13:46 to 13:56 UTC): 42/42 samples green at x20, ticks 2 to 12,
+actions 36 hold / 5 quote / 1 sell, zero `lastError`, zero ask-depth or gas-budget errors,
+gas reserved 1.886 to 2.406 MON of the 10 MON cap. Asks held 2.67 to 2.71 AUSD (about 5.3
+AUSD fundable, every sample above the 2 AUSD largest fixed preset); bids 6.7 to 11.1 AUSD.
+The same window before the fix had the 2,478,352 error and asks as low as 0.06 AUSD.
+
+[V, 2026-10-11] Real TESTNET player path against this worker and book, driven through the
+web chain modules with a disposable key (`0x63d70FE36a940f6a786F2B22a0613A001401D75C`).
+Gate PLAYABLE/live/honeypot-clean, source fresh at x20. 2 AUSD WIDE, 8 levels; book before
+the zap 2.63 AUSD asks / 7.53 AUSD bids. Every receipt succeeded:
+
+| Step | Block | Transaction |
+| --- | --- | --- |
+| Drip MON (public HTTPS) | | `0xe708bc2af24f6027e9febd411085c55aa680bcaab0fcaeb7a61e9a2ce584fab7` |
+| Drip AUSD | | `0xf3aba14297feb90a2646277dbd124aa9970513feebb66f9eca4da63b200e927a` |
+| Disk save | 70124928 | `0xb9b9f88bebe3c065dd4295ce6da8499583fda2c9b458b579aead6084330c1be8` |
+| Approve AUSD | 70126667 | `0x5bab166bf1f32fd13a6ad9a531b6a0ad0cd16c8f44f753d7000d168cf69ccff3` |
+| Deposit AUSD | 70126679 | `0xebe64c831f8e4c4f355ffd2c4dc7be5d3de9fef70e7c9ce1237925cd5bb1ffc1` |
+| Zap MON to margin | 70126693 | `0x659ae9f70e2311b623a06b30fdbacd7d6f0a7727554cf97843029e19f2775a1e` |
+| Provision flip ladder | 70126711 | `0x6476020a622fa4acaa870d963480f1da232b94b3ebceb0da48e457a8a4c6dc08` |
+| Cancel linked flips | 70128943 | `0x46aed4045434eb78fa5d337d2929ef373b32a930d3c9f38f2c20e2a3dd6e4d0e` |
+| Withdraw margin | 70128998 | `0x9a5531c42259d0631cbfa9baff94f7fe7c71089e225c6bd7a40249d9d9774b6e` |
+
+Over 11 minutes the indexed reader saw 4 fills (mirror `sell` then `buy` through the
+ladder), last SCORE 0.0025 / DAMAGE 0.0061 AUSD TESTNET; the exit left no orders or margin.
+Player gas was 0.469 MON. The first quote right after idle was refused (asks fund 0.55 AUSD)
+until the first heartbeat tick re-quoted the ladder. The browser shell was replaced (raw
+key, not a Mera passkey; the Origin header the page sends) and the store's mid-run saves
+were not made: this is chain-path proof, not physical-phone or flawless end-to-end play.
+
+### Updating worker source
+
+Copy only the changed files to `/tmp/mb-deploy/apps/worker/...`, back the current copies
+up under `/opt/monadboy/deploy-backups/<name>/` (root, 0700), then install them as
+`monadboy` and restart:
+
+```sh
+cd /tmp
+sudo install -o monadboy -g monadboy -m 0664 /tmp/mb-deploy/apps/worker/src/chain/<file>.ts \
+  /opt/monadboy/apps/worker/src/chain/<file>.ts
+sudo systemctl restart monadboy-worker
+```
+
+Compare `sha256sum` of the deployed files with the commit first and again after install,
+then read public health. A restart resets in-memory mirror counters, not the gas ledger.
+
 ## Validation record
 
 **[V, 2026-10-08 target]** Worker unit and health service/timer validated against

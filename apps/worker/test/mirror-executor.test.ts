@@ -40,6 +40,7 @@ function fakeChain({ base = 300, quote = 10 }: { base?: number; quote?: number }
   }
   const atPrice = (price: number, isBuy: boolean) =>
     [...orders].filter(([, o]) => o.price === price && o.isBuy === isBuy).map(([id]) => id)
+  const bidsBestFirst = () => [...orders].filter(([, o]) => o.isBuy).sort((a, b) => b[1].price - a[1].price)
   const l2 = () => {
     const word = (v: bigint | number) => BigInt(v).toString(16).padStart(64, '0')
     const side = (isBuy: boolean) => {
@@ -113,6 +114,18 @@ function fakeChain({ base = 300, quote = 10 }: { base?: number; quote?: number }
         if (cost <= quoteLeft) { orders.delete(id); quoteLeft -= cost; free.base += o.size * 10n ** 8n }
         else { const take = quoteLeft * 1000000000000n / BigInt(o.price); o.size -= take; quoteLeft = 0n; free.base += take * 10n ** 8n }
       }
+    } else if (call.functionName === 'placeAndExecuteMarketSell') {
+      // Walk bids from the highest, the bot's own included.
+      let baseLeft = BigInt(call.args[0] as bigint)
+      for (const [id, o] of bidsBestFirst()) {
+        if (baseLeft <= 0n) break
+        const fill = o.size < baseLeft ? o.size : baseLeft
+        o.size -= fill
+        baseLeft -= fill
+        free.quote += fill * BigInt(o.price) / 1000000000000n
+        if (o.size === 0n) orders.delete(id)
+      }
+      free.base -= (BigInt(call.args[0] as bigint) - baseLeft) * 10n ** 8n
     }
     logs.set(hash, created)
     block += 3n
@@ -126,7 +139,7 @@ function fakeChain({ base = 300, quote = 10 }: { base?: number; quote?: number }
     },
     wallet: { writeContract: async (call: Call) => write(call) },
   } as unknown as Treasury
-  return { client, treasury, orders, sends, free, place, selfMatched }
+  return { client, treasury, orders, sends, free, place, selfMatched, bidsBestFirst }
 }
 
 function executorFor(chain: ReturnType<typeof fakeChain>, db = memoryDb(), extra: Partial<Parameters<typeof createMirrorExecutor>[0]> = {}) {
@@ -220,6 +233,66 @@ test('a player ask below the target is taken between two batches, self-matching 
   expect([...chain.orders.values()].some((o) => o.owner === OTHER)).toBe(false)
   expect(Number(chain.selfMatched.quote) / 1e6).toBeLessThanOrEqual(outcome.notional * 0.003)
   expect(Math.max(...ownSide(chain, true).map((o) => o.price)) / 1e8).toBeGreaterThan(0.0302)
+  db.close()
+})
+
+// Each order a market sell fills costs gas, like Kuru: 200k base plus 170k per filled order puts
+// twelve filled flip bids at about 2.25M, the real 2026-10-11 estimate that the 2M ceiling refused.
+function gasPerFill(chain: ReturnType<typeof fakeChain>, limits: bigint[]) {
+  return {
+    ...chain.client,
+    estimateContractGas: async ({ functionName, args }: Call) => {
+      if (functionName !== 'placeAndExecuteMarketSell') return 500000n
+      let left = BigInt(args[0] as bigint)
+      let filled = 0n
+      for (const [, o] of chain.bidsBestFirst()) {
+        if (left <= 0n) break
+        left -= o.size
+        filled++
+      }
+      const estimate = 200000n + 170000n * filled
+      limits.push((estimate * 110n + 99n) / 100n)
+      return estimate
+    },
+  } as unknown as PublicClient
+}
+
+test('stale player bids above the target are taken a gas-bounded slice per tick until asks return', async () => {
+  const chain = fakeChain()
+  // Twelve one-order player flip bids between 0.0317 and 0.0336 (the live book), target 0.0308.
+  for (let i = 0; i < 12; i++) chain.place(OTHER, units(0.0336 - i * 0.00017), 18500000000n, true)
+  const limits: bigint[] = []
+  const client = gasPerFill(chain, limits)
+  const { db, executor } = executorFor({ ...chain, client }, memoryDb(), { client })
+  const external = () => [...chain.orders.values()].filter((o) => o.owner === OTHER && o.price > units(0.0308)).length
+
+  const first = await executor.execute(0.0308, () => {})
+  expect(first).toMatchObject({ kind: 'sell', reason: 'above-target' })
+  expect(limits.every((limit) => limit <= 2000000n)).toBe(true)
+  expect(external()).toBeLessThanOrEqual(6)
+
+  await executor.execute(0.0308, () => {})
+  expect(external()).toBe(0)
+  expect(limits.every((limit) => limit <= 2000000n)).toBe(true)
+  // With the way clear the ask side is back, deep enough to fund the largest preset.
+  expect(askDepthWithin(chain, 0.0308, 0.02)).toBeGreaterThanOrEqual(PRESET)
+  db.close()
+})
+
+test('a take that still exceeds the gas ceiling is halved before anything is signed', async () => {
+  const chain = fakeChain()
+  // Six levels of three orders each: six levels and then three still exceed the 2M ceiling.
+  for (let i = 0; i < 6; i++)
+    for (let j = 0; j < 3; j++) chain.place(OTHER, units(0.0336 - i * 0.0003), 18500000000n, true)
+  const limits: bigint[] = []
+  const client = gasPerFill(chain, limits)
+  const { db, executor } = executorFor({ ...chain, client }, memoryDb(), { client })
+  const outcome = await executor.execute(0.0308, () => {})
+  expect(outcome).toMatchObject({ kind: 'sell' })
+  const sells = chain.sends.filter((call) => call.functionName === 'placeAndExecuteMarketSell')
+  expect(sells).toHaveLength(1)
+  expect(limits.filter((limit) => limit > 2000000n)).toHaveLength(2)
+  expect(limits.at(-1)! <= 2000000n).toBe(true)
   db.close()
 })
 

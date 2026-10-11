@@ -139,22 +139,34 @@ export function planMirrorLadder(input: {
   return { cancel: [...required, ...optional], ...placed }
 }
 
+// [V] 2026-10-11, chain 10143: a market sell through twelve one-order flip bid levels estimated
+// about 2.25M gas (2,478,352 declared with headroom), over the 2M market-order ceiling, so every
+// tick refused it and the asks it was clearing the way for never returned. Six levels fit with
+// room for a flip fill's extra placement; the executor halves this again if an estimate still
+// exceeds the ceiling (several orders can share one price level).
+export const MIRROR_TAKE_LEVELS = 6
+
 /**
  * Other makers' liquidity on the wrong side of the target: asks below it are bought, bids above
- * it are sold into. This is how player orders fill. Returns null when nothing (or only dust
- * below one minimum order) is in the way.
+ * it are sold into. This is how player orders fill. Only the `levels` nearest the touch are
+ * taken in one order; later ticks take the rest. Returns null when nothing (or only dust below
+ * one minimum order) is in the way.
  */
 export function planTake(input: {
   target: number
   params: MarketParams
   own: readonly OwnOrder[]
   book: L2Units
+  levels?: number
 }): { side: 'buy'; quote: number } | { side: 'sell'; base: number } | null {
-  const { target, params: p } = input
+  const { target, params: p, levels = MIRROR_TAKE_LEVELS } = input
   const external = externalLevels(input.book, input.own)
   const price = (units: bigint) => Number(units) / Number(p.pricePrecision)
+  // Nearest the touch first: the cheapest asks and the highest bids.
   const asks = external.asks.filter((level) => price(level.price) < target)
+    .sort((a, b) => (a.price < b.price ? -1 : 1)).slice(0, levels)
   const bids = external.bids.filter((level) => price(level.price) > target)
+    .sort((a, b) => (a.price > b.price ? -1 : 1)).slice(0, levels)
   const askSize = asks.reduce((sum, level) => sum + level.size, 0n)
   const bidSize = bids.reduce((sum, level) => sum + level.size, 0n)
   // Over-take by 0.2%: float-to-unit rounding must never leave a crossing remainder that blocks

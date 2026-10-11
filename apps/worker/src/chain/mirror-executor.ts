@@ -14,7 +14,7 @@ import type { Treasury } from './treasury'
 import { readActiveOrder } from './active-order'
 import type { GasBudget } from './gas-budget'
 import { decodeL2Units } from './l2-book'
-import { MIRROR_LEVELS, planMirrorLadder, planTake } from './mirror-ladder'
+import { MIRROR_LEVELS, MIRROR_TAKE_LEVELS, planMirrorLadder, planTake } from './mirror-ladder'
 import type { LadderPlan, OwnOrder } from './mirror-ladder'
 import type { L2Units } from './l2-book'
 
@@ -29,6 +29,9 @@ export type MirrorGas = { marketOrder: bigint; batchUpdate: bigint }
 
 // Declared gas limit as a percentage of a fresh estimate (see sendChecked).
 const GAS_HEADROOM_PERCENT = 110n
+
+// Refused before any reservation or signature: nothing was sent.
+class GasCeilingError extends Error {}
 
 // S2 proved margin input/output and book-scaled quote input. Simulate and estimate each
 // shape before signing: a passive refresh can cross a still-resting third-party bid/ask.
@@ -104,7 +107,7 @@ export function createMirrorExecutor({
       // estimator also avoids the native-payout anomaly observed in S2.
       const estimate = await client.estimateContractGas({ ...call, gas: ceiling })
       const limit = (estimate * GAS_HEADROOM_PERCENT + 99n) / 100n
-      if (limit > ceiling) throw new Error(`Mirror gas budget exceeded: ${limit} > ${ceiling}`)
+      if (limit > ceiling) throw new GasCeilingError(`Mirror gas budget exceeded: ${limit} > ${ceiling}`)
       const fees = budget ? await client.estimateFeesPerGas({ chain: undefined, type: 'eip1559' }) : undefined
       await assertSource()
       assertActive?.()
@@ -211,12 +214,13 @@ export function createMirrorExecutor({
         const first = await reconcile(view, targetMid, assertSource)
         if (first) hashes.push(first)
         center = targetMid
-        let take = planTake({ target: targetMid, params: view.p, own: view.own, book: view.book })
+        let levels = MIRROR_TAKE_LEVELS
+        let take = planTake({ target: targetMid, params: view.p, own: view.own, book: view.book, levels })
         // Another maker's order sits on the wrong side of the target (a player's ladder). With
         // the bot's own crossed quotes gone in that batch, take it so the book walks to target.
         if (take && first) {
           view = await observe()
-          take = planTake({ target: targetMid, params: view.p, own: view.own, book: view.book })
+          take = planTake({ target: targetMid, params: view.p, own: view.own, book: view.book, levels })
         }
         if (!take)
           return {
@@ -227,24 +231,38 @@ export function createMirrorExecutor({
           }
         const p = view.p
         const minimum = Number(p.minSize) / Number(p.sizePrecision)
-        const notional = take.side === 'buy'
-          ? Math.min(take.quote, maxTakeNotional, view.free.quote)
-          : Math.min(take.base, maxTakeNotional / targetMid, view.free.base) * targetMid
-        if (notional < minimum * targetMid)
-          return { kind: first ? 'quote' : 'hold', reason: 'take-unfunded', notional: 0, hashes }
-        hashes.push(await sendChecked({
-          address: market.address,
-          abi: kuruOrderbookAbi,
-          ...(take.side === 'buy'
-            ? { functionName: 'placeAndExecuteMarketBuy', args: [quoteToUnits(notional, p), 0n, true, false] } as const
-            : { functionName: 'placeAndExecuteMarketSell', args: [sizeToUnits(notional / targetMid, p), 0n, true, false] } as const),
-        }, gas.marketOrder, assertSource))
+        let notional = 0
+        let side = take.side
+        // Each filled order costs gas: take fewer levels until one market order fits its ceiling.
+        for (;;) {
+          if (!take) return { kind: first ? 'quote' : 'hold', reason: 'take-unfunded', notional: 0, hashes }
+          side = take.side
+          notional = take.side === 'buy'
+            ? Math.min(take.quote, maxTakeNotional, view.free.quote)
+            : Math.min(take.base, maxTakeNotional / targetMid, view.free.base) * targetMid
+          if (notional < minimum * targetMid)
+            return { kind: first ? 'quote' : 'hold', reason: 'take-unfunded', notional: 0, hashes }
+          try {
+            hashes.push(await sendChecked({
+              address: market.address,
+              abi: kuruOrderbookAbi,
+              ...(take.side === 'buy'
+                ? { functionName: 'placeAndExecuteMarketBuy', args: [quoteToUnits(notional, p), 0n, true, false] } as const
+                : { functionName: 'placeAndExecuteMarketSell', args: [sizeToUnits(notional / targetMid, p), 0n, true, false] } as const),
+            }, gas.marketOrder, assertSource))
+            break
+          } catch (error) {
+            if (!(error instanceof GasCeilingError) || levels === 1) throw error
+            levels = Math.floor(levels / 2)
+            take = planTake({ target: targetMid, params: p, own: view.own, book: view.book, levels })
+          }
+        }
         // Now that the way is clear, place the rungs the first batch had to skip.
         const second = await reconcile(await observe(), targetMid, assertSource)
         if (second) hashes.push(second)
         return {
-          kind: take.side,
-          reason: take.side === 'buy' ? 'below-target' : 'above-target',
+          kind: side,
+          reason: side === 'buy' ? 'below-target' : 'above-target',
           notional,
           hashes,
         }
