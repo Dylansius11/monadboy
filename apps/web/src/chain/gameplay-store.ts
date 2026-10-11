@@ -7,7 +7,6 @@ import {
   mainnetProfile,
   measuredTestnetGas,
   openDisk,
-  planLadder,
   testnetMarkets,
 } from '@monadboy/sdk'
 import { formatUnits } from 'viem'
@@ -21,6 +20,8 @@ import {
 } from './config'
 import { createViemChain, saveDisk, verifyRegistry } from './registry'
 import { createPositionReader } from './gameplay'
+import { suggestLadder } from './range-suggestion'
+import type { RangeNote } from './range-suggestion'
 import { delay, gameplayClient } from './sender'
 import {
   cancelAndWithdraw,
@@ -76,6 +77,8 @@ export type GameplayState = {
   result: ActualExit | null
   allowed: boolean
   gateReason: string | null
+  /** Set with the quote when the suggestion stretched to cover a source target away from the book. */
+  rangeNote?: RangeNote | null
 }
 const EMPTY: GameplayState = {
   status: 'idle',
@@ -372,7 +375,7 @@ export function createGameplayController() {
   async function quote() {
     const active = session
     if (!active || store.getState().busy) return
-    store.setState({ busy: true, error: null, quote: null })
+    store.setState({ busy: true, error: null, quote: null, rangeNote: null })
     try {
       await refresh()
       active.lease.assertLive()
@@ -395,13 +398,14 @@ export function createGameplayController() {
         throw new Error(
           'Observed volatility is unavailable. Enter an explicit manual range; no width suggestion is invented.',
         )
-      const ladder = planLadder({
+      const { ladder, note: rangeNote } = suggestLadder({
         mid,
         mode: state.width === 'wide' ? 'WIDE' : 'TIGHT',
         budgetQuote: state.amount,
         sigmaDaily: (state.sigmaDaily ?? 0) * state.demoMultiplier,
         params: active.market.params,
         manual: state.manual ?? undefined,
+        target: state.sourceMid,
       })
       const funding = await quoteFunding(
         active.client,
@@ -419,7 +423,7 @@ export function createGameplayController() {
         throw new Error(
           `Not enough TESTNET MON for gas to enter AND exit: need about ${needMon.toFixed(3)} MON, have ${position.walletBase.toFixed(3)} MON. No funds moved.`,
         )
-      store.setState({ quote: funding })
+      store.setState({ quote: funding, rangeNote })
     } catch (error) {
       if (session === active) store.setState({ error: errorCopy(error) })
     } finally {

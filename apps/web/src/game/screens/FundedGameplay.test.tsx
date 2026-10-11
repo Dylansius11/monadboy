@@ -319,3 +319,16 @@ it('an exit with nothing on the book and no fills is an aborted run with funds r
   expect(screen.queryByText('Funds returned')).not.toBeInTheDocument()
   expect(screen.getAllByText('Unavailable')).toHaveLength(3)
 })
+
+it('a quote that stretched to cover the DEMO target says so on Set Range, and says nothing otherwise', () => {
+  const state = actualRead()
+  state.position!.orders = []
+  state.demoMultiplier = 20
+  state.quote = quoted(state)
+  const plain = renderScreen(<FundedRange state={state} actions={actions()} />)
+  expect(screen.queryByText(/catching up to the/)).toBeNull()
+  plain.unmount()
+  state.rangeNote = 'COVERS_TARGET'
+  renderScreen(<FundedRange state={state} actions={actions()} />)
+  expect(screen.getByText('TESTNET book is catching up to the DEMO target; range stretched to cover both.')).toBeInTheDocument()
+})

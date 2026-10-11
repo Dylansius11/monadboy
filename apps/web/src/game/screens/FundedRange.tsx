@@ -202,6 +202,9 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
           </div>
           <PixelText role="micro" tone="dim">Book mid {mid === null ? 'unavailable' : price(mid)}{quote && <> · {(quote.ladder.step * 100).toFixed(2)}% steps · {quote.ladder.levels}+{quote.ladder.levels} levels</>}</PixelText>
           {quote?.ladder.clamped && <PixelText role="micro" tone="loss" as="p">Capped by depth or minimum order size. These are the actual edges.</PixelText>}
+          {quote && state.rangeNote && <PixelText role="micro" as="p">{state.rangeNote === 'COVERS_TARGET'
+            ? `TESTNET book is catching up to the ${state.demoMultiplier > 1 ? 'DEMO target' : 'mainnet price'}; range stretched to cover both.`
+            : `TESTNET book is far from the ${state.demoMultiplier > 1 ? 'DEMO target' : 'mainnet price'}; range stretched as far as the ladder allows and does not reach it.`}</PixelText>}
         </section>}
         {quote && <section className="funded-card funded-hold">
           <div className="funded-card-head">
