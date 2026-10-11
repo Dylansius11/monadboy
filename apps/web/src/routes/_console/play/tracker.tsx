@@ -6,6 +6,7 @@ import { ReadState } from '../../../game/screens/ReadState'
 import { FIXTURE_PROVENANCE } from '../../../game/data/provenance'
 import { toTrackerSnapshot } from '../../../game/data/tracker'
 import { fixtureGates, scoredPools } from '../../../game/fixtures'
+import { nextPlayableTier } from '../../../game/eligibility'
 import { ageNowMs, useNow, useTrackerRead } from '../../../lib/worker/queries'
 import { useSession } from '../../../state/session'
 import type { ReadView } from '../../../lib/worker/queries'
@@ -29,9 +30,13 @@ function Tracker() {
 
 function FixtureTracker() {
   const navigate = useNavigate()
-  const { difficulty, godMode, characterId } = useSession()
+  const { difficulty, godMode, characterId, chooseDifficulty } = useSession()
   const pools = useMemo(
     () => scoredPools(difficulty, godMode),
+    [difficulty, godMode],
+  )
+  const looserTier = useMemo(
+    () => nextPlayableTier(difficulty, (tier) => scoredPools(tier, godMode)),
     [difficulty, godMode],
   )
 
@@ -41,6 +46,13 @@ function FixtureTracker() {
       characterId={characterId}
       gates={fixtureGates(difficulty)}
       provenance={FIXTURE_PROVENANCE}
+      looserTier={looserTier}
+      // A tier is chosen where tiers are chosen: S4 opens with its cursor on
+      // the offered one, and its A stays the single confirm.
+      onTryTier={(tier) => {
+        chooseDifficulty(tier, godMode)
+        navigate({ to: '/play/difficulty' })
+      }}
       onPlayPool={(pairAddress) => {
         navigate({ to: '/play/range/$id', params: { id: pairAddress } })
       }}
@@ -68,7 +80,7 @@ function WorkerTrackerReady({
   onBack: () => void
 }) {
   const navigate = useNavigate()
-  const { difficulty, godMode, characterId } = useSession()
+  const { difficulty, godMode, characterId, chooseDifficulty } = useSession()
   const now = useNow(15_000)
   const { data, receivedAt, refreshError, offline } = view
   const ageMs = ageNowMs(data.ageMs, receivedAt, now)
@@ -89,7 +101,13 @@ function WorkerTrackerReady({
       }),
     [data, difficulty, godMode, ageMs, notes],
   )
-
+  // The same read under each looser tier's gates: an offer to switch is made
+  // only when that tier would actually admit a playable TESTNET market.
+  const looserTier = useMemo(
+    () => nextPlayableTier(difficulty, (tier) =>
+      toTrackerSnapshot(data, { difficulty: tier, godMode, ageMs }).pools),
+    [data, difficulty, godMode, ageMs],
+  )
   if (data.status === 'offline' || snapshot.pools.length === 0) {
     return (
       <ReadState
@@ -111,6 +129,13 @@ function WorkerTrackerReady({
       characterId={characterId}
       gates={snapshot.gates}
       provenance={snapshot.provenance}
+      looserTier={looserTier}
+      // The live tier is saved to the disk, so S4 confirms it, with its
+      // cursor already on the offered tier.
+      onTryTier={(tier) => {
+        chooseDifficulty(tier, godMode)
+        navigate({ to: '/play/difficulty' })
+      }}
       onPlayPool={(pairAddress) => {
         navigate({ to: '/play/range/$id', params: { id: pairAddress } })
       }}

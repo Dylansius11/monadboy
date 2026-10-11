@@ -146,8 +146,9 @@ describe('the map draws the filter working', () => {
   it('renders every pool, filtered-out included, not just the passing ones', () => {
     const { container } = renderTracker()
 
+    // Every pool on the plot, five legend pins and the selected pool's card.
     expect(container.querySelectorAll('[role="img"]').length).toBe(
-      THREE_POOLS.length + 4,
+      THREE_POOLS.length + 6,
     )
 
   })
@@ -232,14 +233,31 @@ describe('missing data, Gate 2.4', () => {
     expect(onBack).toHaveBeenCalledTimes(1)
   })
 
-  it('points an empty EASY map at the looser tiers and names why the pool failed', () => {
-    const { getByText, queryByText } = renderTracker({
+  it('offers the looser tier the read would admit, on A, and names why the pool failed', () => {
+    const onTryTier = vi.fn()
+    const { getByText, getByRole, queryByText } = renderTracker({
       pools: [scoredPool({ failures: ['tvl-too-low'] })],
+      looserTier: 'normal',
+      onTryTier,
     })
 
-    expect(getByText(/NORMAL and HARD let more pools through/)).toBeInTheDocument()
+    expect(getByText(/MOYAKI · NORMAL lets a playable TESTNET market through/)).toBeInTheDocument()
+    expect(getByRole('button', { name: 'A Try MOYAKI' })).toBeInTheDocument()
     expect(queryByText(/easier tier/i)).not.toBeInTheDocument()
     expect(getByText(GATE_COPY['tvl-too-low'])).toBeInTheDocument()
+    press('A')
+    expect(onTryTier).toHaveBeenCalledExactlyOnceWith('normal')
+  })
+
+  it('offers no tier when no looser one would admit a playable market', () => {
+    const { getByText, queryByRole } = renderTracker({
+      pools: [scoredPool({ failures: ['tvl-too-low'] })],
+      looserTier: null,
+      onTryTier: vi.fn(),
+    })
+
+    expect(getByText(/No looser tier admits a playable TESTNET market/)).toBeInTheDocument()
+    expect(queryByRole('button', { name: /^A / })).not.toBeInTheDocument()
   })
 
   it('does not send a HARD player to a looser tier that does not exist', () => {
@@ -367,7 +385,7 @@ describe('zoom', () => {
 describe('the worst pool still shows its controls', () => {
   it('keeps the footer on screen when a pool fails every gate', () => {
 
-    const { getByText } = renderTracker({
+    const { getByText, getByRole } = renderTracker({
       pools: [
         scoredPool({
           score: { safety: 7, heat: 95 },
@@ -385,8 +403,9 @@ describe('the worst pool still shows its controls', () => {
     press('A')
 
     expect(getByText(/Too hot for this difficulty/)).toBeInTheDocument()
-    expect(getByText(/Locked by the checks above/i)).toBeInTheDocument()
-    expect(getByText(/B Back to map/i)).toBeInTheDocument()
+    expect(getByText(/^Locked by filter$/i)).toBeInTheDocument()
+    expect(getByRole('button', { name: 'A Play' })).toBeDisabled()
+    expect(getByRole('button', { name: 'B Map' })).toBeInTheDocument()
   })
 
   it('absorbs the overflow in the failure list, not in the footer', () => {
@@ -444,21 +463,30 @@ describe('fixture source and deployment boundaries', () => {
     return entry
   }
 
+  it('opens with the cursor on the playable TESTNET pool, marked by its own pin shape', () => {
+    const entry = playable()
+    const { container, getByText } = renderTracker({ pools: [PASSING_LOW, FILTERED_DEGRADED, entry] })
+    expect(getByText(/^Playable · Testnet$/i)).toBeInTheDocument()
+    const plotted = Array.from(container.querySelectorAll('.tracker-plot [role="img"]'))
+    expect(plotted.filter((pin) => pin.getAttribute('aria-label')?.endsWith(' playable'))).toHaveLength(1)
+  })
+
   it('starts a passing TESTNET pool only after inspecting it', () => {
     const entry = playable()
     const { getByText, onPlayPool } = renderTracker({ pools: [entry] })
-    expect(getByText(/FIXTURE source.*fallback.*Not live/)).toBeInTheDocument()
+    expect(getByText(/^Sample data · not live$/i)).toBeInTheDocument()
     press('A')
     expect(onPlayPool).not.toHaveBeenCalled()
-    expect(getByText(/PLAYABLE \(TESTNET\)/)).toBeInTheDocument()
+    expect(getByText(/FIXTURE source.*fallback.*Not live/)).toBeInTheDocument()
+    expect(getByText(/^Playable · Testnet$/i)).toBeInTheDocument()
     press('A')
     expect(onPlayPool).toHaveBeenCalledExactlyOnceWith(entry.pool.pairAddress)
   })
 
   it('keeps passing mainnet pools inspectable but never starts a run there', () => {
-    const { getAllByText, onPlayPool } = renderTracker()
+    const { getByText, onPlayPool } = renderTracker()
     press('A')
-    expect(getAllByText(/MAINNET ONLY/)).toHaveLength(2)
+    expect(getByText(/^Mainnet · read only$/i)).toBeInTheDocument()
     press('A')
     expect(onPlayPool).not.toHaveBeenCalled()
   })
@@ -468,12 +496,13 @@ describe('fixture source and deployment boundaries', () => {
     const empty = pools.find((entry) => entry.network === 'mainnet' && entry.pool.tokenY.symbol === 'AUSD')
     if (!empty) throw new Error('missing MON/AUSD fixture')
     const { getByText, onPlayPool } = renderTracker({
-      pools: [empty, ...pools.filter((entry) => entry !== empty)],
+      // Without the playable pool, so the cursor opens on the empty book.
+      pools: [empty, ...pools.filter((entry) => entry !== empty && entry.network !== 'testnet')],
       characterId: 'mouch',
       gates: fixtureGates('hard'),
     })
     press('A')
-    expect(getByText(/Thin book.*MAINNET ONLY/)).toBeInTheDocument()
+    expect(getByText(/^Thin book · /)).toBeInTheDocument()
     expect(getByText(GATE_COPY.honeypot)).toBeInTheDocument()
     press('A')
     expect(onPlayPool).not.toHaveBeenCalled()
@@ -488,9 +517,9 @@ describe('fixture source and deployment boundaries', () => {
 
   it('blocks a two-sided passing mainnet MON/AUSD book rather than trusting its symbols', () => {
     const entry = { ...playable(), network: 'mainnet' as const }
-    const { getAllByText, onPlayPool } = renderTracker({ pools: [entry] })
+    const { getByText, onPlayPool } = renderTracker({ pools: [entry] })
     press('A')
-    expect(getAllByText(/MAINNET ONLY/)).toHaveLength(2)
+    expect(getByText(/^Mainnet · read only$/i)).toBeInTheDocument()
     press('A')
     expect(onPlayPool).not.toHaveBeenCalled()
   })
@@ -538,9 +567,11 @@ describe('a worker read says it is one', () => {
 
   it('prints its source, snapshot time, age and gaps, and never the fixture label', () => {
     const { getByText, queryByText } = renderTracker({ pools: [workerPool()], provenance: worker })
-    expect(getByText(/kuru-mainnet \(mainnet, read only\) · taken 2026-10-06 12:00 UTC · 5m 00s old · PARTIAL/)).toBeInTheDocument()
+    expect(getByText(/^kuru-mainnet · 5m 00s old · PARTIAL$/)).toBeInTheDocument()
     expect(getByText(/24h trade history is incomplete/)).toBeInTheDocument()
     expect(queryByText(/fixture/i)).not.toBeInTheDocument()
+    press('A')
+    expect(getByText(/kuru-mainnet \(mainnet, read only\) · taken 2026-10-06 12:00 UTC · 5m 00s old · PARTIAL/)).toBeInTheDocument()
   })
 
   it('measures pool age from the snapshot clock and invents no fee estimate', () => {

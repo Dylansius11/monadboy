@@ -140,22 +140,18 @@
   .godmode-gate button { width: 44px; height: 44px; }
   .difficulty-body > [role='option'] { min-height: 44px; }
 
-  .tracker-header { grid-template-columns: 1fr auto; gap: 4px; }
-  .tracker-header > span:first-of-type { grid-column: 1; grid-row: 2; text-align: left; }
-  .tracker-header > span:last-child { grid-column: 2; grid-row: 1 / 3; align-self: center; }
   .tracker-map { gap: 8px; }
   .tracker-map-region { flex: 1; min-height: 96px; }
   .tracker-plot { height: 100% !important; }
   .tracker-map-tools { padding: 0; gap: 8px; }
   .tracker-map-tools > span { flex: 1; }
   .tracker-map-tools > div { flex: none; }
-  .tracker-map-tools > div > span:last-child { display: none; }
   .tracker-zoom { width: 44px; height: 44px; }
   .tracker-map-legend { padding: 0; gap: 4px 12px; flex-wrap: wrap; }
   .tracker-selection { display: flex; flex-direction: column; gap: 4px; }
   .tracker-inspect { gap: 8px; overflow-y: auto; }
   .tracker-inspect > * { flex-shrink: 0; }
-  .tracker-pair { flex-wrap: wrap; gap: 8px; }
+  .tracker-pair { gap: 4px; }
   .tracker-facts { padding: 8px 0; gap: 8px; }
   .tracker-fact { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
   .tracker-fact > span { width: auto; }
@@ -215,9 +211,9 @@
     .difficulty-body { gap: 8px; }
     .difficulty-gates > div { min-height: 16px; }
     .tracker-selection { padding: 4px 8px; }
-    .tracker-selection > div { display: none; }
+    .tracker-selection-facts { display: none !important; }
     .tracker-map { gap: 4px; }
-    .screen-tracker { padding: 8px; gap: 4px; }
+    .screen-tracker { gap: 4px; }
     .tracker-map-region { min-height: 80px; }
     .memory-art .card-insert > div { height: 136px; }
     .screen-results { gap: 4px; }

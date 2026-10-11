@@ -155,16 +155,17 @@ const GUIDES: Record<string, ScreenGuide> = {
     summary:
       'Choose a pool on the worker’s map: Safety runs left to right, Heat bottom to top.',
     keys: [
-      ['D-pad or tap a pin', 'Select a pool.'],
+      ['D-pad or tap a pin', 'Select a pool. A reticle marks a playable TESTNET market.'],
       [
         'A',
         'Open details; A in details plays only an executable TESTNET pool.',
       ],
       ['SELECT', 'Cycle the three map zoom levels.'],
       ['B', 'Close details, or return to difficulty.'],
+      ['A when nothing passed', 'Open the nearest looser tier that would admit a playable TESTNET market on this read, to confirm there.'],
     ],
     notes: [
-      'MAINNET READ ONLY, thin books and failed filters cannot be played. EASY filters hardest; if nothing passes, go back and pick NORMAL or HARD.',
+      'MAINNET READ ONLY, thin books and failed filters cannot be played. EASY filters hardest; when nothing passes, the screen names the looser tier that would let a playable market through, if any does.',
       'Source and age describe the worker read. Offline or missing markets stay unavailable; no fixture map is substituted.',
     ],
   },

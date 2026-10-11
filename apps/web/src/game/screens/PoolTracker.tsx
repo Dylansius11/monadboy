@@ -3,17 +3,17 @@ import { useConsoleIntent } from '../../console/useConsoleInput'
 import { characterQuotes, characters } from '../../config/brand'
 import { GATE_COPY, UNVERIFIED_COPY } from '@monadboy/sdk'
 import { ageInDays, compactUsd } from '../../lib/format'
-import { provenanceBadge, provenanceLine } from '../data/provenance'
+import { provenanceBadge, provenanceLine, provenanceShort } from '../data/provenance'
 import { isBookThin, isExecutable, isTestnet } from '../eligibility'
 import { nextPin, panFor, riskBand, scoreToPosition } from '../map'
 import { BAND_FILL, WorldMap } from '../WorldMap'
 import { MapPin, PIN_SIZE, PIN_SIZE_SELECTED } from '../MapPin'
-import { Meter, Panel, PixelText, Sprite } from '../../ui'
+import { KeyHints, Meter, PixelText, Sprite } from '../../ui'
 import type { ReactNode } from 'react'
 import type { CharacterId } from '../../config/brand'
 import type { TrackerPool, TrackerProvenance } from '../data/types'
 import type { CursorDirection } from '../map'
-import type { GateSet } from '../../types/domain'
+import type { Difficulty, GateSet } from '../../types/domain'
 
 /**
  * S5, the pool tracker.
@@ -36,8 +36,21 @@ export interface PoolTrackerProps {
   /** Where `pools` came from and how old it is. Required, so no caller can
    * show a set of pools without saying what it is. */
   provenance: TrackerProvenance
+  /** The nearest looser tier whose own gates, applied to this same read, would
+   * admit a playable TESTNET market. Null when none would. The route decides
+   * it from the data; this screen only offers it when nothing passed. */
+  looserTier?: Difficulty | null
+  onTryTier?: (tier: Difficulty) => void
   onPlayPool: (pairAddress: string) => void
   onBack: () => void
+}
+
+/** The Monanimal tied to each tier. Kept local, as Difficulty.tsx and
+ * DiskSelect.tsx keep theirs: the binding is fixed. */
+const CHARACTER_BY_DIFFICULTY: Record<Difficulty, CharacterId> = {
+  easy: 'molandak',
+  normal: 'moyaki',
+  hard: 'mouch',
 }
 
 /**
@@ -99,16 +112,45 @@ const DIRECTIONS: ReadonlySet<CursorDirection> = new Set([
   'RIGHT',
 ])
 
+/** Why a pool can or cannot start a run, in the order `isExecutable` asks. */
+function statusOf(entry: TrackerPool): string {
+  if (isExecutable(entry)) return 'Playable · Testnet'
+  if (!entry.passes) return 'Locked by filter'
+  if (entry.stale) return 'Stale read · read only'
+  if (!isTestnet(entry)) return 'Mainnet · read only'
+  return 'Book too thin'
+}
+
+/**
+ * The verdict on a pool, as a tag. PLAYABLE is the one answer the player is
+ * hunting for, so it is the one drawn inverted; every refusal is an outline
+ * that still says why.
+ */
+function PoolStatus({ entry }: { entry: TrackerPool }) {
+  const playable = isExecutable(entry)
+  return (
+    <span className={`tracker-status inline-flex shrink-0 items-center border px-1 ${playable ? 'border-ink bg-accent' : 'border-edge-soft'}`}>
+      <PixelText role="micro" tone={playable ? 'invert' : 'dim'} upper>
+        {statusOf(entry)}
+      </PixelText>
+    </span>
+  )
+}
+
 export function PoolTracker({
   pools,
   characterId,
   gates,
   provenance,
+  looserTier = null,
+  onTryTier,
   onPlayPool,
   onBack,
 }: PoolTrackerProps) {
   const [view, setView] = useState<'map' | 'inspect'>('map')
-  const [cursorIndex, setCursorIndex] = useState(0)
+  // The cursor opens on the market the player can actually play, when there
+  // is one: that is the pin this screen exists to find.
+  const [cursorIndex, setCursorIndex] = useState(() => Math.max(0, pools.findIndex(isExecutable)))
   const [zoomStep, setZoomStep] = useState(0)
   const zoom = ZOOM_LEVELS[zoomStep]
 
@@ -116,13 +158,15 @@ export function PoolTracker({
   const passing = pools.filter((p) => p.passes)
   const cursor = Math.max(0, Math.min(cursorIndex, pools.length - 1))
   const selected = pools[cursor]
+  const nextCharacter = looserTier ? characters[CHARACTER_BY_DIFFICULTY[looserTier]] : null
 
   useConsoleIntent((intent) => {
-    // The empty state only has one control. Handled first so the map and
+    // The empty state has its own two controls. Handled first so the map and
     // inspect branches below never have to think about an undefined
     // `selected`.
     if (passing.length === 0) {
       if (intent === 'B') onBack()
+      else if (intent === 'A' && looserTier && onTryTier) onTryTier(looserTier)
       return
     }
 
@@ -167,92 +211,106 @@ export function PoolTracker({
     }
   })
 
+  const header = (
+    <>
+      <div className="tracker-header flex items-baseline justify-between gap-2">
+        <div className="flex min-w-0 items-baseline gap-1">
+          <PixelText role="body" upper>
+            Pool tracker
+          </PixelText>
+          {/* The densest screen in the product and the one that reads most
+              like live market instrumentation. Whether it is a fixture or a
+              worker read is stated beside the title, every time. */}
+          <PixelText role="micro" tone="dim" upper>
+            {provenanceBadge(provenance)}
+          </PixelText>
+        </div>
+        <PixelText role="micro" upper className="tabular-nums">
+          {passing.length} passed
+        </PixelText>
+      </div>
+      <div className="tracker-subheader flex items-baseline justify-between gap-2">
+        <PixelText role="micro" tone="dim" upper className="shrink-0">
+          {character.label} · {character.tier}
+        </PixelText>
+        <PixelText role="micro" tone="dim" upper className="min-w-0 text-right">
+          {provenanceShort(provenance)}
+        </PixelText>
+      </div>
+      {provenance.notes.map((note) => (
+        <PixelText key={note} role="micro" tone="dim">
+          {note}
+        </PixelText>
+      ))}
+    </>
+  )
+
   // No spinner is a terminal state, and "the filter removed every pool" is
-  // exactly as real a state as "here is the map." Not a blank plot: a map
-  // with zero live pins looks like a bug, this looks like a sentence.
+  // exactly as real a state as "here is the map." The map still draws, every
+  // pin outside the shaded pass region, so the refusal is seen rather than
+  // read, and the card under it names the way forward when one exists.
   if (passing.length === 0) {
-    // EASY filters hardest, so "try an easier tier" would point the wrong way.
     // The playable pools come first: they are the ones another tier can open.
     const closest = [...pools]
       .sort((a, b) => Number(isTestnet(b)) - Number(isTestnet(a)) || a.gates.failures.length - b.gates.failures.length)
       .slice(0, 3)
     return (
-      <div className="bg-screen flex h-full w-full flex-col items-center justify-center gap-3 p-4">
-        <Panel className="flex w-full max-w-[34rem] flex-col gap-2">
-          <PixelText role="title" upper>
-            Nothing passed
-          </PixelText>
-          <PixelText role="micro" tone="dim" upper>
-            {provenanceLine(provenance)}
-          </PixelText>
-          <PixelText role="body">
+      <div className="screen-tracker bg-screen flex h-full w-full flex-col gap-1 p-2">
+        {header}
+        <div className="tracker-map flex min-h-0 flex-1 flex-col gap-1">
+          <Plot pools={pools} cursorIndex={null} gates={gates} zoom={1} />
+        </div>
+        <div className="tracker-empty border-edge bg-panel flex flex-col gap-1 border p-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <PixelText role="title" upper>
+              Nothing passed
+            </PixelText>
+            <PixelText role="micro" tone="dim" upper>
+              {character.tier} filter
+            </PixelText>
+          </div>
+          <PixelText as="p" role="body">
             {character.label}&apos;s {character.tier} filter removed every pool.{' '}
-            {character.tier === 'HARD'
-              ? 'HARD is already the loosest filter; nothing on the market passes right now.'
-              : character.tier === 'EASY'
-                ? 'EASY filters hardest. NORMAL and HARD let more pools through.'
-                : 'HARD lets more pools through.'}
+            {nextCharacter
+              ? `${nextCharacter.label} · ${nextCharacter.tier} lets a playable TESTNET market through.`
+              : character.tier === 'HARD'
+                ? 'HARD is already the loosest filter; nothing on the market passes right now.'
+                : 'No looser tier admits a playable TESTNET market on this read either.'}
           </PixelText>
           {closest.length > 0 && (
-            <ul className="border-edge flex flex-col border-t pt-1">
+            <ul className="tracker-closest border-edge-soft flex flex-col gap-1 border-t pt-1">
               {closest.map((entry) => (
-                <li key={entry.pool.pairAddress} className="flex flex-wrap items-baseline justify-between gap-x-2 py-0.5">
-                  <PixelText role="micro" upper>
-                    {entry.pool.tokenX.symbol} / {entry.pool.tokenY.symbol}
-                    {isTestnet(entry) ? ' · TESTNET' : ' · MAINNET ONLY'}
-                  </PixelText>
-                  {entry.gates.failures[0] && (
-                    <PixelText role="micro" tone="loss">
-                      {GATE_COPY[entry.gates.failures[0]]}
+                <li key={entry.pool.pairAddress} className="flex items-start gap-2">
+                  <span className="mt-0.5 shrink-0">
+                    <MapPin band={riskBand(entry.score.safety)} filtered size={12} />
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-2">
+                    <PixelText role="micro" upper>
+                      {entry.pool.tokenX.symbol} / {entry.pool.tokenY.symbol}
+                      {isTestnet(entry) ? ' · testnet' : ' · mainnet only'}
                     </PixelText>
-                  )}
+                    {entry.gates.failures[0] && (
+                      <PixelText role="micro" tone="dim">
+                        {GATE_COPY[entry.gates.failures[0]]}
+                      </PixelText>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
           )}
-        </Panel>
-        <PixelText role="micro" tone="dim" upper>
-          B back · pick another Monanimal
-        </PixelText>
+        </div>
+        <KeyHints className="mt-auto" hints={[
+          ...(nextCharacter && onTryTier ? [{ key: 'A' as const, label: `Try ${nextCharacter.label}` }] : []),
+          { key: 'B', label: 'Back' },
+        ]} />
       </div>
     )
   }
 
   return (
     <div className="screen-tracker bg-screen flex h-full w-full flex-col gap-1 p-2">
-      {/* Three columns, not justify-between, for the same reason S7's header
-          is a grid: with three items of unequal width, "spread them apart"
-          puts the middle one wherever the other two leave room, and it drifts
-          every time the count changes from one digit to two. */}
-      <div className="tracker-header grid grid-cols-3 items-baseline">
-        <div className="flex items-baseline gap-1">
-          <PixelText role="body" upper>
-            Pool tracker
-          </PixelText>
-          {/* The densest screen in the product and the one that reads most
-              like live market instrumentation: LIQUIDITY, 24H VOLUME, FEE
-              INCOME %/yr, AGE, SAFETY, HEAT. Every one of those is a committed
-              fixture, and the pair addresses are placeholders. Eight pixels of
-              honesty. */}
-          <PixelText role="micro" tone="dim" upper>
-            {provenanceBadge(provenance)}
-          </PixelText>
-        </div>
-        <PixelText role="micro" tone="dim" className="text-center" upper>
-          {character.label} · {character.tier}
-        </PixelText>
-        <PixelText role="micro" upper className="text-right tabular-nums">
-          {passing.length} passed
-        </PixelText>
-      </div>
-      <PixelText role="micro" tone="dim" upper>
-        {provenanceLine(provenance)}
-      </PixelText>
-      {provenance.notes.map((note) => (
-        <PixelText key={note} role="micro" tone="dim">
-          {note}
-        </PixelText>
-      ))}
+      {header}
 
       {view === 'inspect' ? (
         <InspectPanel
@@ -276,6 +334,132 @@ export function PoolTracker({
           }
         />
       )}
+
+      <KeyHints className="mt-auto" hints={view === 'inspect' ? [
+        { key: 'A', label: 'Play', disabled: !isExecutable(selected) },
+        { key: 'B', label: 'Map' },
+      ] : [
+        { key: 'DPAD', label: 'Move' },
+        { key: 'A', label: 'Inspect' },
+        { key: 'SELECT', label: 'Zoom' },
+        { key: 'B', label: 'Back' },
+      ]} />
+    </div>
+  )
+}
+
+/** The score map itself: the axis, the plot, the pins, the radar. No cursor
+ * when nothing passed, because there is nothing to choose. */
+function Plot({
+  pools,
+  cursorIndex,
+  gates,
+  zoom,
+}: {
+  pools: Array<TrackerPool>
+  cursorIndex: number | null
+  gates: GateSet
+  zoom: number
+}) {
+  const cursor = cursorIndex === null ? null : scoreToPosition(pools[cursorIndex].score)
+  // The map slides under a fixed window rather than the window moving over a
+  // fixed map, so the plot box, the pins, and the minimap all keep working in
+  // the same 0-100 space at every zoom level.
+  const panX = cursor ? panFor(cursor.leftPct, zoom) : 0
+  const panY = cursor ? panFor(cursor.topPct, zoom) : 0
+  // Playable pins draw last, so a reticle is never hidden under a neighbour.
+  const order = pools
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => Number(isExecutable(a.entry)) - Number(isExecutable(b.entry)))
+
+  return (
+    <div className="tracker-map-region flex gap-1">
+      {/* HEAT, one letter per row rather than a rotated string: a bitmap
+          font rotated with CSS resamples, and four short lines cost nothing
+          a transform would have saved. */}
+      <div className="flex w-4 shrink-0 flex-col items-center justify-center">
+        {['H', 'E', 'A', 'T'].map((letter) => (
+          <PixelText key={letter} role="micro" tone="dim">
+            {letter}
+          </PixelText>
+        ))}
+      </div>
+
+      <div
+        className="tracker-plot border-edge relative flex-1 overflow-hidden border"
+        style={{ height: PLOT_HEIGHT }}
+      >
+        {/* Everything that lives in score space moves together. The minimap
+            and the zoom badge sit OUTSIDE this, which is what keeps them
+            readable while the map is panned. */}
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: `scale(${zoom}) translate(${panX}%, ${panY}%)`,
+            transformOrigin: '0 0',
+          }}
+        >
+          <WorldMap minSafety={gates.minSafety} maxHeat={gates.maxHeat} />
+
+          {order.map(({ entry, index }) => {
+            const { leftPct, topPct } = scoreToPosition(entry.score)
+            const selected = index === cursorIndex
+            const playable = isExecutable(entry)
+            return (
+              <div
+                key={entry.pool.pairAddress}
+                className="absolute"
+                style={{
+                  left: `${leftPct}%`,
+                  top: `${topPct}%`,
+                  // The pin rides in score space with the map, so the zoom
+                  // would double its size too and turn the map into
+                  // fourteen discs touching each other. Cancelling the zoom
+                  // here keeps the glyph one size at every level and lets
+                  // the zoom do the only job it exists for, which is
+                  // separating pins that overlap.
+                  transform: `translate(-50%, -50%) scale(${1 / zoom})`,
+                }}
+              >
+                <MapPin
+                  band={riskBand(entry.score.safety)}
+                  filtered={!entry.passes}
+                  selected={selected}
+                  playable={playable}
+                  size={selected ? PIN_SIZE_SELECTED : PIN_SIZE}
+                />
+                {/* Only the selected pool names itself. Fourteen labels is
+                    not a map, it is a list with coordinates. A playable one
+                    names itself inverted, the same tag the card uses, and a
+                    pool near either coast anchors its name inward so the
+                    frame never cuts it. */}
+                {selected ? (
+                  <div className={`absolute top-full mt-1 whitespace-nowrap px-0.5 ${leftPct > 80 ? 'right-0' : leftPct < 20 ? 'left-0' : 'left-1/2 -translate-x-1/2'} ${playable ? 'bg-accent' : ''}`}>
+                    <PixelText role="micro" tone={playable ? 'invert' : 'ink'} upper>
+                      {entry.pool.tokenX.symbol}
+                    </PixelText>
+                  </div>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* The coastline, named. The axes are still readable off the line
+            below the plot; these are the same two facts in the map's own
+            words. The left label starts past the radar so neither covers
+            the other. */}
+        <div className="pointer-events-none absolute inset-0 flex items-end justify-between p-1" style={{ paddingLeft: RADAR_SIZE + 12 }}>
+          <PixelText role="micro" tone="dim" upper>
+            Deep water
+          </PixelText>
+          <PixelText role="micro" tone="dim" upper>
+            Safe harbour
+          </PixelText>
+        </div>
+
+        <Minimap pools={pools} cursorIndex={cursorIndex} zoom={zoom} />
+      </div>
     </div>
   )
 }
@@ -295,97 +479,12 @@ function MapView({
   zoom: number
   onZoom: (delta: number) => void
 }) {
-  const cursor = scoreToPosition(pools[cursorIndex].score)
-  // The map slides under a fixed window rather than the window moving over a
-  // fixed map, so the plot box, the pins, and the minimap all keep working in
-  // the same 0-100 space at every zoom level.
-  const panX = panFor(cursor.leftPct, zoom)
-  const panY = panFor(cursor.topPct, zoom)
+  const entry = pools[cursorIndex]
+  const playable = isExecutable(entry)
 
   return (
     <div className="tracker-map flex min-h-0 flex-1 flex-col gap-1">
-      <div className="tracker-map-region flex gap-1">
-        {/* HEAT, one letter per row rather than a rotated string: a bitmap
-            font rotated with CSS resamples, and four short lines cost nothing
-            a transform would have saved. */}
-        <div className="flex w-4 shrink-0 flex-col items-center justify-center">
-          {['H', 'E', 'A', 'T'].map((letter) => (
-            <PixelText key={letter} role="micro" tone="dim">
-              {letter}
-            </PixelText>
-          ))}
-        </div>
-
-        <div
-          className="tracker-plot border-edge relative flex-1 overflow-hidden border"
-          style={{ height: PLOT_HEIGHT }}
-        >
-          {/* Everything that lives in score space moves together. The minimap
-              and the zoom badge sit OUTSIDE this, which is what keeps them
-              readable while the map is panned. */}
-          <div
-            className="absolute inset-0"
-            style={{
-              transform: `scale(${zoom}) translate(${panX}%, ${panY}%)`,
-              transformOrigin: '0 0',
-            }}
-          >
-            <WorldMap minSafety={gates.minSafety} maxHeat={gates.maxHeat} />
-
-            {pools.map((entry, index) => {
-              const { leftPct, topPct } = scoreToPosition(entry.score)
-              const selected = index === cursorIndex
-              return (
-                <div
-                  key={entry.pool.pairAddress}
-                  className="absolute"
-                  style={{
-                    left: `${leftPct}%`,
-                    top: `${topPct}%`,
-                    // The pin rides in score space with the map, so the zoom
-                    // would double its size too and turn the map into
-                    // fourteen discs touching each other. Cancelling the zoom
-                    // here keeps the glyph one size at every level and lets
-                    // the zoom do the only job it exists for, which is
-                    // separating pins that overlap.
-                    transform: `translate(-50%, -50%) scale(${1 / zoom})`,
-                  }}
-                >
-                  <MapPin
-                    band={riskBand(entry.score.safety)}
-                    filtered={!entry.passes}
-                    selected={selected}
-                    size={selected ? PIN_SIZE_SELECTED : PIN_SIZE}
-                  />
-                  {/* Only the selected pool names itself. Fourteen labels is
-                      not a map, it is a list with coordinates. */}
-                  {selected ? (
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 pt-1 whitespace-nowrap">
-                      <PixelText role="micro" upper>
-                        {entry.pool.tokenX.symbol}
-                      </PixelText>
-                    </div>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* The coastline, named. The axes are still readable off the line
-              below the plot; these are the same two facts in the map's own
-              words. */}
-          <div className="pointer-events-none absolute inset-0 flex items-end justify-between p-1">
-            <PixelText role="micro" tone="dim" upper>
-              Deep water
-            </PixelText>
-            <PixelText role="micro" tone="dim" upper>
-              Safe harbour
-            </PixelText>
-          </div>
-
-          <Minimap pools={pools} cursorIndex={cursorIndex} zoom={zoom} />
-        </div>
-      </div>
+      <Plot pools={pools} cursorIndex={cursorIndex} gates={gates} zoom={zoom} />
 
       <div className="tracker-map-tools flex items-center justify-between pl-5">
         <PixelText role="micro" tone="dim" upper>
@@ -398,11 +497,6 @@ function MapView({
           on this screen with nothing to spare, and a control parked on the
           corner of a map covers data at exactly the zoom level where data got
           dense. Down here the targets are also big enough for a thumb.
-
-          The keyboard path is not a fallback for these. SELECT cycles and
-          these step, so every input the console has can reach the feature and
-          neither one is the "real" control: a screen never grows an action the
-          D-pad cannot perform.
         */}
         <div className="flex items-center gap-1">
           <ZoomButton
@@ -424,17 +518,14 @@ function MapView({
             disabled={zoom === ZOOM_LEVELS[ZOOM_LEVELS.length - 1]}
             onClick={() => onZoom(1)}
           />
-          <PixelText role="micro" tone="dim" upper>
-            Select
-          </PixelText>
         </div>
       </div>
 
       {/* Colour is the SAFETY band and it means the same thing on every screen
-          a pool can be reached from. Whether THIS tier's filter accepted it is
-          a different question, so it gets its own entry rather than a fourth
-          colour that would collide with the first three. */}
-      <div className="tracker-map-legend flex items-center gap-3 pl-5">
+          a pool can be reached from. Whether THIS tier's filter accepted it,
+          and whether a run can start there, are different questions, so each
+          gets a shape of its own rather than a fourth colour. */}
+      <div className="tracker-map-legend flex flex-wrap items-center gap-x-3 pl-5">
         {(
           [
             { band: 'green', label: 'Safe' },
@@ -455,35 +546,31 @@ function MapView({
             {characterLabel} skipped
           </PixelText>
         </div>
-      </div>
-
-      <div className="tracker-selection border-edge border bg-panel p-2">
-        <PixelText role="title" upper>
-          {pools[cursorIndex].pool.tokenX.symbol} / {pools[cursorIndex].pool.tokenY.symbol}
-        </PixelText>
-        <PixelText role="micro" tone="dim" upper>
-          {isExecutable(pools[cursorIndex]) ? 'PLAYABLE · TESTNET'
-            : !pools[cursorIndex].passes ? 'LOCKED BY FILTER'
-              : pools[cursorIndex].stale ? 'STALE READ · READ ONLY'
-                : !isTestnet(pools[cursorIndex]) ? 'MAINNET · READ ONLY' : 'BOOK TOO THIN'}
-        </PixelText>
-        <div className="flex justify-between gap-2">
-          <PixelText role="micro">Safety {pools[cursorIndex].score.safety}</PixelText>
-          <PixelText role="micro">Heat {pools[cursorIndex].score.heat}</PixelText>
+        <div className="flex items-center gap-1">
+          <MapPin band="green" size={10} playable />
+          <PixelText role="micro" tone="dim" upper>
+            Playable
+          </PixelText>
         </div>
       </div>
-      {/* `mt-auto` pins the controls to the bottom EDGE of the screen rather
-          than to the bottom of the content above them. */}
-      <div className="screen-footer mt-auto flex items-center justify-between">
-        <PixelText role="micro" upper>
-          Move cursor
-        </PixelText>
-        <PixelText role="micro" upper>
-          A Inspect
-        </PixelText>
-        <PixelText role="micro" upper>
-          B Back
-        </PixelText>
+
+      {/* The selected pool at a glance (portrait only). A playable one gets
+          the heavier frame and the inverted tag: it is the answer to the
+          question this screen exists to ask. */}
+      <div className={`tracker-selection bg-panel p-2 ${playable ? 'tracker-selection-playable border-ink shadow-hard border-2' : 'border-edge border'}`}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <MapPin band={riskBand(entry.score.safety)} filtered={!entry.passes} playable={playable} />
+            <PixelText role="title" upper>
+              {entry.pool.tokenX.symbol} / {entry.pool.tokenY.symbol}
+            </PixelText>
+          </div>
+          <PoolStatus entry={entry} />
+        </div>
+        <div className="tracker-selection-facts flex justify-between gap-2">
+          <PixelText role="micro">Safety {entry.score.safety}</PixelText>
+          <PixelText role="micro">Heat {entry.score.heat}</PixelText>
+        </div>
       </div>
     </div>
   )
@@ -531,10 +618,10 @@ function Minimap({
   zoom,
 }: {
   pools: Array<TrackerPool>
-  cursorIndex: number
+  cursorIndex: number | null
   zoom: number
 }) {
-  const cursor = scoreToPosition(pools[cursorIndex].score)
+  const cursor = cursorIndex === null ? null : scoreToPosition(pools[cursorIndex].score)
   const windowPct = 100 / zoom
 
   return (
@@ -564,7 +651,7 @@ function Minimap({
           />
         )
       })}
-      {zoom > 1 ? (
+      {cursor && zoom > 1 ? (
         <span
           className="border-ink absolute border"
           style={{
@@ -641,19 +728,21 @@ function InspectPanel({
       {/* 1. WHICH POOL. The only thing on this screen at title weight, so the
              eye lands here first and knows what the rest is about. */}
       <div
-        className={`tracker-pair border-edge flex items-center justify-between border-b ${dense ? 'pb-1' : 'pb-2'}`}
+        className={`tracker-pair border-edge flex flex-col gap-1 border-b ${dense ? 'pb-1' : 'pb-2'}`}
       >
-        <div className="flex items-center gap-2">
-          <MapPin band={riskBand(score.safety)} filtered={!passes} />
-          <PixelText role="title" upper>
-            {pool.tokenX.symbol} / {pool.tokenY.symbol}
-          </PixelText>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <MapPin band={riskBand(score.safety)} filtered={!passes} playable={isExecutable(entry)} />
+            <PixelText role="title" upper>
+              {pool.tokenX.symbol} / {pool.tokenY.symbol}
+            </PixelText>
+          </div>
+          {/* A passive verdict, never a control. When A cannot play this
+              pool the tag says why, so the disabled A is never a guess. */}
+          <PoolStatus entry={entry} />
         </div>
-        {/* A passive status label, never a control: whether the order book can
-            host a ladder, and whether the pool can be played on testnet. */}
-        <PixelText role="body" tone="dim" upper>
-          {isBookThin(entry) ? 'Thin book' : 'Book ready'}
-          {' · '}{isTestnet(entry) ? 'PLAYABLE (TESTNET)' : 'MAINNET ONLY'}
+        <PixelText role="micro" tone="dim" upper>
+          {isBookThin(entry) ? 'Thin book' : 'Book ready'} · {provenanceLine(provenance)}
         </PixelText>
       </div>
 
@@ -781,26 +870,6 @@ function InspectPanel({
           &quot;{quote}&quot; - {quoteSpeaker}
         </PixelText>
         <Sprite character={characterId} animation="idle" size={32} />
-      </div>
-
-      <div className="flex items-center justify-between">
-        {/* A dimmed label that silently does nothing is a dead end: the player
-            presses A, gets no response, and has to guess why. When the pool
-            cannot be played the button says why: it failed a gate (the
-            reasons are listed directly above), it is mainnet-only, or its
-            book is too thin. */}
-        <PixelText role="micro" tone={passes ? 'ink' : 'dim'} upper>
-          {!passes
-            ? 'Locked by the checks above'
-            : !isTestnet(entry)
-              ? 'MAINNET ONLY'
-              : isBookThin(entry)
-                ? 'Thin book · cannot play'
-                : 'A Play this pool'}
-        </PixelText>
-        <PixelText role="micro" upper>
-          B Back to map
-        </PixelText>
       </div>
     </div>
   )

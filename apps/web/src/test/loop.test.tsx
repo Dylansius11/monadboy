@@ -92,8 +92,9 @@ describe('the loop, walked with console presses', () => {
     press('A')
     await at('/play/tracker')
 
-    press('RIGHT', 'A')
-    await screen.findByText(/PLAYABLE \(TESTNET\)/)
+    // The cursor opens on the playable TESTNET market.
+    press('A')
+    await screen.findByText(/^Playable · Testnet$/i)
     press('A')
     await at(`/play/range/${TESTNET_ID}`)
     await screen.findByText(/set your range/i)
