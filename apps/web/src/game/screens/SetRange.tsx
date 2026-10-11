@@ -847,9 +847,14 @@ function ManualRangeEditor({
 
   return (
     <div className="range-editor bg-screen absolute inset-0 flex flex-col gap-1 p-2">
-      <PixelText role="body" upper>
-        Manual range FIXTURE
-      </PixelText>
+      <div className="flex items-baseline gap-1">
+        <PixelText role="body" upper>
+          Manual range
+        </PixelText>
+        <PixelText role="micro" tone="dim" upper>
+          Fixture
+        </PixelText>
+      </div>
 
       <EditRowLine
         label="Start"
@@ -888,13 +893,13 @@ function ManualRangeEditor({
               leftPct={((mid - lowPrice) / (highPrice - lowPrice)) * 100}
             />
           </div>
-          <div style={{ width: '100%' }}>
-            <PixelText role="micro" tone="dim" className="tabular-nums">
-              {preview.plan.clamped
-                ? 'wider than one transaction fits, so this is narrower.'
-                : `${pct(preview.plan.step * 100, 2)} steps, ${preview.plan.levels} levels per side`}
-            </PixelText>
-          </div>
+          {/* A flex item, not an inline span in a block: inside a block the
+              16px body strut set every wrapped micro line 24px apart. */}
+          <PixelText role="micro" tone="dim" className="tabular-nums">
+            {preview.plan.clamped
+              ? 'wider than one transaction fits, so this is narrower.'
+              : `${pct(preview.plan.step * 100, 2)} steps, ${preview.plan.levels} levels per side`}
+          </PixelText>
         </div>
       ) : null}
 
