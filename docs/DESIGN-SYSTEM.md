@@ -273,9 +273,10 @@ The shell uses these illustrated-plastic constants:
 The centered laptop console sits above a seeded pixel night city: layered facades, roof details, a crescent moon, elevated railway, harbour reflections and a foreground railing.
 The city draws once per resize; only a small train moves by compositor transform.
 Reduced motion freezes the train; hidden tabs pause it. No scenery implies a live fill or affects a game number.
-Portrait phones reserve a 52px safe-area-aware GUIDE header. The city is cropped
-into that header and outer framing, never behind the game text. The native shell
-keeps 44px controls and a flexible bright screen; unusually short viewports scroll
+Portrait phones spend no header lane: the screen starts under the safe area and
+GUIDE is a moulded key in the shell's control row beside VOL. The city shows only
+in the outer framing, never behind the game text. The native shell keeps 44px
+control hit areas and a flexible bright screen; unusually short viewports scroll
 instead of scaling or clipping controls. Held landing consoles keep landscape layout.
 
 The landing page preserves the same city, console and factual copy. Its primary
@@ -315,7 +316,7 @@ The stepped300ms jump respects reduced motion; sound does not imply a chain fill
 ### On-demand guide
 
 RULE BOOK is an unscaled viewport launcher at the desktop's upper right; portrait
-phones show GUIDE in the safe header. The native modal first shows current-screen
+phones dock GUIDE in the shell's control row. The native modal first shows current-screen
 actions. HOW TO PLAY and CONTROLS are explicit sections, not one long initial page.
 Live and opt-in fixture guidance stay distinct. Escape restores opener focus;
 keyboard, touch and gamepad input cannot reach the game while the guide is open.

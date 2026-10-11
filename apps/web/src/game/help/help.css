@@ -42,9 +42,33 @@
 }
 
 @media (max-width: 640px) and (orientation: portrait) {
-  .rulebook-trigger {
-    top: calc(4px + env(safe-area-inset-top));
-    right: max(12px, env(safe-area-inset-right));
+  /* Docked in the shell's control row: in flow beside the volume slider,
+     so no lane above the screen is spent on it. Drawn as a moulded key like
+     the volume knob, 28px tall, with its hit area reaching the full 44px
+     row through a transparent pseudo-element. */
+  .rulebook-trigger.is-docked {
+    position: relative;
+    top: auto;
+    right: auto;
+    flex: none;
+    min-height: 28px;
+    gap: 6px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #fff, var(--btn) 40%, var(--btn-d));
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.28);
+    color: var(--shell-dd);
+  }
+  .rulebook-trigger.is-docked::before {
+    content: '';
+    position: absolute;
+    inset: -8px -4px;
+  }
+  .rulebook-trigger.is-docked svg {
+    width: 16px;
+    height: 16px;
+    color: var(--shell-dd);
   }
 
   .rulebook-label-desktop {

@@ -1,5 +1,13 @@
 // @vitest-environment jsdom
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import {
   Outlet,
   RouterProvider,
@@ -220,5 +228,29 @@ describe('the rule book', () => {
     type('h', {}, view.getByLabelText('name'))
 
     expect(dialog().open).toBe(false)
+  })
+
+  describe('on a portrait phone', () => {
+    afterEach(() => vi.unstubAllGlobals())
+
+    it('docks the launcher in the shell instead of a lane above it, and it still opens the book', async () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: query.includes('orientation: portrait'),
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }))
+      const { view, dialog } = await mount()
+      const launcher = view.getByRole('button', { name: /open the rule book/i })
+
+      expect(view.container.contains(launcher)).toBe(true)
+      expect(launcher.className).toContain('is-docked')
+      expect(dialog().parentElement).toBe(document.body)
+
+      type('Enter', {}, launcher)
+      expect(heard).toEqual([])
+      fireEvent.click(launcher)
+      expect(dialog().open).toBe(true)
+    })
   })
 })

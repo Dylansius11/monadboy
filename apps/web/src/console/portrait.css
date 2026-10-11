@@ -6,7 +6,9 @@
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    padding: calc(52px + env(safe-area-inset-top))
+    /* No header lane: the guide docks in the control row, so the screen
+       starts right under the safe area. */
+    padding: max(8px, env(safe-area-inset-top))
       max(8px, env(safe-area-inset-right))
       max(12px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
     overflow-x: hidden;

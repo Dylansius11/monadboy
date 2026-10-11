@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouterState } from '@tanstack/react-router'
 import { useConsoleInputLock } from '../../console/useConsoleInput'
@@ -23,6 +23,22 @@ const SECTIONS = [
 
 type GuideSection = (typeof SECTIONS)[number][0]
 
+/** The same query console/portrait.css switches the native phone shell on. */
+const PHONE_PORTRAIT = '(max-width: 640px) and (orientation: portrait)'
+
+/** Partial: jsdom has no matchMedia, and test stubs may omit the listeners. */
+function phonePortrait(): Partial<MediaQueryList> | undefined {
+  return typeof window.matchMedia === 'function'
+    ? window.matchMedia(PHONE_PORTRAIT)
+    : undefined
+}
+
+function subscribePhonePortrait(onChange: () => void) {
+  const query = phonePortrait()
+  query?.addEventListener?.('change', onChange)
+  return () => query?.removeEventListener?.('change', onChange)
+}
+
 /** Native modal focus and input isolation, with viewport-sized chrome. */
 export function RuleBook() {
   const routeId = useRouterState({
@@ -30,6 +46,15 @@ export function RuleBook() {
   })
   const guide = guideForRoute(routeId)
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
+  // On a phone the launcher docks in the shell's control row beside the
+  // volume slider instead of taking a lane of its own above the screen.
+  // Elsewhere the shell is scaled, so the launcher escapes it through the
+  // portal and keeps its real size.
+  const docked = useSyncExternalStore(
+    subscribePhonePortrait,
+    () => phonePortrait()?.matches ?? false,
+    () => false,
+  )
   const [open, setOpen] = useState(false)
   const [section, setSection] = useState<GuideSection>('screen')
   useConsoleInputLock(open)
@@ -74,29 +99,33 @@ export function RuleBook() {
 
   if (!portalTarget) return null
 
-  return createPortal(
+  const trigger = (
+    <button
+      type="button"
+      className={docked ? 'rulebook-trigger is-docked' : 'rulebook-trigger'}
+      aria-label="Open the rule book"
+      aria-haspopup="dialog"
+      aria-keyshortcuts="? H"
+      onClick={() => {
+        setSection('screen')
+        setOpen(true)
+      }}
+      // The console listens on window; opening must not also press START/A.
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') e.stopPropagation()
+      }}
+    >
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 5C9 3 5 3 3 4V19C6 18 9 18 12 20C15 18 18 18 21 19V4C19 3 15 3 12 5ZM12 5V20" />
+      </svg>
+      <span className="rulebook-label-desktop">Rule book</span>
+      <span className="rulebook-label-phone">Guide</span>
+    </button>
+  )
+
+  const book = createPortal(
     <>
-      <button
-        type="button"
-        className="rulebook-trigger"
-        aria-label="Open the rule book"
-        aria-haspopup="dialog"
-        aria-keyshortcuts="? H"
-        onClick={() => {
-          setSection('screen')
-          setOpen(true)
-        }}
-        // The console listens on window; opening must not also press START/A.
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') e.stopPropagation()
-        }}
-      >
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M12 5C9 3 5 3 3 4V19C6 18 9 18 12 20C15 18 18 18 21 19V4C19 3 15 3 12 5ZM12 5V20" />
-        </svg>
-        <span className="rulebook-label-desktop">Rule book</span>
-        <span className="rulebook-label-phone">Guide</span>
-      </button>
+      {docked ? null : trigger}
 
       <dialog
         ref={dialogRef}
@@ -233,5 +262,13 @@ export function RuleBook() {
       </dialog>
     </>,
     portalTarget,
+  )
+  return docked ? (
+    <>
+      {trigger}
+      {book}
+    </>
+  ) : (
+    book
   )
 }
