@@ -221,7 +221,7 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
       </div>
       {(state.steps.length > 0 || hasNotices) && (
         <div className="funded-live-receipts">
-          <ReceiptSteps state={state} />
+          <ReceiptSteps steps={state.steps} />
           <Notices state={state} />
         </div>
       )}

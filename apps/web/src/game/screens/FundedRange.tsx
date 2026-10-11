@@ -157,7 +157,7 @@ export function FundedRange({ state, actions }: FundedScreenProps) {
         </Panel>}
         {(!state.sourceFresh || position.paused) && <div className="funded-range-alert text-micro">PRICE FEED PAUSED. Empty/crossed/stale or spread above 2%. Withdrawal remains available.</div>}
         {!state.allowed && !recovered && <div className="funded-range-alert text-micro">{state.gateReason}</div>}
-        {state.steps.length > 0 && <div className="funded-range-receipts"><ReceiptSteps state={state} /></div>}
+        {state.steps.length > 0 && <div className="funded-range-receipts"><ReceiptSteps steps={state.steps} /></div>}
       </div>
       <footer className="screen-footer funded-range-footer text-micro">
         <button className="pressable min-h-11" disabled={state.busy || (!position.orders.length && (!state.sourceFresh || position.paused || !state.allowed))} onClick={primary}>A {state.busy ? 'Working' : position.orders.length ? 'Open position' : quote ? 'Confirm steps' : 'Get actual quote'}</button>

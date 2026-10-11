@@ -90,7 +90,7 @@ export function FundedResults({ state, actions }: FundedScreenProps) {
               ))}
             </div>
           )}
-          <ReceiptSteps state={state} />
+          <ReceiptSteps steps={state.steps} />
         </div>
       </div>
       <footer className="screen-footer funded-result-footer">

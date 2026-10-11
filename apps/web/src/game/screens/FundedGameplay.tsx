@@ -4,7 +4,7 @@ import { useCardState } from '../../chain/card-store'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { useSession } from '../../state/session'
 import { useSound } from '../../sound/SoundProvider'
-import { Panel, PixelText } from '../../ui'
+import { KeyHints, Panel, PixelText } from '../../ui'
 import { FundedRange } from './FundedRange'
 import { FundedLive } from './FundedLive'
 import { FundedResults } from './FundedResults'
@@ -54,6 +54,7 @@ export function FundedGameplay({
   }, [card.phase, slot, controller, stage])
   const { play } = useSound()
   const actions: Actions = {
+    clearQuote: () => controller.useState.setState({ quote: null }),
     quote: () => void controller.quote(),
     quoteExit: () => void controller.quoteExit(),
     confirm: () =>
@@ -93,7 +94,7 @@ export function FundedGameplay({
             : 'Open a saved disk first. The server never chooses your signing identity.'
         }
       >
-        <ReceiptSteps state={state} />
+        <ReceiptSteps steps={state.steps} />
       </Unavailable>
     )
   if (!state.market || !state.position)
@@ -144,9 +145,7 @@ function Unavailable({
         </Panel>
         {children}
       </div>
-      <button className="pressable min-h-11 text-body" onClick={onBack}>
-        B Back to disks
-      </button>
+      <KeyHints hints={[{ key: 'B', label: 'Back' }]} />
     </div>
   )
 }

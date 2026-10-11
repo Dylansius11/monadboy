@@ -28,7 +28,7 @@ it('missing indexed fills cannot replay coins when coverage returns, but a new f
       coverageFrom: 10n, valuation: null, observedAt: Date.now() },
   }
   const actions: Actions = {
-    quote() {}, quoteExit() {}, confirm() {}, withdraw() {}, recenter() {}, refresh() {},
+    clearQuote() {}, quote() {}, quoteExit() {}, confirm() {}, withdraw() {}, recenter() {}, refresh() {},
     setAmount() {}, setWidth() {}, setManual() {}, retrySave() {}, back() {}, openLive() {},
   }
   const position = state.position

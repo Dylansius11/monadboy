@@ -2,14 +2,16 @@ import { mainnetMarkets, monad } from '@monadboy/sdk'
 import { explorerAddressUrl, explorerTxUrl } from '../../chain/config'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { price } from '../../lib/format'
-import { Panel, PixelText, Value } from '../../ui'
+import { KeyHints, Panel, PixelText, Value } from '../../ui'
 import type { GameplayState } from '../../chain/gameplay-store'
+import type { ExecutionStep } from '../../chain/market-execution'
 import type { ReactNode } from 'react'
 import './funded.css'
 
 const sourceMarket = mainnetMarkets.find((market) => market.symbol === 'MON_USDC')
 
 export type Actions = {
+  clearQuote: () => void
   quote: () => void
   quoteExit: () => void
   confirm: () => void
@@ -28,50 +30,60 @@ export function Header({
   title, demoMultiplier = 1, pair = 'MON / AUSD',
 }: { title: string; demoMultiplier?: number; pair?: string }) {
   return (
-    <header className="funded-header flex items-baseline justify-between gap-1">
+    <header className="funded-header">
       <PixelText role="body" upper>{title}</PixelText>
-      <PixelText role="micro" tone="dim">DEMO x{demoMultiplier} · TESTNET</PixelText>
       <PixelText role="body" upper>{pair}</PixelText>
+      <PixelText role="micro" tone="dim">{demoMultiplier > 1 ? `TESTNET · DEMO x${demoMultiplier} price motion` : 'TESTNET'}</PixelText>
     </header>
   )
 }
-export function ReceiptSteps({ state }: { state: GameplayState }) {
+
+/**
+ * The real steps as a checklist: one row each, the state in its marker's
+ * shape, the block it landed in and the transaction one tap away. `planned`
+ * lists steps that will run but have not started, so progress reads as a
+ * list being ticked off rather than a log appearing line by line.
+ */
+export function ReceiptSteps({ steps, planned = [], verbose = false }: { steps: readonly ExecutionStep[]; planned?: readonly string[]; verbose?: boolean }) {
+  const rows = [...steps, ...planned.filter((name) => !steps.some((step) => step.step === name)).map((name) => ({ step: name, state: 'waiting' as const }))]
+  if (!rows.length) return null
   return (
-    <ol aria-live="polite" aria-label="Actual transaction steps" className="funded-steps text-micro">
-      {state.steps.map((step, index) => (
-        <li key={step.step} className="funded-step" data-state={step.receipt?.status === 'reverted' ? 'reverted' : step.state}>
-          <span aria-hidden="true" className="funded-step-marker">
-            {step.receipt?.status === 'reverted' || step.state === 'not-sent' || step.state === 'unconfirmed' ? '!' : step.state === 'confirmed' ? 'OK' : index + 1}
-          </span>
-          <div className="funded-step-copy">
-            <span>
-              {step.step}:{' '}
-              {step.receipt?.status === 'reverted' ? 'reverted' : step.state === 'checking' ? 'checking cost / block spacing'
-                : step.state === 'not-sent' ? `not sent: ${step.detail ?? 'operation interrupted'}`
-                  : step.state === 'unconfirmed' ? step.hash ? 'confirmation unavailable; check explorer' : 'outcome unknown: refresh chain state'
-                    : step.state}
+    <ol aria-live="polite" aria-label="Actual transaction steps" className="funded-steps">
+      {rows.map((step, index) => {
+        const sent = step.state === 'waiting' ? null : step
+        const state = sent?.receipt?.status === 'reverted' ? 'reverted' : step.state
+        const failed = state === 'reverted' || state === 'not-sent' || state === 'unconfirmed'
+        const note = sent?.state === 'not-sent' ? sent.detail ?? 'operation interrupted'
+          : sent?.state === 'unconfirmed' ? sent.hash ? 'confirmation unavailable; check explorer' : 'outcome unknown: refresh chain state'
+            : verbose && sent?.receipt ? `gas limit ${sent.receipt.gas.toString()}` : null
+        return (
+          <li key={step.step} className="funded-step" data-state={state}>
+            <span aria-hidden="true" className="funded-step-marker">{failed ? '!' : state === 'confirmed' ? 'OK' : index + 1}</span>
+            <span className="funded-step-name">{step.step}</span>
+            <span className="funded-step-status">
+              {state === 'confirmed' ? sent?.receipt ? `#${sent.receipt.block.toString()}` : 'confirmed'
+                : state === 'broadcast' ? 'sent' : state === 'not-sent' ? 'not sent' : state === 'unconfirmed' ? 'unknown' : state}
             </span>
-            {step.receipt && <span>block {step.receipt.block.toString()}, limit {step.receipt.gas.toString()}</span>}
-          </div>
-          {step.hash && (
-            <a className="underline" href={explorerTxUrl(step.hash)} target="_blank" rel="noreferrer">
-              Open transaction
-            </a>
-          )}
-        </li>
-      ))}
+            {sent?.hash
+              ? <a className="funded-step-link pressable" href={explorerTxUrl(sent.hash)} target="_blank" rel="noreferrer" aria-label={`Open ${step.step} transaction`}>TX ↗</a>
+              : <span className="funded-step-link" aria-hidden="true" />}
+            {note && <span className="funded-step-note">{note}</span>}
+          </li>
+        )
+      })}
     </ol>
   )
 }
-export function Notices({ state }: { state: GameplayState }) {
-  const hasError = state.demandError || state.error || state.readError || state.saveError || state.position?.historyError
+/** `error={false}` when the screen states the operation error in its own card. */
+export function Notices({ state, error = true }: { state: GameplayState; error?: boolean }) {
+  const hasError = state.demandError || (error && state.error) || state.readError || state.saveError || state.position?.historyError
   return (
     <>
       {hasError && (
         <div role="alert" aria-live="polite" className="funded-notices">
           <Panel flush className="flex flex-col gap-1 p-2">
             {state.demandError && <PixelText role="micro" tone="loss" as="p">{state.demandError}</PixelText>}
-            {state.error && <PixelText role="micro" tone="loss" as="p">{state.error}</PixelText>}
+            {error && state.error && <PixelText role="micro" tone="loss" as="p">{state.error}</PixelText>}
             {state.readError && (
               <PixelText role="micro" tone="loss" as="p">
                 Latest chain read failed: {state.readError}. The last good read is retained, not refreshed.
@@ -182,8 +194,9 @@ export function Inputs({
   const position = state.position
   if (!position) return null
   return (
-    <div className="screen-inputs bg-screen flex h-full w-full flex-col gap-2 overflow-y-auto p-2">
+    <div className="screen-inputs bg-screen flex h-full w-full flex-col gap-2 p-2">
       <Header title="Actual inputs" demoMultiplier={state.demoMultiplier} />
+      <div className="funded-inputs-body">
       {position.historyError && <div role="alert" className="funded-notices"><Panel flush className="p-2"><PixelText role="micro" tone="loss">{position.historyError}</PixelText></Panel></div>}
       <Panel flush className="flex flex-col gap-1 p-2">
         <PixelText role="micro">
@@ -244,11 +257,10 @@ export function Inputs({
           {fill.isFlippedOrder ? 'flipped SCORE' : 'initial inventory only'}.
         </a>
       ))}
-      <ReceiptSteps state={state} />
+      <ReceiptSteps steps={state.steps} verbose />
       <SourceLinks state={state} />
-      <button className="pressable min-h-11 text-micro" onClick={onClose}>
-        B Close inputs
-      </button>
+      </div>
+      <KeyHints hints={[{ key: 'B', label: 'Close' }]} />
     </div>
   )
 }

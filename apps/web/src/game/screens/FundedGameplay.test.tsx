@@ -83,6 +83,7 @@ function actualRead(): GameplayState {
 }
 function actions() {
   return {
+    clearQuote: vi.fn(),
     quote: vi.fn(),
     quoteExit: vi.fn(),
     confirm: vi.fn(),
@@ -199,7 +200,7 @@ it('range setup exposes equal manual and amount keys without inventing an unquot
   const controls = actions()
   renderScreen(<FundedRange state={state} actions={controls} />)
   expect(screen.getByText('How much?')).toBeInTheDocument()
-  expect(screen.getByText('DEMO x1 · TESTNET')).toBeInTheDocument()
+  expect(screen.getByText('TESTNET')).toBeInTheDocument()
   expect(screen.getByRole('img', { name: 'Ladder unavailable until actual quote' })).toBeInTheDocument()
   expect(screen.queryByText('YOU WILL HOLD')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'MANUAL' }))
@@ -218,7 +219,7 @@ it('range notices and receipt states preserve accessible evidence and recovery',
   renderScreen(<FundedRange state={state} actions={actions()} />)
   expect(screen.getByRole('alert')).toHaveTextContent(state.error)
   expect(screen.getByRole('list', { name: 'Actual transaction steps' })).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: 'Open transaction' })).toHaveAttribute('href', expect.stringContaining(tx))
+  expect(screen.getByRole('link', { name: 'Open deposit transaction' })).toHaveAttribute('href', expect.stringContaining(tx))
 })
 
 it('a mined reverted receipt never appears as a successful funded step', () => {
@@ -229,7 +230,10 @@ it('a mined reverted receipt never appears as a successful funded step', () => {
     receipt: { step: 'provision', hash, block: 12n, estimate: 100n, gas: 120n, gasUsed: 110n, effectiveGasPrice: 1n, status: 'reverted' },
   }]
   renderScreen(<FundedRange state={state} actions={actions()} />)
-  expect(screen.getByRole('list', { name: 'Actual transaction steps' })).toHaveTextContent('provision: reverted')
+  const row = screen.getByRole('list', { name: 'Actual transaction steps' }).querySelector('li')!
+  expect(row).toHaveAttribute('data-state', 'reverted')
+  expect(row).toHaveTextContent('reverted')
+  expect(row).not.toHaveTextContent('OK')
 })
 
 it('unavailable fill history stays unavailable in results and live Inputs, never an invented zero', () => {
