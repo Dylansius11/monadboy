@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useConsoleIntent } from '../../console/useConsoleInput'
-import { PixelText } from '../../ui'
+import { KeyHints, PixelText } from '../../ui'
 import type { Cartridge } from '../fixtures'
 import type { SaveDisk } from '../../types/domain'
 
@@ -141,31 +141,12 @@ export function CartridgeSelect({
         </PixelText>
       </div>
 
-      {/* Footer, pinned to the bottom edge whatever the content above it
-          did. The console owns the key legend; this screen only names the
-          button. ◄► and not ◀▶: the pixel font does not map the
-          pointing-triangle pair the wireframe uses. */}
-      <div className="screen-footer mt-auto flex items-center justify-between">
-        <PixelText role="micro" upper>
-          {'◄►'} Select
-        </PixelText>
-        <PixelText role="micro" upper>
-          A Insert
-        </PixelText>
-        <button
-          type="button"
-          aria-label="Open leaderboard"
-          onClick={onLeaderboard}
-          className="pressable"
-        >
-          <PixelText role="micro" upper>
-            Start Ranks
-          </PixelText>
-        </button>
-        <PixelText role="micro" upper>
-          B Back
-        </PixelText>
-      </div>
+      <KeyHints className="mt-auto" hints={[
+        { key: 'DPAD', label: 'Pick' },
+        { key: 'A', label: 'Insert', disabled: current.locked },
+        { key: 'START', label: 'Ranks' },
+        { key: 'B', label: 'Back' },
+      ]} />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { brand } from '../../config/brand'
-import { PixelText, Sprite } from '../../ui'
+import { KeyHints, PixelText, Sprite } from '../../ui'
 import type { CharacterId } from '../../config/brand'
 import './boot.css'
 
@@ -244,9 +244,7 @@ export function Boot({ instant, onStart }: BootProps) {
         <PixelText role="micro" tone="dim" upper>
           Testnet · no real money
         </PixelText>
-        <PixelText role="micro" tone="dim" upper>
-          Enter / start
-        </PixelText>
+        <KeyHints hints={[{ key: 'START', label: 'Start' }]} />
       </div>
 
       {stage === 'dark' && <div className="bg-ink absolute inset-0 boot-warm" aria-hidden="true" />}

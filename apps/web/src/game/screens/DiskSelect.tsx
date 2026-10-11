@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { brand, characters } from '../../config/brand'
 import { diskNetUsd } from '../fixtures'
-import { PixelText, Value } from '../../ui'
+import { KeyHints, PixelText, Value } from '../../ui'
 import type { CharacterId } from '../../config/brand'
 import type { Difficulty, SaveDisk } from '../../types/domain'
 
@@ -157,20 +157,11 @@ export function DiskSelect({
         ) : null}
       </div>
 
-      {/* The console owns the key legend; a screen names the BUTTON. The pixel
-          font has no confirmed down-triangle, so the vertical pair is spelled
-          out rather than drawn. */}
-      <div className="screen-footer flex items-center justify-between">
-        <PixelText role="micro" upper>
-          Move cursor
-        </PixelText>
-        <PixelText role="micro" upper>
-          A open
-        </PixelText>
-        <PixelText role="micro" upper>
-          B back
-        </PixelText>
-      </div>
+      <KeyHints hints={[
+        { key: 'DPAD', label: 'Move' },
+        { key: 'A', label: 'Open', disabled: disks.length === 0 },
+        { key: 'B', label: 'Back' },
+      ]} />
     </div>
   )
 }

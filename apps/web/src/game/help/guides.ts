@@ -95,9 +95,10 @@ const GUIDES: Record<string, ScreenGuide> = {
         'Complete the reader prompt, then open your save disks. CONTINUE uses the inserted card.',
       ],
       ['B', 'Back to the title; cancel an active reader prompt.'],
+      ['SELECT', 'Eject an inserted card.'],
     ],
     notes: [
-      'A failed restore does not create a new card. EJECT ends the local signing session, not the chain position.',
+      'A failed restore does not create a new card. Eject ends the local signing session, not the chain position.',
     ],
   },
   '/disks': {
@@ -110,11 +111,12 @@ const GUIDES: Record<string, ScreenGuide> = {
         'A',
         'Open a disk, create an empty one, or retry an unreadable slot. Follow the funding and save status.',
       ],
-      ['START', 'Show the selected disk’s sealed proof.'],
-      ['B', 'Close proof, or return to your card.'],
+      ['START', 'Show the selected slot’s disk account, and a disk’s sealed proof, with its explorer link.'],
+      ['SELECT', 'Eject the card and return to the card slot.'],
+      ['B', 'Close that view, or return to your card.'],
     ],
     notes: [
-      'Unreadable slots are not empty. Explorer links show confirmed accounts and saves; EJECT ends the local signing session.',
+      'Unreadable slots are not empty. Explorer links show confirmed accounts and saves; eject ends the local signing session.',
     ],
   },
   '/cartridges': {

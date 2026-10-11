@@ -135,9 +135,9 @@ describe('the leaderboard', () => {
     expect(onInsert).not.toHaveBeenCalled()
   })
 
-  it('opens from a tap on its footer button', () => {
-    const { onLeaderboard, getByLabelText } = renderCartridgeSelect()
-    fireEvent.click(getByLabelText('Open leaderboard'))
+  it('opens from a tap on its control hint', () => {
+    const { onLeaderboard, getByRole } = renderCartridgeSelect()
+    fireEvent.click(getByRole('button', { name: 'START Ranks' }))
     expect(onLeaderboard).toHaveBeenCalledOnce()
   })
 

@@ -138,14 +138,14 @@ describe('inserting and going back', () => {
 
 describe('the returning player', () => {
   it('shows the card as already in the slot, with its address truncated', () => {
-    const { getByText } = renderMemoryCard({
+    const { getByText, getByRole } = renderMemoryCard({
       cardAddress: FIXTURE_CARD_ADDRESS,
     })
 
     expect(getByText(/memory card in/i)).toBeInTheDocument()
     expect(getByText(/0x00\.\.ca/i)).toBeInTheDocument()
 
-    expect(getByText(/^continue$/i)).toBeInTheDocument()
+    expect(getByRole('button', { name: 'A Continue' })).toBeInTheDocument()
   })
 
   it('shows no address at all before a card exists', () => {

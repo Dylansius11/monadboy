@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { brand } from '../../config/brand'
-import { PixelText } from '../../ui'
+import { KeyHints, PixelText } from '../../ui'
 
 export interface MemoryCardProps {
   /** Non-null once a card is already in the slot. A returning player. */
@@ -77,6 +77,10 @@ export function MemoryCard({
       onInsert(cursor === 0 ? 'insert' : 'new')
       return
     }
+    if (intent === 'SELECT' && inserted && onEject) {
+      onEject()
+      return
+    }
     if (intent === 'UP' || intent === 'DOWN') {
       // No wrap, same rule as every other cursor in this build.
       const next = intent === 'DOWN' ? cursor + 1 : cursor - 1
@@ -126,12 +130,6 @@ export function MemoryCard({
       </div>
       {pending && <PixelText role="body">Reading card. Complete the reader prompt.</PixelText>}
       {error && <PixelText role="body" tone="loss">{error}</PixelText>}
-      {inserted && onEject && (
-        <button type="button" className="pressable border-edge bg-panel min-h-11 border p-2" onClick={onEject}>
-          <PixelText role="body" upper>Eject card</PixelText>
-        </button>
-      )}
-
       <div className="flex items-center justify-center gap-4">
         {REASSURANCES.map((fact) => (
           <span key={fact} className="flex items-center gap-1">
@@ -147,6 +145,12 @@ export function MemoryCard({
           </span>
         ))}
       </div>
+
+      <KeyHints className="mt-auto" hints={[
+        { key: 'A', label: inserted ? 'Continue' : cursor === 0 ? 'Insert' : 'New card', disabled: pending },
+        { key: 'B', label: 'Back' },
+        ...(inserted && onEject ? [{ key: 'SELECT' as const, label: 'Eject' }] : []),
+      ]} />
     </div>
   )
 }
