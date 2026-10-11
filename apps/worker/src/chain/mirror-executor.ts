@@ -94,7 +94,8 @@ export function createMirrorExecutor({
     const call = { ...request, account: treasury.account } as Parameters<typeof client.estimateContractGas>[0]
     // Preflight before queueing: a post-only cross or missing funds is refused without waiting.
     await client.simulateContract(call)
-    let reservation: number | null = null
+    // Set inside the queued signer; a holder keeps the type visible after the await.
+    const reserved: { id: number | null } = { id: null }
     const sent = await treasury.send(async (nonce) => {
       // Queue spacing/nonces may await: revalidate immediately before signing.
       assertActive?.()
@@ -113,16 +114,16 @@ export function createMirrorExecutor({
       assertActive?.()
       // Reserves this transaction's declared limit x maxFee, nothing more: a refusal here
       // leaves the resting ladder exactly as it was, because every quote change is one batch.
-      reservation = fees && budget ? budget.reserve(limit, fees.maxFeePerGas) : null
+      reserved.id = fees && budget ? budget.reserve(limit, fees.maxFeePerGas) : null
       const hash = await treasury.wallet.writeContract({
         ...request, gas: limit, nonce,
         ...(fees ? { maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas } : {}),
       })
-      if (reservation !== null) budget!.record(reservation, hash)
+      if (reserved.id !== null) budget!.record(reserved.id, hash)
       return hash
     })
     // Monad bills the declared limit at the effective price; settle the reservation to that.
-    if (reservation !== null) budget!.settle(reservation, sent.gasUsed * sent.effectiveGasPrice)
+    if (reserved.id !== null) budget!.settle(reserved.id, sent.gasUsed * sent.effectiveGasPrice)
     return sent.hash
   }
 

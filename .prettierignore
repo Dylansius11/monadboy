@@ -5,3 +5,4 @@ indexer/generated/
 indexer/.pnpm-store/
 indexer/pnpm-lock.yaml
 **/.vercel/**
+**/.scratch/

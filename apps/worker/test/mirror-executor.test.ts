@@ -76,7 +76,7 @@ function fakeChain({ base = 300, quote = 10 }: { base?: number; quote?: number }
   } as unknown as PublicClient
   const write = async (call: Call) => {
     sends.push(call)
-    const hash = `0x${sends.length.toString(16).padStart(64, '0')}` as Hex
+    const hash: Hex = `0x${sends.length.toString(16).padStart(64, '0')}`
     const created: { address: string; data: Hex; topics: Hex[] }[] = []
     if (call.functionName === 'batchUpdate') {
       const [buyPrices, buySizes, sellPrices, sellSizes, cancel] = call.args as [number[], bigint[], number[], bigint[], number[]]
@@ -107,7 +107,7 @@ function fakeChain({ base = 300, quote = 10 }: { base?: number; quote?: number }
     } else if (call.functionName === 'placeAndExecuteMarketBuy') {
       // Walk asks from the cheapest, the bot's own included (Kuru self-matches).
       let quoteLeft = BigInt(call.args[0] as bigint) * 10n ** 6n / 10n ** 8n * 9970n / 10000n
-      for (const [id, o] of [...orders].filter(([, o]) => !o.isBuy).sort((a, b) => a[1].price - b[1].price)) {
+      for (const [id, o] of [...orders].filter(([, order]) => !order.isBuy).sort((a, b) => a[1].price - b[1].price)) {
         if (quoteLeft <= 0n) break
         const cost = o.size * BigInt(o.price) / 1000000000000n
         if (o.owner === BOT) selfMatched.quote += cost < quoteLeft ? cost : quoteLeft

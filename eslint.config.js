@@ -69,6 +69,9 @@ export default [
       'dist/**',
       'apps/*/dist/**',
       '**/.vercel/**',
+      // Throwaway agent scripts and proof output; excluded from git via
+      // .git/info/exclude, so .gitignore-based tooling does not skip them.
+      '**/.scratch/**',
       'indexer/generated/**',
       'indexer/.pnpm-store/**',
       'apps/web/src/routeTree.gen.ts',
