@@ -167,8 +167,32 @@ RP ID and never reset `demo_anchors` while player positions exist.
 
 For demand-only signing, configure the separate funded `BOT_PRIVATE_KEY`,
 `TESTNET_REGISTRY_ADDRESS` from the verified deployment manifest and
-`MIRROR_DAILY_GAS_MON=2`. Keep the existing DRIP key/salt and private RPC unchanged.
+`MIRROR_DAILY_GAS_MON=10`. Keep the existing DRIP key/salt unchanged.
 `APP_ORIGIN` must exactly match the canonical frontend. Never run a second signer.
+
+#### DEMO mode switch (20x default, 50x on request)
+
+Production runs `DEMO_MULTIPLIER=20`. Switch to 50x only when the owner says a demo is
+starting, and back to 20x when it ends. Always write the line explicitly: the worker's own
+default is 50, so a missing line means 50x. From the repo root on the operator machine:
+
+```sh
+deploy/demo-mode.sh 50   # demo starting
+deploy/demo-mode.sh 20   # demo over; production default
+```
+
+The script rewrites only `DEMO_MULTIPLIER` in the worker env through sudo from `/tmp`,
+restarts `monadboy-worker` and polls public health every 3 s for up to 90 s until it reports
+`green` with the requested multiplier; it exits 1 otherwise. `MONADBOY_SSH` overrides the
+host alias (`perago-vps`), `MONADBOY_HEALTH` the health URL and `SSH` the client binary.
+On Windows Git Bash both the bundled `/usr/bin/ssh` and
+`SSH=/c/Windows/System32/OpenSSH/ssh.exe` work. The DEMO anchor carries the current target
+forward on a change, so open ranges never jump. At 50x the mirror re-quotes more often:
+budget about 6 to 10.7 MON of gas per active hour against the 10 MON/day cap.
+
+[V, 2026-10-11] Flip proof from Git Bash: `20 -> 50` turned green at x50 in 33 s
+(13:28:47 to 13:29:20 UTC), `50 -> 20` green at x20 30 s later; 50x was live about
+30 s. Health afterwards: `green` at `multiplier 20` (DEMO target 0.03110 at x50, 0.03193 after).
 
 The visible range/live client signs a heartbeat every15seconds, not a transaction.
 `POST /v1/mirror/demand` verifies its saved registry disk and signature; the45second

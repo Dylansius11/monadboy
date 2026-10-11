@@ -335,6 +335,7 @@ until the next deployment, since no page renders per-visitor data on the server.
 - [ ] **9.6** Complete eligible bounty mapping — proof required: each requirement -> actual code path -> video timestamp in README/research/bounties.md; Agora is skipped (Mera + AUSD + Perpl required), not pending PWA qualification.
 - [ ] **9.7** Check public submission package against [SUBMISSIONS](../SUBMISSIONS.md) — proof required: public repo/live URL, MIT license, final address/tx/technical-demo/pitch links, logo, sponsor fields and AI-tool disclosure; saved submission receipt/checklist.
 - [x] **9.8** Enable production drip without unattended mirror signing — original public503 `supply-unavailable` traced to disabled transactions, not empty treasury. Configure only DRIP and stable salt; no BOT key/executor/job. Actual HTTPS0.5MON/10AUSD receipts at69485927/69485933 succeeded, balances matched and repeat returned409 `already-funded`. Funding copy distinguishes unavailable service from insufficient inventory. User-reported S22/GPM card access is recorded without closing funded save/restore or B8; receipt/permission evidence in deployment docs and external PROGRESS.
+- [x] **9.9** Switch DEMO between 20x and 50x with one checked command: `deploy/demo-mode.sh 20|50` rewrites only `DEMO_MULTIPLIER`, restarts the worker and waits for green health at that multiplier. [V, 2026-10-11] Git Bash flip 20 to 50 green in 33 s, back to 20 green 30 s later (50x live about 30 s); health ends green at x20.
 
 **Acceptance**
 
