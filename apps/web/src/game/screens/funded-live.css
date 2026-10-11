@@ -1,8 +1,11 @@
 /* The arena owns spare LCD height; evidence stays in START or receipt wells. */
 .screen-funded-live,
 .screen-results.screen-funded-results { overflow: hidden; font-family: var(--font-pixel); }
-.screen-funded-live > :not(.funded-live-arena),
+.screen-funded-live > :not(.funded-live-body),
 .screen-funded-results > :not(.funded-results-body) { flex-shrink: 0; }
+/* HUD, controls pinned; the chart takes the spare height and the rest scrolls here, never over the KeyHints strip. */
+.funded-live-body { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 4px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.funded-live-body > * { flex-shrink: 0; }
 .funded-live-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 
 /* SCORE and DAMAGE: equal cells, equal type. NET reads beneath them. */
@@ -17,7 +20,8 @@
 @keyframes funded-hud-flash { from { background: var(--color-accent); color: var(--color-ink-invert); } }
 
 .funded-live-range { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; white-space: nowrap; }
-.funded-live-arena { position: relative; display: flex; flex: 1; min-height: 96px; min-width: 0; padding-block: 4px; }
+.funded-live-arena { position: relative; display: flex; flex: 1 0 112px; min-height: 112px; min-width: 0; padding-block: 4px; }
+.funded-live-arena:has(> .funded-recenter, > .funded-live-exit) { flex: 1 0 auto; min-height: 0; }
 .screen-funded-live .funded-live-arena .price-field { flex: 1; height: 100% !important; min-height: 0; }
 /* Out of range: a beat of stillness, then the field drains of colour. */
 .funded-live-arena .price-field { transition: filter 400ms linear 200ms; }
@@ -47,6 +51,8 @@
 .funded-live-status[data-tone='alarm'] { background: var(--color-alarm); color: var(--color-alarm-ink); }
 .funded-live-status[data-tone='warn'] { background: var(--color-warn); color: var(--color-warn-ink); }
 .funded-live-status > div { flex: 0 1 112px; }
+.funded-live-status > :first-child { flex: 1 1 auto; min-width: 0; }
+.funded-live-status > :last-child:not(:first-child) { white-space: nowrap; }
 .funded-live-status > div > :first-child { display: none; }
 
 .funded-live-sources { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; font-size: var(--text-micro); line-height: var(--text-micro--line-height); }
@@ -56,8 +62,8 @@
 .funded-live-sources dt { color: var(--color-ink-dim); text-transform: uppercase; white-space: nowrap; }
 .funded-live-sources dd { margin: 0; font-variant-numeric: tabular-nums; }
 
-.funded-live-exit { display: flex; flex: 1; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.funded-live-arena .funded-recenter { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.funded-live-exit { display: flex; flex: 1; flex-direction: column; gap: 8px; min-height: 0; }
+.funded-live-arena .funded-recenter { flex: 1; min-height: 0; }
 .funded-recenter-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: auto; }
 .funded-secondary { min-height: 44px; border: 1px solid var(--color-edge); padding: 4px 8px; background: var(--color-panel); color: var(--color-ink); font-size: var(--text-body); line-height: var(--text-body--line-height); text-transform: uppercase; }
 .funded-secondary:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }

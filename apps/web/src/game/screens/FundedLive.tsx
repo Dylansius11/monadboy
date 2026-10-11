@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { rangeState } from '@monadboy/sdk'
+import { explorerTxUrl } from '../../chain/config'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { useSession } from '../../state/session'
 import { useSound } from '../../sound/SoundProvider'
-import { price, usdDecimals } from '../../lib/format'
+import { duration, price, usdDecimals } from '../../lib/format'
 import { KeyHints, Meter, Panel, PixelText, Value } from '../../ui'
 import { PriceField } from '../PriceField'
 import {
@@ -16,6 +17,8 @@ import './funded-live.css'
 
 /** The live window: thirty chain reads, one per gameplay tick. */
 const SAMPLE_CAPACITY = 30
+/** A young run still spreads its few samples over a readable stretch of the field. */
+const MIN_WINDOW = 8
 const SAMPLE_MS = 5000
 
 export function FundedLive({ state, actions }: FundedScreenProps) {
@@ -63,7 +66,8 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
   useEffect(() => {
     if (mid !== null) setSamples((old) => ({ series: [...old.series.slice(1 - SAMPLE_CAPACITY), mid], newestAt: Date.now() }))
   }, [mid, position?.block])
-  const sampling = useMemo(() => ({ capacity: SAMPLE_CAPACITY, intervalMs: SAMPLE_MS, newestAt: samples.newestAt }), [samples.newestAt])
+  const windowSlots = Math.min(SAMPLE_CAPACITY, Math.max(MIN_WINDOW, samples.series.length))
+  const sampling = useMemo(() => ({ capacity: windowSlots, intervalMs: SAMPLE_MS, newestAt: samples.newestAt }), [samples.newestAt, windowSlots])
   useEffect(() => () => clearTimeout(jumpTimer.current), [])
   const seen = useRef<Set<string> | null>(null)
   const previousBand = useRef(band)
@@ -130,6 +134,8 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
       </div>
     )
   }
+  const bookCatchingUp = !paused && band === 'OUT_OF_RANGE' && low !== null && high !== null &&
+    position.mid !== null && position.mid >= low && position.mid <= high
   const details = (
     <Panel flush className="flex flex-col gap-1 p-2">
       <PixelText role="micro">
@@ -148,6 +154,21 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
       <PixelText role="micro">
         Range display follows {state.demoMultiplier > 1 ? `DEMO x${state.demoMultiplier} target` : 'mainnet source'}; valuation uses actual TESTNET book mid. Linked flip orders re-arm on chain. The field holds the newest 5s sample until the next one.
       </PixelText>
+      <dl className="funded-live-sources">
+        <div><dt>Mainnet</dt><dd>{state.mainnetMid === null ? 'unavailable' : price(state.mainnetMid)}</dd></div>
+        <div><dt>{state.demoMultiplier > 1 ? 'Demo target' : 'Target'}</dt><dd>{state.sourceMid === null ? 'unavailable' : price(state.sourceMid)}</dd></div>
+        <div><dt>Testnet book</dt><dd>{position.mid === null ? 'unavailable' : price(position.mid)}</dd></div>
+      </dl>
+      {bookCatchingUp && (
+        <PixelText role="micro" tone="loss" as="p">
+          {state.demoMultiplier > 1 ? 'DEMO target' : 'Mainnet price'} left your range; the TESTNET book is still inside and catching up.
+        </PixelText>
+      )}
+      {state.saved && (
+        <a className="pressable text-micro underline" href={explorerTxUrl(state.saved.hash)} target="_blank" rel="noreferrer">
+          SAVED TO CARD. Matching DiskSaved receipt.
+        </a>
+      )}
     </Panel>
   )
   if (inspect) return <Inputs state={state} onClose={() => setInspect(false)}>{details}</Inputs>
@@ -159,13 +180,14 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
   const tone = paused || band === 'OUT_OF_RANGE' ? 'alarm' : band === 'NAD_SENSE' ? 'warn' : band === 'IN_RANGE' ? 'earning' : 'idle'
   const status = paused ? 'PRICE FEED PAUSED'
     : band === 'NAD_SENSE' ? 'NAD-SENSE · near your edge'
-      : band === 'OUT_OF_RANGE' ? 'OUT OF RANGE · sitting'
+      : band === 'OUT_OF_RANGE' ? (bookCatchingUp ? 'OUT OF RANGE · book catching up' : 'OUT OF RANGE · sitting')
         : band === 'IN_RANGE' ? 'IN RANGE · earning on flips' : 'No active range'
+  const elapsed = basis ? duration(Math.max(0, Date.now() / 1000 - basis.openedAt)) : null
   const exiting = exitFrom !== null && (state.busy || state.error !== null)
   return (
     <div className={`screen-live screen-funded-live bg-screen flex h-full w-full flex-col gap-1 p-2 ${band === 'NAD_SENSE' && !paused ? 'nad-pulse' : ''}`}>
       <header className="funded-live-heading">
-        <PixelText role="body" upper>Live · MON/AUSD</PixelText>
+        <PixelText role="body" upper>MON/AUSD</PixelText>
         <PixelText role="micro" tone="dim">{state.demoMultiplier > 1 ? `TESTNET · DEMO x${state.demoMultiplier}` : 'TESTNET'}</PixelText>
       </header>
       <div className="funded-live-hud">
@@ -182,58 +204,50 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
           {valuation ? <Value amount={valuation.net} prefix="$" decimals={figureDecimals} signed role="body" /> : <PixelText role="body">Unavailable</PixelText>}
         </div>
       </div>
-      <div className="funded-live-range">
-        <PixelText role="micro"><PixelText role="micro" tone="dim">RANGE </PixelText>{low === null ? 'unavailable' : price(low)} to {high === null ? 'unavailable' : price(high)}</PixelText>
-        <PixelText role="micro"><PixelText role="micro" tone="dim">NOW </PixelText>{mid === null ? 'unavailable' : price(mid)}</PixelText>
-      </div>
-      <div className="funded-live-arena" data-tone={tone}>
-        {exiting ? (
-          <div className="funded-live-exit">
-            <PixelText role="body" upper>{state.busy ? 'Ending run' : 'Exit stopped'}</PixelText>
-            <ReceiptSteps steps={state.steps.slice(exitFrom)} />
-          </div>
-        ) : recenter ? (
-          <section className="funded-card funded-recenter">
-            <div className="funded-card-head">
-              <PixelText role="body" upper>Re-center</PixelText>
-              <PixelText role="micro" tone="dim">TESTNET</PixelText>
+      <div className="funded-live-body">
+        <div className="funded-live-range">
+          <PixelText role="micro"><PixelText role="micro" tone="dim">RANGE </PixelText>{low === null ? 'unavailable' : price(low)} to {high === null ? 'unavailable' : price(high)}</PixelText>
+          <PixelText role="micro"><PixelText role="micro" tone="dim">NOW </PixelText>{mid === null ? 'unavailable' : price(mid)}</PixelText>
+        </div>
+        <div className="funded-live-arena" data-tone={tone}>
+          {exiting ? (
+            <div className="funded-live-exit">
+              <PixelText role="body" upper>{state.busy ? 'Ending run' : 'Exit stopped'}</PixelText>
+              <ReceiptSteps steps={state.steps.slice(exitFrom)} />
             </div>
-            <PixelText role="micro" as="p">Re-centering is an exit and a fresh quote: cancel one ID per linked pair, withdraw, then review a new ladder, zap fee and gas before confirming again. Nothing changes automatically.</PixelText>
-            <dl className="funded-facts">
-              <dt>Exit fee est.</dt>
-              <dd>{state.exitCostMon === null ? 'reading' : `${state.exitCostMon.toFixed(6)} MON, not a ceiling`}</dd>
-            </dl>
-            <div className="funded-recenter-actions">
-              <button className="funded-primary pressable" disabled={state.busy || state.exitCostMon === null} onClick={() => exit(actions.recenter)}>Exit and re-center</button>
-              <button className="funded-secondary pressable" onClick={() => setRecenter(false)}>Keep position</button>
-            </div>
-          </section>
-        ) : mid !== null && low !== null && high !== null ? (
-          <>
-            <PriceField series={samples.series.length ? samples.series : [mid]} lowerPrice={low} upperPrice={high}
-              width={464} height={200} character={character} sampling={samples.series.length ? sampling : undefined}
-              animation={paused || band === 'OUT_OF_RANGE' ? 'sit' : jumping ? 'jump' : band === 'NAD_SENSE' ? 'alert' : 'run'}
-              jumping={jumping} earning={!paused && band === 'IN_RANGE'} />
-            {flips > 0 && <span key={flips} className="funded-flip-pop" aria-hidden="true">+FLIP</span>}
-          </>
-        ) : <PixelText role="body">No active range to draw. START opens actual chain inputs.</PixelText>}
+          ) : recenter ? (
+            <section className="funded-card funded-recenter">
+              <div className="funded-card-head">
+                <PixelText role="body" upper>Re-center</PixelText>
+                <PixelText role="micro" tone="dim">TESTNET</PixelText>
+              </div>
+              <PixelText role="micro" as="p">Re-centering is an exit and a fresh quote: cancel one ID per linked pair, withdraw, then review a new ladder, zap fee and gas before confirming again. Nothing changes automatically.</PixelText>
+              <dl className="funded-facts">
+                <dt>Exit fee est.</dt>
+                <dd>{state.exitCostMon === null ? 'reading' : `${state.exitCostMon.toFixed(6)} MON, not a ceiling`}</dd>
+              </dl>
+              <div className="funded-recenter-actions">
+                <button className="funded-primary pressable" disabled={state.busy || state.exitCostMon === null} onClick={() => exit(actions.recenter)}>Exit and re-center</button>
+                <button className="funded-secondary pressable" onClick={() => setRecenter(false)}>Keep position</button>
+              </div>
+            </section>
+          ) : mid !== null && low !== null && high !== null ? (
+            <>
+              <PriceField series={samples.series.length ? samples.series : [mid]} lowerPrice={low} upperPrice={high}
+                width={464} height={200} character={character} sampling={samples.series.length ? sampling : undefined}
+                animation={paused || band === 'OUT_OF_RANGE' ? 'sit' : jumping ? 'jump' : band === 'NAD_SENSE' ? 'alert' : 'run'}
+                jumping={jumping} earning={!paused && band === 'IN_RANGE'} />
+              {flips > 0 && <span key={flips} className="funded-flip-pop" aria-hidden="true">+FLIP</span>}
+            </>
+          ) : <PixelText role="body">No active range to draw. START opens actual chain inputs.</PixelText>}
+        </div>
+        <div className="funded-live-status" data-tone={tone} role="status">
+          <PixelText role="micro" upper>{status}</PixelText>
+          {tone === 'earning' && <Meter value={proximity} segments={12} label="Distance from range edge" />}
+          {elapsed && <PixelText role="micro" tone={tone === 'idle' || tone === 'earning' ? 'dim' : 'ink'} className="tabular-nums">{elapsed}</PixelText>}
+        </div>
+        <Notices state={state} saved={false} />
       </div>
-      <div className="funded-live-status" data-tone={tone} role="status">
-        <PixelText role="micro" upper>{status}</PixelText>
-        {tone === 'earning' && <Meter value={proximity} segments={12} label="Distance from range edge" />}
-      </div>
-      {!paused && band === 'OUT_OF_RANGE' && low !== null && high !== null &&
-        position.mid !== null && position.mid >= low && position.mid <= high && (
-          <PixelText role="micro" tone="loss" as="p">
-            {state.demoMultiplier > 1 ? 'DEMO target' : 'Mainnet price'} left your range; the TESTNET book is still inside and catching up.
-          </PixelText>
-        )}
-      <dl className="funded-live-sources">
-        <div><dt>Mainnet</dt><dd>{state.mainnetMid === null ? 'unavailable' : price(state.mainnetMid)}</dd></div>
-        <div><dt>{state.demoMultiplier > 1 ? 'Demo target' : 'Target'}</dt><dd>{state.sourceMid === null ? 'unavailable' : price(state.sourceMid)}</dd></div>
-        <div><dt>Testnet book</dt><dd>{position.mid === null ? 'unavailable' : price(position.mid)}</dd></div>
-      </dl>
-      <Notices state={state} />
       <KeyHints hints={[
         { key: 'A', label: recenter ? 'Exit' : band === 'OUT_OF_RANGE' ? 'Recenter' : 'Jump', disabled: state.busy || (recenter ? state.exitCostMon === null : paused) },
         { key: 'B', label: recenter ? 'Keep' : state.busy ? 'Working' : 'Withdraw', disabled: state.busy },

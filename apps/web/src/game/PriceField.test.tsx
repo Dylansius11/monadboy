@@ -82,8 +82,11 @@ describe('price field geometry', () => {
     expect(getByText('Low')).toBeInTheDocument()
   })
 
-  it('leaves the out-of-range band unfilled rather than claiming earnings', () => {
+  it('draws the out-of-range band muted rather than claiming earnings', () => {
     const { container } = render(<PriceField {...BASE} earning={false} />)
-    expect(container.querySelector('svg > rect')!.getAttribute('fill')).toBe('transparent')
+    const band = container.querySelector('svg > rect')!
+    expect(band.getAttribute('fill')).toBe('var(--color-sunk)')
+    expect(band.getAttribute('fill-opacity')).toBe('0.5')
+    expect(render(<PriceField {...BASE} earning />).container.querySelector('svg > rect')!.getAttribute('fill-opacity')).toBe('1')
   })
 })

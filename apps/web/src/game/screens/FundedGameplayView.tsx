@@ -75,7 +75,7 @@ export function ReceiptSteps({ steps, planned = [], verbose = false }: { steps: 
   )
 }
 /** `error={false}` when the screen states the operation error in its own card. */
-export function Notices({ state, error = true }: { state: GameplayState; error?: boolean }) {
+export function Notices({ state, error = true, saved = true }: { state: GameplayState; error?: boolean; saved?: boolean }) {
   const hasError = state.demandError || (error && state.error) || state.readError || state.saveError || state.position?.historyError
   return (
     <>
@@ -94,7 +94,7 @@ export function Notices({ state, error = true }: { state: GameplayState; error?:
           </Panel>
         </div>
       )}
-      {state.saved && (
+      {saved && state.saved && (
         <a className="funded-saved text-micro underline" href={explorerTxUrl(state.saved.hash)} target="_blank" rel="noreferrer">
           SAVED TO CARD. Matching DiskSaved receipt.
         </a>

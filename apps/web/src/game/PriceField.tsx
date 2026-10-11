@@ -125,7 +125,7 @@ export function PriceField({
   })
   // The first observed price is held across the field; one SVG point has no
   // visible line and would leave half the character outside the left edge.
-  if (series.length === 1 && !sampling) points.unshift(`0,${y(series[0])}`)
+  if (series.length === 1) points.unshift(`0,${y(series[0])}`)
 
   const top = Math.max(lowerPrice, upperPrice)
   const bottom = Math.min(lowerPrice, upperPrice)
@@ -158,7 +158,8 @@ export function PriceField({
           y={topY}
           width={plotWidth}
           height={Math.max(1, bottomY - topY)}
-          fill={earning ? 'var(--color-sunk)' : 'transparent'}
+          fill="var(--color-sunk)"
+          fillOpacity={earning ? 1 : 0.5}
         />
 
         {[topY, bottomY].map((edgeY, index) => (
