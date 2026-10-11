@@ -26,3 +26,6 @@ export type { BinState, PinKind } from './data'
 
 export { Sprite, Marquee, FRAMES } from './motion'
 export type { FrameName, SpriteAnimation } from './motion'
+
+export { KeyHints } from './hints'
+export type { KeyHint } from './hints'
