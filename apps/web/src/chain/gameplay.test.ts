@@ -124,18 +124,19 @@ describe('real gameplay consumer boundaries', () => {
     expect(() => bufferedGas(17909681n, 2000000n)).toThrow()
     expect(rawQuoteCeil(0.0603, 6)).toBe(60300n)
   })
-  it('rejects a minimum-base preview when the buffered fill-or-kill input exceeds all asks', async () => {
-    const ladder = planLadder({
+  it('funds a ladder whose slippage buffer exceeds the asks, and names the fundable amount past the minimum', async () => {
+    const plan = (budgetQuote: number) => planLadder({
       mid: 0.033,
       mode: 'TIGHT',
-      budgetQuote: 0.4752,
+      budgetQuote,
       sigmaDaily: 0,
       manual: { low: 0.032934, high: 0.033066 },
       params: market.params,
     })
-    await expect(
-      quoteFunding(historicalBookClient(), market, ladder, unfundedPosition),
-    ).rejects.toThrow()
+    // The zap is not fill-or-kill: only the ladder's minimum MON must be on the asks.
+    await expect(quoteFunding(historicalBookClient(), market, plan(0.4752), unfundedPosition)).resolves.toBeDefined()
+    await expect(quoteFunding(historicalBookClient(), market, plan(5), unfundedPosition))
+      .rejects.toThrow(/can fund about \d+\.\d\d AUSD right now/)
   })
   it('keeps fee and slippage funding for a ladder within the same historical ask capacity', async () => {
     const ladder = planLadder({

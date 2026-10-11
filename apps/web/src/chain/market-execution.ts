@@ -8,6 +8,7 @@ import {
   measuredTestnetGas,
 } from '@monadboy/sdk'
 import {
+  BaseError,
   createWalletClient,
   decodeAbiParameters,
   encodeFunctionData,
@@ -17,6 +18,7 @@ import { CHAIN } from './config'
 import { bufferedGas, cancelPairIds, MARGIN, rawQuoteCeil } from './gameplay'
 import {
   browserTransport,
+  delay,
   rememberSenderBlock,
   waitForSender,
   withSenderLock,
@@ -172,7 +174,43 @@ export async function verifyMarket(
   return { ...market, params }
 }
 
-/** L2 asks are a block-backed preview; the funded margin call is simulated again before signing. */
+/** Cost in quote of buying `neededBase` from the L2 asks, cheapest first, and the base left unfilled. */
+export function walkAsks(
+  raw: Hex,
+  neededBase: number,
+  params: Market['params'],
+): { cost: number; remaining: number; askQuote: number } {
+  if (!/^0x(?:[a-fA-F0-9]{64}){2,}$/.test(raw))
+    throw new Error('TESTNET book quote is unreadable.')
+  let offset = 66
+  while (offset < raw.length) {
+    const price = BigInt(`0x${raw.slice(offset, offset + 64)}`)
+    offset += 64
+    if (price === 0n) break
+    if (offset + 64 > raw.length)
+      throw new Error('TESTNET book quote is truncated.')
+    offset += 64
+  }
+  let remaining = neededBase
+  let cost = 0
+  let askQuote = 0
+  while (offset < raw.length) {
+    const units = BigInt(`0x${raw.slice(offset, offset + 64)}`)
+    offset += 64
+    if (units === 0n) break
+    const price = Number(units) / Number(params.pricePrecision)
+    if (offset + 64 > raw.length) throw new Error('TESTNET asks are truncated.')
+    const size = Number(BigInt(`0x${raw.slice(offset, offset + 64)}`)) / Number(params.sizePrecision)
+    offset += 64
+    askQuote += price * size
+    const take = Math.min(remaining, size)
+    cost += take * price
+    remaining -= take
+  }
+  return { cost, remaining, askQuote }
+}
+
+/** L2 asks are a block-backed preview; depth is read again and the zap simulated before signing. */
 export async function quoteFunding(
   client: PublicClient,
   market: Market,
@@ -185,17 +223,6 @@ export async function quoteFunding(
     functionName: 'getL2Book',
     blockNumber: position.block,
   })
-  if (!/^0x(?:[a-fA-F0-9]{64}){2,}$/.test(raw))
-    throw new Error('TESTNET book quote is unreadable.')
-  let offset = 66
-  while (offset < raw.length) {
-    const price = BigInt(`0x${raw.slice(offset, offset + 64)}`)
-    offset += 64
-    if (price === 0n) break
-    if (offset + 64 > raw.length)
-      throw new Error('TESTNET book quote is truncated.')
-    offset += 64
-  }
   const sellBaseRaw = ladder.orders
     .filter((order) => !order.isBuy)
     .reduce(
@@ -212,40 +239,23 @@ export async function quoteFunding(
   const neededBase = Number(
     formatUnits(minimumBaseRaw, market.params.baseDecimals),
   )
-  let remaining = neededBase
-  let cost = 0
-  let askCapacity = 0n
-  while (offset < raw.length) {
-    const price = BigInt(`0x${raw.slice(offset, offset + 64)}`)
-    offset += 64
-    if (price === 0n) break
-    if (offset + 64 > raw.length) throw new Error('TESTNET asks are truncated.')
-    const size = BigInt(`0x${raw.slice(offset, offset + 64)}`)
-    offset += 64
-    askCapacity += price * size
-    const available = Number(size) / Number(market.params.sizePrecision)
-    const take = Math.min(remaining, available)
-    cost += (take * Number(price)) / Number(market.params.pricePrecision)
-    remaining -= take
-  }
-  if (remaining > 1e-9)
+  const { cost, remaining, askQuote } = walkAsks(raw, neededBase, market.params)
+  if (remaining > 1e-9) {
+    // About half a ladder's budget buys MON, plus fee and slippage: name what the book can fund.
+    const fundable = Math.floor(askQuote * 2 * (1 - market.params.takerFeeBps / 10000) / (1 + Number(SLIPPAGE_BPS) / 10000) * 100) / 100
     throw new Error(
-      'TESTNET ask depth cannot fund this ladder. Refresh the book or retry when liquidity returns. No funds moved.',
+      fundable >= 0.01
+        ? `TESTNET asks can fund about ${fundable.toFixed(2)} AUSD right now. Choose that or less, or retry when liquidity returns. No funds moved.`
+        : 'TESTNET book has no asks to fund a ladder right now. Retry when liquidity returns. No funds moved.',
     )
+  }
   const quoteBeforeFee = cost / (1 - market.params.takerFeeBps / 10000)
+  // The zap is not fill-or-kill: it stops once asks run out and keeps the unspent buffer in
+  // margin, while minimumBaseRaw (minAmountOut) still refuses a fill short of the ladder.
   const zapRaw = rawQuoteCeil(
     quoteBeforeFee * (1 + Number(SLIPPAGE_BPS) / 10000),
     market.params.quoteDecimals,
   )
-  // Fill-or-kill consumes the full fee/slippage-buffered input, not just the minimum base.
-  const zapUnits = quoteToUnits(
-    Number(formatUnits(zapRaw, market.params.quoteDecimals)),
-    market.params,
-  )
-  if (zapUnits * market.params.sizePrecision > askCapacity)
-    throw new Error(
-      'TESTNET asks cannot cover this amount plus its safety buffer. Refresh the book or retry when liquidity returns. No funds moved.',
-    )
   const requiredQuote =
     rawQuoteCeil(ladder.quoteNeeded, market.params.quoteDecimals) + zapRaw
   const depositRaw =
@@ -280,6 +290,38 @@ export async function quoteFunding(
   }
 }
 
+const ZAP_DEPTH_WAIT_MS = 30_000
+// Kuru custom errors a margin market buy can revert with (selectors from their signatures).
+const ZAP_FAILURE = {
+  InsufficientLiquidity:
+    'TESTNET asks are too thin to swap for your MON right now, so the swap was not sent. Your AUSD is safe in margin: WITHDRAW returns it, or re-quote to try again.',
+  SlippageExceeded:
+    'The TESTNET price moved more than 1% before the swap, so it was not sent. Your AUSD is safe in margin: WITHDRAW returns it, or re-quote at the new price.',
+  InsufficientBalance:
+    'Margin AUSD is short of the swap amount, so it was not sent. Refresh: WITHDRAW returns what is in margin, or re-quote.',
+} as const
+const ZAP_SELECTORS: Record<string, keyof typeof ZAP_FAILURE> = {
+  '0xbb55fd27': 'InsufficientLiquidity',
+  '0x8199f5f3': 'SlippageExceeded',
+  '0xf4d678b8': 'InsufficientBalance',
+}
+
+/** Human copy for a zap revert, or null when the error is not a known swap revert. */
+export function zapFailure(error: unknown): string | null {
+  if (error instanceof Error && Object.values(ZAP_FAILURE).some((copy) => copy === error.message))
+    return error.message
+  if (!(error instanceof BaseError)) return null
+  // eth_call / eth_estimateGas put the revert bytes on the RPC error (RpcRequestError.data,
+  // verified against testnet); contract reads wrap them in RawContractError.data.
+  const hexData = (cause: unknown) =>
+    typeof cause === 'object' && cause !== null && 'data' in cause && typeof cause.data === 'string' && cause.data.startsWith('0x')
+      ? cause.data
+      : undefined
+  const data = hexData(error.walk((cause) => hexData(cause) !== undefined))
+  const name = data ? ZAP_SELECTORS[data.slice(0, 10).toLowerCase()] : undefined
+  return name ? ZAP_FAILURE[name] : null
+}
+
 export async function fundAndProvision(
   client: PublicClient,
   rpc: string,
@@ -305,6 +347,20 @@ export async function fundAndProvision(
   }
   if (Date.now() - quote.at > 60000)
     throw new Error('Quote expired. Refresh the actual book before confirming.')
+  const neededBase = Number(formatUnits(quote.minimumBaseRaw, market.params.baseDecimals))
+  const zapQuote = Number(formatUnits(quote.zapRaw, market.params.quoteDecimals))
+  // Latest-block asks still sell the ladder's MON within the zap's fee/slippage-buffered input.
+  const asksCover = async () => {
+    const raw = await client.readContract({ address: market.address, abi: kuruOrderbookAbi, functionName: 'getL2Book' })
+    lease.assertLive()
+    const { cost, remaining } = walkAsks(raw, neededBase, market.params)
+    return remaining <= 1e-9 && cost / (1 - market.params.takerFeeBps / 10000) <= zapQuote
+  }
+  // Re-read before any signature: the quote may be up to a minute old.
+  if (quote.zapRaw > 0n && !(await asksCover()))
+    throw new Error(
+      'TESTNET asks moved since this quote and no longer fund the ladder. Re-quote to see the current price. No funds moved.',
+    )
   if (quote.depositRaw > 0n) {
     const allowance = await client.readContract({
       address: market.quoteToken,
@@ -335,31 +391,47 @@ export async function fundAndProvision(
     })
   }
   if (quote.zapRaw > 0n) {
-    const input = quoteToUnits(
-      Number(formatUnits(quote.zapRaw, market.params.quoteDecimals)),
-      market.params,
-    )
+    const step = 'Zap MON to margin'
+    // Approve and deposit take several blocks; the market maker may be re-quoting meanwhile.
+    // Its ladder refills in one atomic batch, so give it up to one mirror cycle to return.
+    publish({ step, state: 'checking', detail: 'checking TESTNET asks' })
+    const deadline = Date.now() + ZAP_DEPTH_WAIT_MS
+    let covered = await asksCover()
+    while (!covered && Date.now() < deadline) {
+      publish({ step, state: 'checking', detail: 'waiting for TESTNET asks to refill' })
+      await delay(3000)
+      lease.assertLive()
+      covered = await asksCover()
+    }
+    if (!covered) {
+      publish({ step, state: 'not-sent', detail: 'TESTNET asks too thin' })
+      throw new Error(ZAP_FAILURE.InsufficientLiquidity)
+    }
+    const input = quoteToUnits(zapQuote, market.params)
+    // Not fill-or-kill: unspent buffer stays in margin; minAmountOut refuses a short fill.
     const data = encodeFunctionData({
       abi: kuruOrderbookAbi,
       functionName: 'placeAndExecuteMarketBuy',
-      args: [input, quote.minimumBaseRaw, true, true],
+      args: [input, quote.minimumBaseRaw, true, false],
     })
-    const result = await client.call({
-      account: lease.address,
-      to: market.address,
-      data,
-      gas: 2000000n,
-    })
-    lease.assertLive()
-    const [output] = decodeAbiParameters(
-      [{ type: 'uint256' }],
-      result.data ?? '0x',
-    )
-    if (output < quote.minimumBaseRaw || quote.minimumBaseRaw === 0n)
-      throw new Error(
-        'Actual funded margin quote cannot cover the ladder. Withdraw or re-quote.',
-      )
-    await send('Zap MON to margin', { to: market.address, data, cap: 2000000n })
+    try {
+      const result = await client.call({ account: lease.address, to: market.address, data, gas: 2000000n })
+      lease.assertLive()
+      const [output] = decodeAbiParameters([{ type: 'uint256' }], result.data ?? '0x')
+      if (output < quote.minimumBaseRaw || quote.minimumBaseRaw === 0n)
+        throw new Error(ZAP_FAILURE.SlippageExceeded)
+    } catch (error) {
+      const copy = zapFailure(error)
+      if (!copy) throw error
+      publish({ step, state: 'not-sent', detail: 'swap simulation refused' })
+      throw new Error(copy)
+    }
+    try {
+      await send(step, { to: market.address, data, cap: 2000000n })
+    } catch (error) {
+      const copy = zapFailure(error)
+      throw copy ? new Error(copy) : error
+    }
   }
   await beforeProvision()
   lease.assertLive()
