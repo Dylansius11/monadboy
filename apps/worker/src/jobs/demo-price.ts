@@ -1,11 +1,12 @@
 import type { Database } from 'bun:sqlite'
 
-export const DEMO_MULTIPLIER = 50
+// Owner policy: 20x by default; 50x (the maximum) only for a live demo.
+export const DEMO_MULTIPLIER = 20
 // e-folding time of the DEMO target's log gap to the mainnet price. Amplified relative
-// movement alone is a random walk with 50x mainnet's volatility: the measured 4.6% mainnet
-// range over 24h (2026-10-11) would swing it about 9.5x in a day. Decaying the gap with a
+// movement alone is a random walk with up to 50x mainnet's volatility: the measured 4.6% mainnet
+// range over 24h (2026-10-11) would swing it about 9.5x in a day at 50x. Decaying the gap with a
 // one-hour constant keeps it to tens of percent (from measured 1h mainnet moves, p50 0.38%)
-// while a three-minute run sees well under 1% of drift next to its 50x moves.
+// while a three-minute run sees well under 1% of drift next to its amplified moves.
 export const DEMO_REVERSION_MS = 3_600_000
 // Anchor writes are throttled to the mainnet sampler cadence; reads in between agree.
 const PERSIST_MS = 5_000

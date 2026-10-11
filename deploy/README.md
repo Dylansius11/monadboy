@@ -172,9 +172,9 @@ For demand-only signing, configure the separate funded `BOT_PRIVATE_KEY`,
 
 #### DEMO mode switch (20x default, 50x on request)
 
-Production runs `DEMO_MULTIPLIER=20`. Switch to 50x only when the owner says a demo is
-starting, and back to 20x when it ends. Always write the line explicitly: the worker's own
-default is 50, so a missing line means 50x. From the repo root on the operator machine:
+Production runs `DEMO_MULTIPLIER=20`, also the worker's default. Switch to 50x only when the
+owner says a demo is starting, and back to 20x when it ends. The script always writes the
+line explicitly. From the repo root on the operator machine:
 
 ```sh
 deploy/demo-mode.sh 50   # demo starting

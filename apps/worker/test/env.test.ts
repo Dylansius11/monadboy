@@ -56,11 +56,11 @@ test('proxy trust requires one exact IP, not a network or hostname', () => {
     expect(() => parseEnv({ TRUSTED_PROXY_IP: peer })).toThrow()
 })
 
-test('mirror pacing and DEMO amplification default to 60 s, 1% and 50x, and are range checked', () => {
+test('mirror pacing and DEMO amplification default to 60 s, 1% and 20x, and are range checked', () => {
   const env = parseEnv({})
-  expect([env.MIRROR_INTERVAL_MS, env.MIRROR_DEADBAND, env.DEMO_MULTIPLIER]).toEqual([60_000, 0.01, 50])
+  expect([env.MIRROR_INTERVAL_MS, env.MIRROR_DEADBAND, env.DEMO_MULTIPLIER]).toEqual([60_000, 0.01, 20])
   expect(env.MIRROR_DAILY_GAS_MON).toBe(10n * 10n ** 18n)
-  expect(parseEnv({ DEMO_MULTIPLIER: '20' }).DEMO_MULTIPLIER).toBe(20)
+  expect(parseEnv({ DEMO_MULTIPLIER: '50' }).DEMO_MULTIPLIER).toBe(50)
   for (const bad of [{ DEMO_MULTIPLIER: '51' }, { DEMO_MULTIPLIER: '0' }, { DEMO_MULTIPLIER: '2.5' },
     { MIRROR_INTERVAL_MS: '1000' }, { MIRROR_DEADBAND: '0.2' }])
     expect(() => parseEnv(bad)).toThrow()

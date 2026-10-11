@@ -58,7 +58,8 @@ const schema = z
     MIRROR_INTERVAL_MS: z.coerce.number().int().min(5_000).max(600_000).default(60_000),
     MIRROR_DEADBAND: z.coerce.number().min(0).max(0.05).default(0.01),
     // Relative-movement amplification of the playable DEMO target (1 = mainnet movement).
-    DEMO_MULTIPLIER: z.coerce.number().int().min(1).max(50).default(50),
+    // Owner policy: 20x by default; 50x only for a live demo (deploy/demo-mode.sh).
+    DEMO_MULTIPLIER: z.coerce.number().int().min(1).max(50).default(20),
     MIRROR_DAILY_GAS_MON: decimal(18, '10'),
     // Mirror ceilings bound estimation; each send declares a fresh estimate +10% (mirror-executor).
     // S2 samples are shape-specific, so never reuse partial-fill gas for a multi-level traversal.
