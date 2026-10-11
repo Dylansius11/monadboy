@@ -250,11 +250,20 @@ rerun, because the generated `internal.config.json` keeps the URL resolved at
 codegen time and a container env change alone does not move the indexer.
 Health afterwards was green with Envio live at lag1. A counting proxy measured
 idle load with no active players: the indexer made about380 calls/min
-(`eth_blockNumber`, `eth_getLogs` and `eth_getBlockByNumber`, one each per1s
-poll), and the worker about130–280 calls/min, of which77% were `s_orders`
+(`eth_blockNumber`, `eth_getLogs` and `eth_getBlockByNumber`, about two of each
+per second), and the worker about130–280 calls/min, of which77% were `s_orders`
 reads walking price-point lists for order membership during leaderboard
 hydration. The public endpoint allows50 requests/s and25 `eth_call`/s [V];
 [I] if that is counted per IP, every service on this VPS shares it.
+
+[V,2026-10-11] With Multicall3 batching deployed, the same proxy measured the
+worker at33–34 calls/min, nearly all `aggregate3`, `eth_getLogs` or head reads, with no
+RPC errors. Raising the indexer `polling_interval` to2000ms still measured about
+323 calls/min: the pinned HyperIndex schema states that every block is fetched
+for reorg checks whatever the interval, and Monad produces about two blocks per
+second. The interval stays at1000ms. Only HyperSync-only live indexing would
+remove these calls, and it previously missed a fresh fill by16.620s and would
+share the HyperSync token that the tracker uses.
 
 The mainnet MON_USDC source pauses immediately for an empty/crossed book or relative
 spread `(ask - bid) / mid > 2%`. This fixed operator maximum is user-approved policy,
