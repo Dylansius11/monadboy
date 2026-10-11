@@ -12,7 +12,7 @@ import {
   shortAddress,
 } from '../data/leaderboard'
 import { utcStamp } from '../data/provenance'
-import { Panel, PixelText } from '../../ui'
+import { KeyHints, Panel, PixelText } from '../../ui'
 import { describeReadState } from './ReadState'
 import type { TextTone } from '../../ui'
 import type { ReadView } from '../../lib/worker/queries'
@@ -149,26 +149,13 @@ export function Leaderboard({ window, onWindowChange, view, now, onBack }: Leade
         <StateBody view={view} data={data} />
       )}
 
-      <div className="screen-footer mt-auto flex items-center justify-between gap-2">
-        <PixelText role="micro" upper>
-          {'◄►'} Window
-        </PixelText>
-        <button
-          type="button"
-          disabled={!rows[current]?.lastFillTx}
-          onClick={() => openLastFill(rows[current])}
-          className="pressable disabled:opacity-40"
-        >
-          <PixelText role="micro" upper>
-            A Last fill
-          </PixelText>
-        </button>
-        <button type="button" onClick={onBack} className="pressable">
-          <PixelText role="micro" upper>
-            B Back
-          </PixelText>
-        </button>
-      </div>
+      <KeyHints className="mt-auto" hints={[
+        { key: 'DPAD', label: 'Window' },
+        view.kind === 'failed'
+          ? { key: 'A', label: 'Retry' }
+          : { key: 'A', label: 'Last fill', disabled: !rows[current]?.lastFillTx },
+        { key: 'B', label: 'Back' },
+      ]} />
     </div>
   )
 }

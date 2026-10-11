@@ -8,7 +8,7 @@ import { useCardState } from '../../../chain/card-store'
 import { useConsoleIntent } from '../../../console/useConsoleInput'
 import { ageNowMs, useNow, useTrackerRead } from '../../../lib/worker/queries'
 import { toTrackerSnapshot } from '../../../game/data/tracker'
-import { Panel, PixelText } from '../../../ui'
+import { KeyHints, Panel, PixelText } from '../../../ui'
 import type { Difficulty as Tier } from '../../../types/domain'
 
 export const Route = createFileRoute('/_console/play/difficulty')({
@@ -44,9 +44,9 @@ function RealDifficultyRoute() {
   const selected = slot === null ? null : state.shelf?.slots[slot]
   useConsoleIntent((intent) => { if (intent === 'B' && selected?.kind !== 'disk') void navigate({ to: '/disks' }) })
   if (card.phase !== 'inserted' || selected?.kind !== 'disk') return <div className="bg-screen flex h-full flex-col gap-2 p-2">
-    <PixelText role="title">Choose a saved disk first</PixelText>
+    <PixelText role="title" upper>Choose a saved disk first</PixelText>
     <Panel>{state.error?.text ?? 'Insert your card and open one of its three saved disks. No demo disk is substituted.'}</Panel>
-    <button type="button" className="pressable mt-auto min-h-11 text-body" onClick={() => void navigate({ to: '/disks' })}>B Back to disks</button>
+    <KeyHints className="mt-auto" hints={[{ key: 'B', label: 'Disks' }]} />
   </div>
   let preview
   if (read.kind === 'ready') {

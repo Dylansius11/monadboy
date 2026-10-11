@@ -1,5 +1,5 @@
 import { useConsoleIntent } from '../../console/useConsoleInput'
-import { Panel, PixelText } from '../../ui'
+import { KeyHints, Panel, PixelText } from '../../ui'
 import type { NotReady } from '../../lib/worker/queries'
 import type { WorkerReadError } from '../../lib/worker/client'
 
@@ -91,22 +91,10 @@ export function ReadState({ subject, view, onBack }: ReadStateProps) {
           </PixelText>
         </Panel>
       </div>
-      <div className="screen-footer flex items-center justify-between gap-2">
-        {retry ? (
-          <button type="button" onClick={retry} className="pressable">
-            <PixelText role="micro" upper>
-              A Retry
-            </PixelText>
-          </button>
-        ) : (
-          <span />
-        )}
-        <button type="button" onClick={onBack} className="pressable">
-          <PixelText role="micro" upper>
-            B Back
-          </PixelText>
-        </button>
-      </div>
+      <KeyHints hints={[
+        ...(retry ? [{ key: 'A' as const, label: 'Retry' }] : []),
+        { key: 'B', label: 'Back' },
+      ]} />
     </div>
   )
 }

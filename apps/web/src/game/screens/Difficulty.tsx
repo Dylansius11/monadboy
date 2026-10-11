@@ -5,7 +5,7 @@ import { characters } from '../../config/brand'
 import { fixtureGates, passingCount, scoredPools } from '../fixtures'
 import { ageInDays, compactUsd } from '../../lib/format'
 import { GodModeGate } from '../GodModeGate'
-import { Meter, PixelText, Row, Sprite, Toggle } from '../../ui'
+import { KeyHints, Meter, PixelText, Row, Sprite, Toggle } from '../../ui'
 import type { CharacterId } from '../../config/brand'
 import type { Difficulty as DifficultyTier, GateSet } from '../../types/domain'
 
@@ -340,23 +340,11 @@ export function Difficulty({
       </Row>
       </div>
 
-      {/* Footer, pinned to the bottom edge whatever the content above it did.
-          The console owns the key legend: this screen names the BUTTON, never
-          the key it happens to be bound to on a keyboard. */}
-      <div className="screen-footer mt-auto flex items-center justify-between">
-        {/* U+25C4 and U+25BA, not U+25C0 and U+25B6. The pixel font does not
-            map the pointing-triangle pair, so the obvious glyphs render as two
-            tofu boxes on the first row a player reads. */}
-        <PixelText role="micro" upper>
-          {'◄►'} Select
-        </PixelText>
-        <PixelText role="micro" upper>
-          A Confirm
-        </PixelText>
-        <PixelText role="micro" upper>
-          B Back
-        </PixelText>
-      </div>
+      <KeyHints hints={[
+        { key: 'DPAD', label: 'Pick' },
+        { key: 'A', label: focus === 'godmode' ? 'Toggle' : 'Confirm', disabled: pending },
+        { key: 'B', label: 'Back', disabled: pending },
+      ]} />
 
       {overlayOpen ? (
         <div className="absolute inset-0">
