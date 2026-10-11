@@ -10,15 +10,49 @@ const market = '0x1111111111111111111111111111111111111111' as const
 const account = privateKeyToAccount(`0x${'12'.repeat(32)}`)
 
 describe('amplified demo price', () => {
-  it('amplifies relative movement and preserves its anchor across restart', () => {
+  it('amplifies relative movement 50x and preserves its anchor across restart', () => {
     const db = memoryDb()
-    const demo = createDemoPrice(db, market, 20)
+    const demo = createDemoPrice(db, market, 50, { now: () => 1000 })
     expect(demo.read(0.24).targetMid).toBeCloseTo(0.24)
-    expect(demo.read(0.24024).targetMid! / 0.24 - 1).toBeCloseTo(0.02019114486, 8)
-    const restarted = createDemoPrice(db, market, 20)
+    expect(demo.read(0.24024).targetMid! / 0.24 - 1).toBeCloseTo(1.001 ** 50 - 1, 10)
+    expect(demo.read(0.24024).multiplier).toBe(50)
+    const restarted = createDemoPrice(db, market, 50, { now: () => 1000 })
     expect(restarted.read(0.24024)).toEqual(demo.read(0.24024))
     expect(restarted.read(0.20).targetMid).toBeGreaterThan(0)
     expect(restarted.read(null).targetMid).toBeNull()
+    expect(() => createDemoPrice(memoryDb(), market, 51)).toThrow('multiplier')
+    db.close()
+  })
+
+  it('decays the gap to mainnet with the reversion time, never jumping', () => {
+    const db = memoryDb()
+    let at = 1000
+    const demo = createDemoPrice(db, market, 50, { now: () => at, reversionMs: 3_600_000 })
+    demo.read(0.24)
+    const moved = demo.read(0.2424).targetMid!
+    const gap = Math.log(moved / 0.2424)
+    expect(moved / 0.24).toBeCloseTo(1.01 ** 50, 8)
+    at += 3_600_000
+    expect(Math.log(demo.read(0.2424).targetMid! / 0.2424)).toBeCloseTo(gap / Math.E, 8)
+    // Reads in between are continuous: one second moves the target by about gap/3600.
+    const before = demo.read(0.2424).targetMid!
+    at += 1000
+    expect(Math.abs(demo.read(0.2424).targetMid! / before - 1)).toBeLessThan(Math.abs(gap) / 3000)
+    db.close()
+  })
+
+  it('a multiplier change carries the current target forward instead of jumping open ranges', () => {
+    const db = memoryDb()
+    let at = 1000
+    const old = createDemoPrice(db, market, 20, { now: () => at })
+    old.read(0.24)
+    const before = old.read(0.2424).targetMid!
+    // A pre-reversion anchor row (time 0) starts its reversion now, not at the epoch.
+    db.query('UPDATE demo_anchors SET anchored_at = 0').run()
+    at += 10 * 3_600_000
+    const next = createDemoPrice(db, market, 50, { now: () => at })
+    expect(next.read(0.2424).targetMid).toBeCloseTo(before, 12)
+    expect(next.read(0.2424 * 1.001).targetMid! / before).toBeCloseTo(1.001 ** 50, 8)
     db.close()
   })
 })
