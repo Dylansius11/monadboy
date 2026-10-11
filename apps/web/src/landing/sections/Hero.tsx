@@ -4,6 +4,7 @@ import { CityCanvas } from '../city/CityCanvas'
 import { HeldConsole } from '../HeldConsole'
 import { Boot } from '../../game/screens/Boot'
 import { brand } from '../../config/brand'
+import { InstallKey } from '../InstallKey'
 
 /** The console sits dark for a beat before the LED comes on. */
 const POWER_ON_MS = 700
@@ -60,9 +61,14 @@ export function Hero({ onStart }: { onStart: () => void }) {
               Press start
               <kbd>Enter</kbd>
             </button>
-            <a className="quiet-link" href="#how">
-              How it plays
-            </a>
+            {/* the second row always holds the link, so the install key
+                arriving after load never moves the page */}
+            <div className="hero-more">
+              <a className="quiet-link" href="#how">
+                How it plays
+              </a>
+              <InstallKey />
+            </div>
           </div>
         </div>
 

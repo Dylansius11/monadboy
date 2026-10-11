@@ -334,10 +334,16 @@ body:has(.landing) {
 }
 
 .landing .hero-actions {
+  display: grid;
+  justify-items: start;
+  gap: 20px;
+}
+.landing .hero-more {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 20px 24px;
+  gap: 12px 24px;
 }
 
 .landing .hero-actions .quiet-link {
@@ -347,6 +353,72 @@ body:has(.landing) {
   font-size: 11px;
 }
 
+/* Install: a rubber key off the shell, quieter than START. iOS has no install
+   dialog, so there the key opens the two taps as a caption under it. */
+.landing .install {
+  position: relative;
+  display: inline-flex;
+}
+.landing .install-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 16px 0 14px;
+  border: 2px solid var(--shell-d);
+  border-radius: 999px;
+  background: var(--night);
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--shell-dd);
+  transition:
+    transform 80ms linear,
+    box-shadow 80ms linear,
+    color 160ms ease,
+    border-color 160ms ease;
+}
+.landing .install-key:hover {
+  border-color: #6e54ff;
+  color: var(--text);
+}
+.landing .install-key:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shell-dd);
+}
+.landing .install-glyph {
+  fill: var(--lit);
+  shape-rendering: crispEdges;
+}
+.landing .install-hint {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 2;
+  width: 240px;
+  padding: 8px 12px;
+  background: var(--text);
+  color: var(--night);
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 0 #3a2a9e;
+}
+/* a stepped notch pointing up at the key */
+.landing .install-hint::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 32px;
+  width: 12px;
+  height: 6px;
+  background: var(--text);
+  clip-path: polygon(0 6px, 0 4px, 2px 4px, 2px 2px, 4px 2px, 4px 0, 8px 0, 8px 2px, 10px 2px, 10px 4px, 12px 4px, 12px 6px);
+}
 .landing .hero-console {
   display: grid;
   justify-items: center;
@@ -950,7 +1022,7 @@ body:has(.landing) {
     gap: 32px;
   }
   .landing .hero-actions {
-    gap: 12px 24px;
+    gap: 12px;
   }
   .landing .topbar {
     letter-spacing: 0.12em;
