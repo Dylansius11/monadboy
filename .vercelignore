@@ -1,0 +1,20 @@
+# Vercel CLI does not read .git/info/exclude; keep local scratch and generated output out of the upload.
+.scratch/
+node_modules/
+dist/
+.output/
+.vinxi/
+.tanstack/
+coverage/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+indexer/generated/
+.env
+.env.*
+!.env.example
+*.sqlite*
+.impeccable/
+.claude/
+music/
+graphify-out/
