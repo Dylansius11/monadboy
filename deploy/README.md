@@ -422,6 +422,40 @@ sudo systemctl restart monadboy-worker
 Compare `sha256sum` of the deployed files with the commit first and again after install,
 then read public health. A restart resets in-memory mirror counters, not the gas ledger.
 
+### Drip size and treasury moves
+
+Production drips `DRIP_MON=1` and the default 10 AUSD per fresh disk. Half a MON did not
+cover a round trip: [V, 2026-10-11 at 102 gwei] the first disk save declared 242,123 gas,
+entry (approve, deposit, zap, 8-level provision) 3,235,437, cancel 1,205,181 and withdraw
+156,807, plus the store's saves after confirm and after exit, about 0.54 MON in total. The
+web quote now refuses unless the disk holds enough TESTNET MON to enter and exit.
+
+Treasury moves between the drip and the BOT use the funding workspace's `sweep.ts`
+(outside this repository, next to the funding hub). Run it on the VPS with the worker env so
+no key leaves the server: copy it to a `monadboy`-owned `/tmp` folder with `node_modules`
+linked to `/opt/monadboy/apps/worker/node_modules`, run
+`sudo -u monadboy bun --env-file=/opt/monadboy/apps/worker/.env sweep.ts <mode>` as a dry
+run, then again with `--send`, and remove the folder afterwards. It refuses unless both keys
+derive to the production drip and BOT addresses, the chain is 10143 and AUSD has code.
+
+- `--surplus` moves drip funds above 12 MON and 300 AUSD (20 drips of 10 AUSD plus the
+  100 AUSD faucet top-up floor) to the BOT: AUSD first, MON three blocks later.
+- `--refill` tops the drip up to 20 MON (about 20 drips of 1 MON) from the BOT and refuses
+  to leave the BOT under 40 MON. The worker also signs with the BOT, so send it while health
+  shows `activePlayers: 0`.
+
+[V, 2026-10-11] TESTNET surplus sweep: drip 14.86892796 MON / 10,900 AUSD and BOT
+57.1577624114106 MON / 7,897.982809 AUSD before; AUSD 10,600
+`0x156db0710089301734df3104c198da6ecc62d75e781e0e9102e8fded5063930c` (block 70124296) and
+MON 2.855690716 `0xacbd70c6d4c8f693808ed34b4222fc63bed11844f5fd2537c982fda9129e78ac`
+(block 70124304), both successful. After: drip 12.00217004 MON / 300 AUSD, BOT
+60.0134531274106 MON / 18,497.982809 AUSD.
+
+[V, 2026-10-11] After `DRIP_MON=1` (health green at x20) the TESTNET refill sent 8.508897164
+MON BOT to drip, `0xa73e6a34b82903e4090c5fdc67287970e797048c65518d71c0ab9058ee06b457`
+(block 70129383, success): drip 11.491102836 to 20 MON (290 AUSD), BOT 58.8885262374106 to
+50.3774870734106 MON (18,497.982809 AUSD).
+
 ## Validation record
 
 **[V, 2026-10-08 target]** Worker unit and health service/timer validated against
