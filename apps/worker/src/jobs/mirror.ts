@@ -7,83 +7,42 @@ import type { Logger } from '../logger'
 import type { HealthSection } from '../app'
 
 export type MirrorKind = 'paused' | 'hold' | 'quote' | 'buy' | 'sell'
-// notional: quote units (USD) the bot takes this tick; quoteNotional: quote units per resting side.
-export type MirrorAction = {
-  kind: MirrorKind
-  notional: number
-  quoteNotional: number
-  reason: string
-}
+export type MirrorDecision = { kind: 'paused' | 'hold' | 'reconcile'; reason: string }
 export type MirrorInput = {
   targetMid: number | null
   sourceAgeMs: number | null
   sourcePaused: boolean
-  // Null when the testnet book was read and has no usable bid and ask.
-  testnetMid: number | null
-  // False when no fresh testnet read exists: an unread book is not an empty book, so never seed quotes.
+  // False when no fresh testnet read exists: an unread book is not an empty book, so never quote.
   testnetObserved: boolean
-  deviationThreshold: number
-  maxStepNotional: number
-  // Whole-unit margin inventory, including owned resting funds released before execution.
-  inventory: { base: number; quote: number }
 }
 
-const idle = (kind: MirrorKind, reason: string): MirrorAction => ({
-  kind,
-  notional: 0,
-  quoteNotional: 0,
-  reason,
-})
-
-// SPEC 5.2. Pure: never reads the chain or the clock, and never trades on a
+// SPEC 5.2. Pure: never reads the chain or the clock, and never signs on a
 // price that is missing, stale or from a paused source.
-export function decideMirrorAction(input: MirrorInput): MirrorAction {
-  const { targetMid, testnetMid, inventory } = input
+export function decideMirrorAction(input: MirrorInput): MirrorDecision {
   if (
     input.sourcePaused ||
-    targetMid === null ||
-    targetMid <= 0 ||
+    input.targetMid === null ||
+    input.targetMid <= 0 ||
     input.sourceAgeMs === null ||
     input.sourceAgeMs > SOURCE_STALE_MS
-  ) {
-    return idle('paused', 'source-unavailable')
-  }
-  if (!input.testnetObserved) return idle('hold', 'testnet-unavailable')
-  const quoteNotional = Math.max(
-    0,
-    Math.min(
-      input.maxStepNotional,
-      inventory.quote,
-      inventory.base * targetMid,
-    ),
   )
-  if (testnetMid === null)
-    return quoteNotional > 0
-      ? { kind: 'quote', notional: 0, quoteNotional, reason: 'book-empty' }
-      : idle('hold', 'no-inventory')
-  if (Math.abs(testnetMid / targetMid - 1) <= input.deviationThreshold)
-    return idle('hold', 'within-threshold')
-  const buy = testnetMid < targetMid
-  const notional = Math.max(
-    0,
-    Math.min(
-      input.maxStepNotional,
-      buy ? inventory.quote : inventory.base * targetMid,
-    ),
-  )
-  if (notional === 0) return idle('hold', 'no-inventory')
-  return {
-    kind: buy ? 'buy' : 'sell',
-    notional,
-    quoteNotional,
-    reason: buy ? 'below-target' : 'above-target',
-  }
+    return { kind: 'paused', reason: 'source-unavailable' }
+  if (!input.testnetObserved) return { kind: 'hold', reason: 'testnet-unavailable' }
+  return { kind: 'reconcile', reason: 'source-fresh' }
 }
 
+// notional: quote units (AUSD) taken from other makers this tick.
+export type MirrorOutcome = {
+  kind: 'hold' | 'quote' | 'buy' | 'sell'
+  reason: string
+  notional: number
+  hashes: Hex[]
+}
 export type MirrorExecutor = {
-  inventory: () => Promise<{ base: number; quote: number }>
-  // Cancel owned quotes, take only remaining external liquidity, then refresh.
-  execute: (action: MirrorAction, targetMid: number, assertSource: () => void | Promise<void>) => Promise<Hex[]>
+  // Reads the book and, only if the ladder no longer fits the target, signs one atomic
+  // batchUpdate (plus a take when another maker's order sits on the wrong side of it).
+  // A hold sends nothing. Failures carry already-broadcast `hashes`.
+  execute: (targetMid: number, assertSource: () => void | Promise<void>) => Promise<MirrorOutcome>
 }
 export type MirrorState = {
   attempted: number
@@ -101,8 +60,6 @@ export function createMirrorJob({
   mid,
   state,
   executor,
-  maxStepNotional,
-  deviationThreshold,
   active = () => 1,
   intervalMs = 0,
   target = () => mid.targetMid,
@@ -113,8 +70,6 @@ export function createMirrorJob({
   mid: MidState
   state: MirrorState
   executor: MirrorExecutor
-  maxStepNotional: number
-  deviationThreshold: number
   active?: () => number
   intervalMs?: number
   target?: () => number | null
@@ -132,90 +87,82 @@ export function createMirrorJob({
       Object.assign(state, { lastAt: at, lastAction: 'hold', lastError: null })
       return
     }
-    let action = idle('paused', 'not-evaluated')
+    let kind: MirrorKind = 'paused'
+    let reason = 'not-evaluated'
+    let notional = 0
     let hashes: Hex[] = []
     let error: string | null = null
-    let sourceMid = target()
-    let testnetMid = mid.testnet.mid
+    const sourceMid = target()
+    const testnet = testnetObservation(mid, at)
+    // Evaluated context: the sampler may advance while the executor signs.
+    const testnetMid = testnet.mid
     try {
-      const inventory = await executor.inventory()
-      const evaluatedAt = now()
-      const testnet = testnetObservation(mid, evaluatedAt)
-      sourceMid = target()
-      testnetMid = testnet.mid
-      action = decideMirrorAction({
+      const decision = decideMirrorAction({
         targetMid: sourceMid,
-        sourceAgeMs: sourceAgeMs(mid, evaluatedAt),
-        sourcePaused: isSourcePaused(mid, evaluatedAt),
-        testnetMid: testnet.mid,
+        sourceAgeMs: sourceAgeMs(mid, at),
+        sourcePaused: isSourcePaused(mid, at),
         testnetObserved: testnet.status === 'live' || testnet.status === 'empty',
-        deviationThreshold,
-        maxStepNotional,
-        inventory,
       })
-      if (action.kind !== 'paused' && action.kind !== 'hold') {
-        lastActionAt = now()
-        hashes = await executor.execute(action, sourceMid ?? 0, () => {
+      kind = decision.kind === 'reconcile' ? 'hold' : decision.kind
+      reason = decision.reason
+      if (decision.kind === 'reconcile') {
+        lastActionAt = at
+        const outcome = await executor.execute(sourceMid!, () => {
           const checkedAt = now()
           const age = sourceAgeMs(mid, checkedAt)
           if (active() === 0)
             throw new Error('Gameplay demand expired before mirror signing')
           if (isSourcePaused(mid, checkedAt) || age === null || age > SOURCE_FRESH_MS)
             throw new Error('Source unavailable before mirror signing')
+          // The ladder is built around the target read at the start of the tick.
+          if (target() === null) throw new Error('Demo target unavailable before mirror signing')
         })
+        ;({ kind, reason, notional, hashes } = outcome)
       }
     } catch (cause) {
       error = describeError(cause)
       if (cause instanceof Error && 'hashes' in cause && Array.isArray(cause.hashes))
         hashes = cause.hashes as Hex[]
     }
-    insert.run(
-      at,
-      sourceMid,
-      testnetMid,
-      action.kind,
-      action.notional,
-      hashes.join(',') || null,
-      error,
-    )
+    insert.run(at, sourceMid, testnetMid, kind, notional, hashes.join(',') || null, error)
     if (at - prunedAt > 3_600_000) {
       db.query('DELETE FROM mirror_ticks WHERE at < ?').run(at - 7 * 86_400_000)
       prunedAt = at
     }
-    Object.assign(state, {
-      lastAt: at,
-      lastAction: action.kind,
-      lastError: error,
-    })
+    Object.assign(state, { lastAt: at, lastAction: kind, lastError: error })
     state.attempted++
-    logger('mirror.tick', {
-      action: action.kind,
-      reason: action.reason,
-      notional: action.notional,
-      txs: hashes,
-      error,
-    })
+    logger('mirror.tick', { action: kind, reason, notional, txs: hashes, error })
   }
 }
+
+export type MirrorGasStatus = { capWei: string; reservedWei: string; exhausted: boolean; dayUTC: string }
 
 export function mirrorSection(
   state: MirrorState,
   execution: { enabled: boolean; reason: string | null },
   now: () => number,
+  gas: () => MirrorGasStatus | null = () => null,
 ): () => HealthSection {
-  return () => ({
-    value: {
-      execution: execution.enabled ? 'enabled' : 'disabled',
-      reason: execution.reason,
-      ticks: state.attempted,
-      lastTickAgeMs: state.lastAt === null ? null : now() - state.lastAt,
-      lastAction: state.lastAction,
-      lastError: state.lastError,
-    },
-    amber: !execution.enabled
-      ? `mirror-disabled:${execution.reason ?? 'unknown'}`
-      : state.lastError !== null
-        ? 'mirror-error'
-        : undefined,
-  })
+  return () => {
+    const budget = gas()
+    return {
+      value: {
+        execution: execution.enabled ? 'enabled' : 'disabled',
+        reason: execution.reason,
+        ticks: state.attempted,
+        lastTickAgeMs: state.lastAt === null ? null : now() - state.lastAt,
+        lastAction: state.lastAction,
+        lastError: state.lastError,
+        gas: budget,
+      },
+      // An exhausted budget leaves the last ladder resting; it is degraded, not broken.
+      amber: !execution.enabled
+        ? `mirror-disabled:${execution.reason ?? 'unknown'}`
+        : budget?.exhausted || state.lastError?.includes('daily gas budget exhausted')
+          ? 'mirror-gas-exhausted'
+          : state.lastError !== null
+            ? 'mirror-error'
+            : undefined,
+    }
+  }
 }

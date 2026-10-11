@@ -8,6 +8,7 @@ import { createMirrorExecutor } from './chain/mirror-executor'
 import { createTreasury } from './chain/treasury'
 import type { Treasury } from './chain/treasury'
 import { createGasBudget } from './chain/gas-budget'
+import type { GasBudget } from './chain/gas-budget'
 import { createFaucetTopup } from './jobs/faucet-topup'
 import { createTreasuryMonitor } from './jobs/treasury-monitor'
 import type { MirrorExecutor } from './jobs/mirror'
@@ -21,6 +22,8 @@ export type Operations = {
   drip?: DripService
   dripStatus: { enabled: boolean; reason: string | null }
   executor?: MirrorExecutor
+  // One durable UTC-day gas ledger, shared by the mirror's signing path and health.
+  gasBudget?: GasBudget
   execution: { enabled: boolean; reason: string | null }
   topup: ReturnType<typeof createFaucetTopup> | null
   monitor: ReturnType<typeof createTreasuryMonitor> | null
@@ -137,8 +140,10 @@ export async function createOperations({
   }
 
   let executor: MirrorExecutor | undefined
+  let gasBudget: GasBudget | undefined
   let execution = off(bot ? 'no-testnet-market' : 'no-bot-key')
   if (bot && market) {
+    gasBudget = createGasBudget(db, env.MIRROR_DAILY_GAS_MON, now)
     executor = createMirrorExecutor({
       db,
       client,
@@ -149,8 +154,11 @@ export async function createOperations({
         marketOrder: env.GAS_MARKET_ORDER,
         batchUpdate: env.GAS_BATCH_UPDATE,
       },
-      budget: createGasBudget(db, env.MIRROR_DAILY_GAS_MON, now),
+      budget: gasBudget,
       assertActive,
+      sideNotional: env.MIRROR_SIDE_NOTIONAL,
+      maxTakeNotional: env.MIRROR_MAX_STEP_NOTIONAL,
+      deadband: env.MIRROR_DEADBAND,
     })
     execution = { enabled: true, reason: null }
   }
@@ -209,5 +217,5 @@ export async function createOperations({
         }),
       })
     : null
-  return { drip, dripStatus, executor, execution, topup, monitor }
+  return { drip, dripStatus, executor, gasBudget, execution, topup, monitor }
 }

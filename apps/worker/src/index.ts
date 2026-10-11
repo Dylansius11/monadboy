@@ -47,7 +47,6 @@ import { midRoute } from './routes/mid'
 import { trackerRoute } from './routes/tracker'
 import { createDemoPrice } from './jobs/demo-price'
 import { createDemand, demandRoute } from './routes/demand'
-import { createGasBudget } from './chain/gas-budget'
 
 // [V] Kuru mainnet MarginAccount holds deposited tokens: the holder for sellability eth_calls (cast code: 141 bytes).
 const MAINNET_MARGIN: Address = '0x2A68ba1833cDf93fa9Da1EEbd7F46242aD8E90c5'
@@ -84,7 +83,9 @@ const ops = await createOperations({
     if (demand.active() === 0) throw new Error('No active gameplay before mirror signing')
   },
 })
-const demo = createDemoPrice(db, markets.find((entry) => entry.baseSymbol === 'MON')?.address ?? 'MON_AUSD')
+const demo = createDemoPrice(
+  db, markets.find((entry) => entry.baseSymbol === 'MON')?.address ?? 'MON_AUSD', env.DEMO_MULTIPLIER,
+)
 const demand = createDemand({
   market: markets.find((entry) => entry.baseSymbol === 'MON')?.address ?? '',
   savedDisk: async (owner) => {
@@ -96,7 +97,6 @@ const demand = createDemand({
     return record.createdAt > 0n
   },
 })
-const gasBudget = createGasBudget(db, env.MIRROR_DAILY_GAS_MON)
 
 const fetcher = env.HYPERSYNC_API_TOKEN
   ? createHypersyncFetcher({
@@ -201,10 +201,8 @@ if (ops.executor)
       mid,
       state: mirrorState,
       executor: ops.executor,
-      maxStepNotional: env.MIRROR_MAX_STEP_NOTIONAL,
-      deviationThreshold: env.MIRROR_DEVIATION_THRESHOLD,
       active: demand.active,
-      intervalMs: 30_000,
+      intervalMs: env.MIRROR_INTERVAL_MS,
       target: () => demo.read(mid.targetMid).targetMid,
     }),
   })
@@ -226,8 +224,8 @@ if (ops.monitor)
 const sections: HealthSections = {
   source: sourceSection(mid, now),
   testnet: testnetSection(mid, now),
-  mirror: mirrorSection(mirrorState, ops.execution, now),
-  demo: () => ({ value: { ...demo.read(mid.targetMid), activePlayers: demand.active(), gas: gasBudget.status() } }),
+  mirror: mirrorSection(mirrorState, ops.execution, now, () => ops.gasBudget?.status() ?? null),
+  demo: () => ({ value: { ...demo.read(mid.targetMid), activePlayers: demand.active() } }),
   tracker: trackerSection(db, trades, now),
   treasury: treasurySection(
     ops.monitor,
