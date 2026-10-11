@@ -1,8 +1,9 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { PixelText, Sprite } from '../ui'
 import { price as fmt } from '../lib/format'
 import { yDomain } from './domain'
 import type { SpriteAnimation } from '../ui'
+import './price-field.css'
 
 /**
  * The screen. Everything else on S7 is a label around this.
@@ -23,9 +24,13 @@ import type { SpriteAnimation } from '../ui'
  * over the plot rather than drawn into it.
  */
 
-/** Room on the right for the two edge prices, so the line never runs under
- *  them. A multiple of 4, like everything else. */
-const LABEL_GUTTER = 56
+/** Room on the right for half the character, so it never leaves the field. */
+const CHARACTER_GUTTER = 20
+/** Headroom for the 32px character standing on the highest price. */
+const TOP_INSET = 24
+const BOTTOM_INSET = 4
+/** An edge label is one micro line tall; it sits outside the band it names. */
+const LABEL_HEIGHT = 16
 
 export interface PriceFieldProps {
   /** Oldest to newest. The last sample is where the character stands. */
@@ -39,6 +44,12 @@ export interface PriceFieldProps {
   jumping: boolean
   /** Drives the greyed treatment. Nothing is earning while price is outside. */
   earning: boolean
+  /**
+   * Live sampling. With both set, the field is a fixed window of `capacity`
+   * samples that scrolls left in whole pixels while the newest price is held
+   * up to now, so the line moves between samples without inventing a price.
+   */
+  sampling?: { capacity: number; intervalMs: number; newestAt: number }
 }
 
 export function PriceField({
@@ -51,8 +62,10 @@ export function PriceField({
   animation,
   jumping,
   earning,
+  sampling,
 }: PriceFieldProps) {
   const field = useRef<HTMLDivElement>(null)
+  const line = useRef<SVGGElement>(null)
   const [size, setSize] = useState({ width: naturalWidth, height: naturalHeight })
   useLayoutEffect(() => {
     const el = field.current
@@ -68,42 +81,61 @@ export function PriceField({
     return () => observer.disconnect()
   }, [])
   const { width, height } = size
-  const plotWidth = width - (width < 440 ? 104 : LABEL_GUTTER)
+  const plotWidth = width - CHARACTER_GUTTER
+  const plotHeight = Math.max(1, height - TOP_INSET - BOTTOM_INSET)
   const { low, high } = yDomain(series, lowerPrice, upperPrice)
 
-  const y = (value: number) => ((high - value) / (high - low)) * height
-  const step = plotWidth / Math.max(1, series.length - 1)
+  const y = (value: number) => Math.round(TOP_INSET + ((high - value) / (high - low)) * plotHeight)
+  const step = plotWidth / Math.max(1, (sampling?.capacity ?? series.length) - 1)
+
+  // Between samples the window slides left by at most one slot, written
+  // straight to the transform: no React render, no layout, whole pixels only.
+  useEffect(() => {
+    const group = line.current
+    if (!group || !sampling || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    let frame = 0
+    let shown = -1
+    const tick = () => {
+      const progress = Math.min(1, Math.max(0, (Date.now() - sampling.newestAt) / sampling.intervalMs))
+      const offset = Math.round(progress * step)
+      if (offset !== shown) {
+        group.style.transform = `translateX(${-offset}px)`
+        shown = offset
+      }
+      frame = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => cancelAnimationFrame(frame)
+  }, [sampling, step])
 
   // Stepped, not interpolated, exactly like the Chart primitive: each sample
   // holds its value until the next one. A smooth curve would invent prices
   // that never traded.
+  const newest = series.length - 1
   const points: Array<string> = []
   series.forEach((value, i) => {
-    const px = Math.round(i * step)
-    points.push(`${px},${Math.round(y(value))}`)
-    if (i < series.length - 1) {
-      points.push(`${Math.round((i + 1) * step)},${Math.round(y(value))}`)
-    }
+    const px = Math.round(plotWidth - (newest - i) * step)
+    points.push(`${px},${y(value)}`)
+    // The newest price is held to now; while sliding it must still reach the
+    // character, so it runs one slot past the clip edge.
+    const holdTo = i < newest ? plotWidth - (newest - i - 1) * step : sampling ? plotWidth + step : plotWidth
+    if (holdTo > px) points.push(`${Math.round(holdTo)},${y(value)}`)
   })
   // The first observed price is held across the field; one SVG point has no
   // visible line and would leave half the character outside the left edge.
-  if (series.length === 1)
-    points.push(`${plotWidth},${Math.round(y(series[0]))}`)
+  if (series.length === 1 && !sampling) points.unshift(`0,${y(series[0])}`)
 
-  const nowPrice = series[series.length - 1]
-  const nowY = y(nowPrice)
-  const nowX = plotWidth
-
-  // A bound outside the visible window is simply not drawn. When price runs a
-  // long way past one edge the other edge stops being the thing worth showing,
-  // and squeezing both in would flatten the price line into a straight one.
-  const upperVisible = upperPrice <= high && upperPrice >= low
-  const lowerVisible = lowerPrice <= high && lowerPrice >= low
-
+  const top = Math.max(lowerPrice, upperPrice)
+  const bottom = Math.min(lowerPrice, upperPrice)
+  const topY = y(top)
+  const bottomY = y(bottom)
+  const nowY = y(series[newest])
   const edge = earning ? 'var(--color-accent)' : 'var(--color-ink-dim)'
+  // url(#…) breaks on the punctuation React puts in generated ids.
+  const clip = `price-field-clip-${useId().replace(/[^\w-]/g, '')}`
 
   return (
-    <div ref={field} className="price-field relative h-full w-full" style={{ height: naturalHeight }}>
+    <div ref={field} className="price-field relative h-full w-full" data-earning={earning} style={{ height: naturalHeight }}>
       <svg
         width={width}
         height={height}
@@ -112,68 +144,59 @@ export function PriceField({
         aria-label="Price against your range"
         className="absolute inset-0"
       >
+        <defs>
+          <clipPath id={clip}>
+            <rect x={0} y={0} width={plotWidth} height={height} />
+          </clipPath>
+        </defs>
         {/* The band you are earning in. Filled, so "inside" is a place rather
             than a gap between two lines. */}
-        {upperVisible || lowerVisible ? (
-          <rect
-            x={0}
-            y={Math.round(y(Math.min(upperPrice, high)))}
-            width={plotWidth}
-            height={Math.max(
-              1,
-              Math.round(
-                y(Math.max(lowerPrice, low)) - y(Math.min(upperPrice, high)),
-              ),
-            )}
-            fill={earning ? 'var(--color-sunk)' : 'transparent'}
-          />
-        ) : null}
+        <rect
+          x={0}
+          y={topY}
+          width={plotWidth}
+          height={Math.max(1, bottomY - topY)}
+          fill={earning ? 'var(--color-sunk)' : 'transparent'}
+        />
 
-        {[
-          { value: upperPrice, visible: upperVisible },
-          { value: lowerPrice, visible: lowerVisible },
-        ].map(({ value, visible }) =>
-          visible ? (
-            <line
-              key={value}
-              x1={0}
-              x2={plotWidth}
-              y1={Math.round(y(value))}
-              y2={Math.round(y(value))}
-              stroke={edge}
+        {[topY, bottomY].map((edgeY, index) => (
+          <line
+            key={index}
+            className="price-field-edge"
+            x1={0}
+            x2={plotWidth}
+            y1={edgeY}
+            y2={edgeY}
+            stroke={edge}
+            strokeWidth={2}
+            strokeDasharray="4 4"
+            shapeRendering="crispEdges"
+          />
+        ))}
+
+        <g clipPath={`url(#${clip})`}>
+          <g ref={line} className="price-field-line">
+            <polyline
+              points={points.join(' ')}
+              fill="none"
+              stroke="var(--color-ink)"
               strokeWidth={2}
-              strokeDasharray="4 4"
               shapeRendering="crispEdges"
             />
-          ) : null,
-        )}
-
-        <polyline
-          points={points.join(' ')}
-          fill="none"
-          stroke="var(--color-ink)"
-          strokeWidth={2}
-          shapeRendering="crispEdges"
-        />
+          </g>
+        </g>
       </svg>
 
-      {/* The two edge prices, stated. A dashed line tells you an edge exists;
-          only the number tells you how far away it is. */}
-      {upperVisible ? (
-        <EdgeLabel top={y(upperPrice)} value={upperPrice} label="Up" />
-      ) : null}
-      {lowerVisible ? (
-        <EdgeLabel top={y(lowerPrice)} value={lowerPrice} label="Low" />
-      ) : null}
+      {/* The two edge prices, stated, each on the outside of the band so a
+          thin band never stacks one label on the other. */}
+      <EdgeLabel top={Math.max(0, topY - LABEL_HEIGHT)} value={top} label="High" />
+      <EdgeLabel top={Math.min(height - LABEL_HEIGHT, bottomY + 2)} value={bottom} label="Low" />
 
-      {/* The character stands ON the price, so its feet are the reading. */}
+      {/* The character stands ON the price, so its feet are the reading. It
+          hops to a new sample in four whole steps rather than gliding. */}
       <div
-        className="absolute"
-        style={{
-          left: nowX,
-          top: nowY,
-          transform: 'translate(-50%, -100%)',
-        }}
+        className="price-field-character absolute left-0 top-0"
+        style={{ transform: `translate(${plotWidth}px, ${nowY}px) translate(-50%, -100%)` }}
       >
         {/*
           TWO ELEMENTS, TWO TRANSFORMS, AND THAT IS THE WHOLE JUMP FIX.
@@ -181,13 +204,9 @@ export function PriceField({
           `transform` is one property. `sprite-jump` animates it to
           `translateY(-16px)`, which REPLACES whatever the element already had
           rather than adding to it. With both classes on the wrapper above,
-          pressing A would drop the `translate(-50%, -100%)` that puts the
-          character's feet on the price line: it would snap half a sprite right
-          and a whole sprite down, hop, and snap back. That reads as the
-          character leaping off the chart, because it is.
-
-          The wrapper positions. The child jumps. Neither one can clobber the
-          other, and it stays that way no matter what the animation does next.
+          pressing A would drop the translate that puts the character's feet on
+          the price line. The wrapper positions. The child jumps. Neither one
+          can clobber the other.
         */}
         <div className={jumping ? 'sprite-jump' : undefined}>
           <Sprite character={character} animation={animation} size={32} />
@@ -207,10 +226,7 @@ function EdgeLabel({
   label: string
 }) {
   return (
-    <div
-      className="absolute right-0 flex items-center gap-1"
-      style={{ top, transform: 'translateY(-50%)' }}
-    >
+    <div className="price-field-label absolute left-0 flex items-center gap-1 px-1" style={{ top }}>
       <PixelText role="micro" tone="dim" upper>
         {label}
       </PixelText>

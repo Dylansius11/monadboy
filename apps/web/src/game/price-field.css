@@ -1,0 +1,15 @@
+/* The field's motion: whole-pixel line slide (set from script), a four-step
+   hop to each new sample, and marching edges only while the band earns. */
+.price-field-line { will-change: transform; }
+.price-field-character { transition: transform 240ms steps(4, end); will-change: transform; }
+.price-field-label { background: var(--color-screen); }
+.price-field[data-earning='true'] .price-field-edge { animation: price-field-march 600ms steps(2, end) infinite; }
+
+@keyframes price-field-march {
+  to { stroke-dashoffset: -8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .price-field-character { transition: none; }
+  .price-field[data-earning='true'] .price-field-edge { animation: none; }
+}
