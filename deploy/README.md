@@ -244,6 +244,18 @@ indexed leaderboard and no job errors. Three regressions cover delayed
 responses, failed requests and queued cancellation. The disposable trace
 script was removed; raw redacted evidence is retained outside the repository.
 
+[V,2026-10-11] Both backends run on the public testnet RPC again: the worker
+`TESTNET_RPC_URL` and indexer `ENVIO_RPC_URL` lines were removed and codegen
+rerun, because the generated `internal.config.json` keeps the URL resolved at
+codegen time and a container env change alone does not move the indexer.
+Health afterwards was green with Envio live at lag1. A counting proxy measured
+idle load with no active players: the indexer made about380 calls/min
+(`eth_blockNumber`, `eth_getLogs` and `eth_getBlockByNumber`, one each per1s
+poll), and the worker about130–280 calls/min, of which77% were `s_orders`
+reads walking price-point lists for order membership during leaderboard
+hydration. The public endpoint allows50 requests/s and25 `eth_call`/s [V];
+[I] if that is counted per IP, every service on this VPS shares it.
+
 The mainnet MON_USDC source pauses immediately for an empty/crossed book or relative
 spread `(ask - bid) / mid > 2%`. This fixed operator maximum is user-approved policy,
 not measured calibration. Transport failures retain the three-failure pause. Testnet
