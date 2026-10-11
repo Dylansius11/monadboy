@@ -424,7 +424,7 @@ function Figure({
         {text}
       </PixelText>
       {hint ? (
-        <PixelText role="micro" tone="dim">
+        <PixelText role="micro" tone="dim" className="lb-hint">
           {hint}
         </PixelText>
       ) : null}

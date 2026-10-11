@@ -73,27 +73,41 @@
   .lb-header { flex-wrap: wrap; gap: 4px; }
   .lb-tabs button { min-height: 44px; flex: 1; }
   .lb-scroll { padding-right: 4px; }
-  .lb-list { gap: 8px; }
+  .lb-list { gap: 4px; }
 
+  /* Five rows to a 412x915 screen: name on one line, SCORE / DAMAGE / NET
+     side by side at one size, fills and time in range on one micro line. */
   .lb-row {
-    grid-template-columns: 36px repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     grid-template-areas:
-      'rank who who who'
-      '. score score score'
-      '. damage damage damage'
-      '. net net net'
-      '. fills range range'
-      '. tx tx tx';
-    row-gap: 8px;
-    padding: 12px;
+      'rank who who who tx tx'
+      'score score damage damage net net'
+      'fills fills range range range range';
+    row-gap: 4px;
+    column-gap: 8px;
+    padding: 6px 8px;
   }
+  .lb-who { flex-direction: row; align-items: baseline; gap: 8px; }
+  /* Flex, not block: an inline micro label in a block takes the 24px body strut. */
+  .lb-label { display: flex; }
   .lb-score, .lb-damage, .lb-net {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-areas: 'label hint' 'value value';
+    column-gap: 4px;
     align-items: baseline;
-    column-gap: 8px;
   }
+  .lb-score .lb-label, .lb-damage .lb-label, .lb-net .lb-label { grid-area: label; }
+  .lb-hint { grid-area: hint; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .lb-figure { grid-area: value; }
+  .lb-fills, .lb-range { flex-direction: row; align-items: baseline; gap: 4px; }
+  .lb-fills > :last-child, .lb-range > :last-child { font-size: 11px; line-height: 16px; }
+  .lb-tx { justify-self: end; }
   /* One size for SCORE, DAMAGE and NET at every width, so none outweighs another. */
   .lb-figure { font-size: 16px; line-height: 20px; }
-  .lb-tx a, .lb-tx > span { display: flex; min-height: 44px; align-items: center; }
+}
+
+/* A 360px phone leaves under 92px per figure; all three step down together. */
+@container game-screen (max-width: 340px) and (min-height: 340px) {
+  .lb-figure { font-size: 13px; line-height: 16px; }
 }
