@@ -43,7 +43,7 @@ function DpadGlyph() {
 export function KeyHints({ hints, className = '' }: { hints: readonly KeyHint[]; className?: string }) {
   const { press, release } = useConsoleControls()
   return (
-    <nav aria-label="Controls" className={`key-hints flex h-5 min-w-0 flex-none items-center justify-between gap-3 whitespace-nowrap ${className}`}>
+    <nav aria-label="Controls" className={`key-hints flex h-5 min-w-0 flex-none items-center justify-between gap-2 whitespace-nowrap ${className}`}>
       {hints.map((hint) => {
         const glyph = (
           <kbd aria-hidden="true" className={`key-hint-glyph font-pixel text-micro bg-ink text-ink-invert inline-flex h-4 min-w-4 items-center justify-center px-1 leading-none ${hint.key === 'A' || hint.key === 'B' ? 'rounded-full' : 'rounded-sm'}`}>
