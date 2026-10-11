@@ -25,7 +25,11 @@
     flex: 1 0 0;
     width: 100%;
     max-width: 428px;
-    min-height: 580px;
+    /* The screen absorbs the height. 532px is the plastic (192px) plus the
+       340px screen the portrait reflow needs, so the stage scrolls only on
+       viewports shorter than 548px; every other phone keeps a single scroll
+       body inside the screen, never nested in a scrolling page. */
+    min-height: 532px;
     max-height: 888px;
     margin: auto;
     /* The header and shell are in flow; short viewports can scroll, never scale. */
@@ -234,9 +238,6 @@
 @media (max-width: 640px) and (orientation: portrait) and (max-height: 700px) {
   .console-stage {
     padding-bottom: max(8px, env(safe-area-inset-bottom));
-  }
-  .console-stage .console {
-    min-height: 540px;
   }
   .console-stage .wordmark {
     display: none;

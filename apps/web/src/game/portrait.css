@@ -204,7 +204,6 @@
   .results-money > div:first-child { flex-direction: row; justify-content: center; gap: 12px; }
   .results-money > div:last-child { padding: 12px; gap: 8px; }
   .results-instruments { gap: 8px; }
-  .screen-results { overflow-y: auto; }
 
   @container game-screen (max-height: 460px) {
     .difficulty-cast { min-height: 92px; flex: none; }

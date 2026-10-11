@@ -176,126 +176,129 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
           block, and the Dialog line do not all fit full width inside a 320px
           height budget without something getting clipped by the viewport's
           overflow:hidden. Side by side is what buys the room for the block
-          that actually carries the never-hide-a-loss rule. */}
-      <div className="results-money grid grid-cols-[96px_1fr] items-start gap-2">
-        <div className="flex flex-col items-center gap-1">
-          <Sprite
-            character={characterId}
-            animation={spriteAnimation}
-            scale={1}
-            size={64}
-          />
-          <PixelText role="micro" tone="dim" upper>
-            {characters[characterId].label}
-          </PixelText>
+          that actually carries the never-hide-a-loss rule. On a short phone
+          the body below the title scrolls, never the control strip. */}
+      <div className="screen-scroll results-body">
+        <div className="results-money grid grid-cols-[96px_1fr] items-start gap-2">
+          <div className="flex flex-col items-center gap-1">
+            <Sprite
+              character={characterId}
+              animation={spriteAnimation}
+              scale={1}
+              size={64}
+            />
+            <PixelText role="micro" tone="dim" upper>
+              {characters[characterId].label}
+            </PixelText>
+          </div>
+
+          <Panel flush className="flex flex-col gap-1 p-1">
+            <div className="flex items-baseline justify-between">
+              <PixelText role="body" upper>
+                Score
+              </PixelText>
+              <Value
+                amount={run.feesEarnedUsd}
+                prefix="+$"
+                decimals={2}
+                tone="gain"
+              />
+            </div>
+            <div className="flex items-baseline justify-between">
+              <PixelText role="body" upper>
+                Damage taken
+              </PixelText>
+              {/* Not `signed`, same reasoning as InRange.tsx: damageUsd is
+                  stored positive and is never a gain, so `signed` would render
+                  a green +$0.00 the moment a session ends without a loss. The
+                  minus and the loss tone are stated explicitly instead, which
+                  is the only way DAMAGE keeps SCORE's size without also losing
+                  the loss colour. This row is the whole reason S8 exists. */}
+              <Value
+                amount={run.damageUsd}
+                prefix="-$"
+                decimals={2}
+                tone="loss"
+              />
+            </div>
+            <div className="border-edge border-t" />
+            <div className="flex items-baseline justify-between">
+              <PixelText role="body" upper>
+                Net
+              </PixelText>
+              {/* The one row on this screen allowed to be `signed`: NET can
+                  actually land on either side, so its glyph has to be derived
+                  from the amount rather than asserted by a hardcoded prefix
+                  like the two rows above it. `role="hero"` because
+                  tokens.css marks --text-hero for exactly this: "boot,
+                  results, score". Largest thing on the screen, on purpose. */}
+              <Value
+                amount={run.netUsd}
+                prefix="$"
+                decimals={2}
+                signed
+                role="hero"
+              />
+            </div>
+          </Panel>
         </div>
 
-        <Panel flush className="flex flex-col gap-1 p-1">
+        {/* Instrument block. Time in range gets a body-weight row and its own
+            Meter, both bigger than the two rows under them: it is the only
+            number here that measures a skill rather than a deposit size, and a
+            profit-ranked leaderboard would just reward whoever put in most. */}
+        <div className="results-instruments flex flex-col gap-1">
           <div className="flex items-baseline justify-between">
             <PixelText role="body" upper>
-              Score
+              Time in range
             </PixelText>
-            <Value
-              amount={run.feesEarnedUsd}
-              prefix="+$"
-              decimals={2}
-              tone="gain"
-            />
-          </div>
-          <div className="flex items-baseline justify-between">
-            <PixelText role="body" upper>
-              Damage taken
+            <PixelText role="body" className="tabular-nums">
+              {pct(run.timeInRangePct, 0)}
             </PixelText>
-            {/* Not `signed`, same reasoning as InRange.tsx: damageUsd is
-                stored positive and is never a gain, so `signed` would render
-                a green +$0.00 the moment a session ends without a loss. The
-                minus and the loss tone are stated explicitly instead, which
-                is the only way DAMAGE keeps SCORE's size without also losing
-                the loss colour. This row is the whole reason S8 exists. */}
-            <Value
-              amount={run.damageUsd}
-              prefix="-$"
-              decimals={2}
-              tone="loss"
-            />
           </div>
-          <div className="border-edge border-t" />
-          <div className="flex items-baseline justify-between">
-            <PixelText role="body" upper>
-              Net
+          <Meter value={run.timeInRangePct} />
+          <PixelText role="micro" tone="dim">
+            FIXTURE time in range, not a live leaderboard.
+          </PixelText>
+          <div className="grid grid-cols-2">
+            <PixelText role="micro" upper>
+              {/* Always "Rebalanced", never the autopilot name.
+                  `run.rebalances` is written by one function, `recordRebalance`
+                  in sim.ts, and that function has exactly one caller: the A
+                  keypress branch in InRange.tsx. Nothing fires autopilot, so
+                  keying the label off the autopilot SETTING would credit a
+                  machine for presses the player made with their own thumb.
+                  When autopilot is real it gets its own counter in RunSummary,
+                  and this line branches on that counter, not on a checkbox. */}
+              Rebalanced {run.rebalances}x
             </PixelText>
-            {/* The one row on this screen allowed to be `signed`: NET can
-                actually land on either side, so its glyph has to be derived
-                from the amount rather than asserted by a hardcoded prefix
-                like the two rows above it. `role="hero"` because
-                tokens.css marks --text-hero for exactly this: "boot,
-                results, score". Largest thing on the screen, on purpose. */}
-            <Value
-              amount={run.netUsd}
-              prefix="$"
-              decimals={2}
-              signed
-              role="hero"
-            />
+            {/* There is no distance anywhere in sim.ts, only elapsed seconds and
+                streak length: a metres figure belongs to a runner mini-game, not
+                this one, and printing one would be inventing a number on the one
+                screen whose entire job is refusing to do that. So this prints
+                the longest unbroken in-range streak as a time instead. */}
+            <PixelText
+              role="micro"
+              tone="dim"
+              className="text-right tabular-nums"
+              upper
+            >
+              Best run {duration(run.bestStreakSeconds)}
+            </PixelText>
           </div>
-        </Panel>
+        </div>
+
+        {/* The line, keyed on the same `outcome` the sprite animation reads
+            above, so the face and the words can never tell two different
+            stories about one run. No portrait: Dialog's portrait well is a
+            fixed 64px square, and the same character is already on screen at
+            64px twenty pixels above it. A second copy of one Monanimal is
+            redundancy, not richness, and it costs a fifth of the remaining
+            height budget to say nothing new. */}
+        <Dialog speaker={characters[characterId].label}>
+          {LINE_BY_OUTCOME[outcome]}
+        </Dialog>
       </div>
-
-      {/* Instrument block. Time in range gets a body-weight row and its own
-          Meter, both bigger than the two rows under them: it is the only
-          number here that measures a skill rather than a deposit size, and a
-          profit-ranked leaderboard would just reward whoever put in most. */}
-      <div className="results-instruments flex flex-col gap-1">
-        <div className="flex items-baseline justify-between">
-          <PixelText role="body" upper>
-            Time in range
-          </PixelText>
-          <PixelText role="body" className="tabular-nums">
-            {pct(run.timeInRangePct, 0)}
-          </PixelText>
-        </div>
-        <Meter value={run.timeInRangePct} />
-        <PixelText role="micro" tone="dim">
-          FIXTURE time in range, not a live leaderboard.
-        </PixelText>
-        <div className="grid grid-cols-2">
-          <PixelText role="micro" upper>
-            {/* Always "Rebalanced", never the autopilot name.
-                `run.rebalances` is written by one function, `recordRebalance`
-                in sim.ts, and that function has exactly one caller: the A
-                keypress branch in InRange.tsx. Nothing fires autopilot, so
-                keying the label off the autopilot SETTING would credit a
-                machine for presses the player made with their own thumb.
-                When autopilot is real it gets its own counter in RunSummary,
-                and this line branches on that counter, not on a checkbox. */}
-            Rebalanced {run.rebalances}x
-          </PixelText>
-          {/* There is no distance anywhere in sim.ts, only elapsed seconds and
-              streak length: a metres figure belongs to a runner mini-game, not
-              this one, and printing one would be inventing a number on the one
-              screen whose entire job is refusing to do that. So this prints
-              the longest unbroken in-range streak as a time instead. */}
-          <PixelText
-            role="micro"
-            tone="dim"
-            className="text-right tabular-nums"
-            upper
-          >
-            Best run {duration(run.bestStreakSeconds)}
-          </PixelText>
-        </div>
-      </div>
-
-      {/* The line, keyed on the same `outcome` the sprite animation reads
-          above, so the face and the words can never tell two different
-          stories about one run. No portrait: Dialog's portrait well is a
-          fixed 64px square, and the same character is already on screen at
-          64px twenty pixels above it. A second copy of one Monanimal is
-          redundancy, not richness, and it costs a fifth of the remaining
-          height budget to say nothing new. */}
-      <Dialog speaker={characters[characterId].label}>
-        {LINE_BY_OUTCOME[outcome]}
-      </Dialog>
 
       <KeyHints className="mt-auto" hints={[
         { key: 'A', label: 'Disks' },

@@ -276,8 +276,11 @@ Reduced motion freezes the train; hidden tabs pause it. No scenery implies a liv
 Portrait phones spend no header lane: the screen starts under the safe area and
 GUIDE is a moulded key in the shell's control row beside VOL. The city shows only
 in the outer framing, never behind the game text. The native shell keeps 44px
-control hit areas and a flexible bright screen; unusually short viewports scroll
-instead of scaling or clipping controls. Held landing consoles keep landscape layout.
+control hit areas and a flexible bright screen that absorbs the height. The shell's
+532px minimum is the plastic plus the 340px screen the portrait reflow needs, so the
+page scrolls only below a 548px viewport and a screen's one scroll body is never
+nested inside a scrolling page. Header and control strip stay pinned; only the body
+between them scrolls. Held landing consoles keep landscape layout.
 
 The landing page preserves the same city, console and factual copy. Its primary
 PRESS START action has a 64px minimum height; short phones use 16px action text
