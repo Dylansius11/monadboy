@@ -50,6 +50,13 @@ export interface PriceFieldProps {
    * up to now, so the line moves between samples without inventing a price.
    */
   sampling?: { capacity: number; intervalMs: number; newestAt: number }
+  /**
+   * A reference price that is not the line: the DEMO target the TESTNET book
+   * is pulled toward. Drawn as a faint dashed rule, never as the character's
+   * footing. Outside the window it is pinned to the nearer border with an
+   * arrow, so it never squeezes the band the player is reading.
+   */
+  target?: { price: number; label: string } | null
 }
 
 export function PriceField({
@@ -63,6 +70,7 @@ export function PriceField({
   jumping,
   earning,
   sampling,
+  target,
 }: PriceFieldProps) {
   const field = useRef<HTMLDivElement>(null)
   const line = useRef<SVGGElement>(null)
@@ -133,6 +141,10 @@ export function PriceField({
   const bottomY = y(bottom)
   const nowY = y(series[newest])
   const edge = earning ? 'var(--color-accent)' : 'var(--color-ink-dim)'
+  const targetY = target && Number.isFinite(target.price) ? y(target.price) : null
+  const targetAbove = targetY !== null && targetY < TOP_INSET
+  const targetBelow = targetY !== null && targetY > height - BOTTOM_INSET
+  const targetInside = targetY !== null && !targetAbove && !targetBelow
   // url(#…) breaks on the punctuation React puts in generated ids.
   const clip = `price-field-clip-${useId().replace(/[^\w-]/g, '')}`
 
@@ -177,6 +189,20 @@ export function PriceField({
           />
         ))}
 
+        {targetInside && (
+          <line
+            className="price-field-target"
+            x1={0}
+            x2={plotWidth}
+            y1={targetY}
+            y2={targetY}
+            stroke="var(--color-ink-dim)"
+            strokeWidth={1}
+            strokeDasharray="2 6"
+            shapeRendering="crispEdges"
+          />
+        )}
+
         <g clipPath={`url(#${clip})`}>
           <g ref={line} className="price-field-line">
             <polyline
@@ -194,6 +220,22 @@ export function PriceField({
           thin band never stacks one label on the other. */}
       <EdgeLabel top={Math.max(0, topY - LABEL_HEIGHT)} value={top} label="High" />
       <EdgeLabel top={Math.min(height - LABEL_HEIGHT, bottomY + 2)} value={bottom} label="Low" />
+      {target && targetY !== null && (
+        <div
+          className="price-field-label price-field-target-label absolute flex items-center gap-1 px-1"
+          style={{
+            right: width - plotWidth + 20,
+            top: targetAbove ? 0 : targetBelow ? height - LABEL_HEIGHT : Math.max(0, Math.min(height - LABEL_HEIGHT, targetY - LABEL_HEIGHT)),
+          }}
+        >
+          <PixelText role="micro" tone="dim" upper>
+            {targetAbove ? '▲ ' : targetBelow ? '▼ ' : ''}{target.label}
+          </PixelText>
+          <PixelText role="micro" tone="dim" className="tabular-nums">
+            {fmt(target.price)}
+          </PixelText>
+        </div>
+      )}
 
       {/* The character stands ON the price, so its feet are the reading. It
           hops to a new sample in four whole steps rather than gliding. */}

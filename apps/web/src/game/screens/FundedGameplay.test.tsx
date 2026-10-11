@@ -99,9 +99,9 @@ function actions() {
   }
 }
 
-it('unknown fill coverage shows equally visible unavailable SCORE and DAMAGE while keyboard withdrawal still works with source paused', () => {
+it('unknown fill coverage shows equally visible unavailable SCORE and DAMAGE while keyboard withdrawal still works with the book paused', () => {
   const state = actualRead()
-  state.sourceFresh = false
+  state.position!.paused = true
   const controls = actions()
   renderScreen(<FundedLive state={state} actions={controls} />)
   expect(screen.getAllByText('Unavailable')).toHaveLength(3)
@@ -151,7 +151,7 @@ it('an unavailable recovered result links the real successful exit and allows pl
 
 it('keyboard cannot start re-center before its exit cost is available, but accepts a real zero-cost quote', () => {
   const state = actualRead()
-  state.sourceMid = 0.04
+  state.position!.mid = 0.04
   const controls = actions()
   const view = renderScreen(<FundedLive state={state} actions={controls} />)
   press('A')

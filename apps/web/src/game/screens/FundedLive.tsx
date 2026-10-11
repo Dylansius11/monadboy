@@ -45,26 +45,26 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
   const edges = position?.orders.flatMap((order) => [order.price, order.flipPrice || order.price]) ?? []
   const low = basis?.low ?? (edges.length ? Math.min(...edges) : null)
   const high = basis?.high ?? (edges.length ? Math.max(...edges) : null)
-  const mid =
-    state.sourceFresh && state.sourceMid !== null
-      ? state.sourceMid
-      : position?.mid ?? null
+  // ONE price drives the game: the TESTNET book mid, where these orders fill
+  // and SCORE/DAMAGE are valued. The range is centred on it at quote time, so
+  // a run always starts inside. The DEMO target is only the direction the
+  // mirror pulls the book, drawn as a reference rule, never as the footing.
+  const mid = position?.mid ?? null
   const band =
     mid !== null && low !== null && high !== null
-      ? rangeState(
-          mid,
-          low,
-          high,
-          basis ? (position?.mid ?? mid) * basis.step : (high - low) / 8,
-        )
+      ? rangeState(mid, low, high, basis ? mid * basis.step : (high - low) / 8)
       : null
+  // Paused is about the book this field draws. A stale source only hides the
+  // target rule; it does not stop the book from being the book.
   const paused =
-    !state.sourceFresh ||
     !position ||
     position.paused ||
     Date.now() - position.observedAt > 15000
+  const target = state.sourceFresh && state.sourceMid !== null ? state.sourceMid : null
+  const targetLabel = state.demoMultiplier > 1 ? `DEMO x${state.demoMultiplier}` : 'MAINNET'
+  // A paused read is not a price: the line holds its last observed sample.
   useEffect(() => {
-    if (mid !== null) setSamples((old) => ({ series: [...old.series.slice(1 - SAMPLE_CAPACITY), mid], newestAt: Date.now() }))
+    if (mid !== null && !paused) setSamples((old) => ({ series: [...old.series.slice(1 - SAMPLE_CAPACITY), mid], newestAt: Date.now() }))
   }, [mid, position?.block])
   const windowSlots = Math.min(SAMPLE_CAPACITY, Math.max(MIN_WINDOW, samples.series.length))
   const sampling = useMemo(() => ({ capacity: windowSlots, intervalMs: SAMPLE_MS, newestAt: samples.newestAt }), [samples.newestAt, windowSlots])
@@ -134,8 +134,8 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
       </div>
     )
   }
-  const bookCatchingUp = !paused && band === 'OUT_OF_RANGE' && low !== null && high !== null &&
-    position.mid !== null && position.mid >= low && position.mid <= high
+  const targetSide = target === null || low === null || high === null ? null
+    : target > high ? 'above' : target < low ? 'below' : 'inside'
   const details = (
     <Panel flush className="flex flex-col gap-1 p-2">
       <PixelText role="micro">
@@ -152,16 +152,21 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
           : `History has unavailable gaps before block ${position.coverageFrom.toString()}. SCORE/DAMAGE/NET are unavailable, not zero.`}
       </PixelText>
       <PixelText role="micro">
-        Range display follows {state.demoMultiplier > 1 ? `DEMO x${state.demoMultiplier} target` : 'mainnet source'}; valuation uses actual TESTNET book mid. Linked flip orders re-arm on chain. The field holds the newest 5s sample until the next one.
+        The field draws the actual TESTNET book mid: your orders fill there and SCORE/DAMAGE are valued there. {state.demoMultiplier > 1 ? `The dashed rule is the DEMO x${state.demoMultiplier} target; while you play, the mirror pulls the book toward it.` : 'The dashed rule is the mainnet source the mirror follows.'} Linked flip orders re-arm on chain. The field holds the newest 5s sample until the next one.
       </PixelText>
       <dl className="funded-live-sources">
         <div><dt>Mainnet</dt><dd>{state.mainnetMid === null ? 'unavailable' : price(state.mainnetMid)}</dd></div>
         <div><dt>{state.demoMultiplier > 1 ? 'Demo target' : 'Target'}</dt><dd>{state.sourceMid === null ? 'unavailable' : price(state.sourceMid)}</dd></div>
         <div><dt>Testnet book</dt><dd>{position.mid === null ? 'unavailable' : price(position.mid)}</dd></div>
       </dl>
-      {bookCatchingUp && (
-        <PixelText role="micro" tone="loss" as="p">
-          {state.demoMultiplier > 1 ? 'DEMO target' : 'Mainnet price'} left your range; the TESTNET book is still inside and catching up.
+      {targetSide === 'above' || targetSide === 'below' ? (
+        <PixelText role="micro" tone="dim" as="p">
+          {state.demoMultiplier > 1 ? 'DEMO target' : 'Mainnet price'} is {targetSide} your range. The book follows it only as the mirror trades, so it may leave your range in that direction.
+        </PixelText>
+      ) : null}
+      {!state.sourceFresh && (
+        <PixelText role="micro" tone="dim" as="p">
+          Source target unavailable or stale. The mirror holds the book still until it returns; the field keeps drawing the book.
         </PixelText>
       )}
       {state.saved && (
@@ -180,7 +185,7 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
   const tone = paused || band === 'OUT_OF_RANGE' ? 'alarm' : band === 'NAD_SENSE' ? 'warn' : band === 'IN_RANGE' ? 'earning' : 'idle'
   const status = paused ? 'PRICE FEED PAUSED'
     : band === 'NAD_SENSE' ? 'NAD-SENSE · near your edge'
-      : band === 'OUT_OF_RANGE' ? (bookCatchingUp ? 'OUT OF RANGE · book catching up' : 'OUT OF RANGE · sitting')
+      : band === 'OUT_OF_RANGE' ? 'OUT OF RANGE · sitting'
         : band === 'IN_RANGE' ? 'IN RANGE · earning on flips' : 'No active range'
   const elapsed = basis ? duration(Math.max(0, Date.now() / 1000 - basis.openedAt)) : null
   const exiting = exitFrom !== null && (state.busy || state.error !== null)
@@ -236,7 +241,8 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
               <PriceField series={samples.series.length ? samples.series : [mid]} lowerPrice={low} upperPrice={high}
                 width={464} height={200} character={character} sampling={samples.series.length ? sampling : undefined}
                 animation={paused || band === 'OUT_OF_RANGE' ? 'sit' : jumping ? 'jump' : band === 'NAD_SENSE' ? 'alert' : 'run'}
-                jumping={jumping} earning={!paused && band === 'IN_RANGE'} />
+                jumping={jumping} earning={!paused && band === 'IN_RANGE'}
+                target={target === null ? null : { price: target, label: targetLabel }} />
               {flips > 0 && <span key={flips} className="funded-flip-pop" aria-hidden="true">+FLIP</span>}
             </>
           ) : <PixelText role="body">No active range to draw. START opens actual chain inputs.</PixelText>}
