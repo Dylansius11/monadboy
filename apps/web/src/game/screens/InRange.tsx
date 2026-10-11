@@ -13,7 +13,7 @@ import {
 } from '../sim'
 import { FIXTURE_MARKETS } from '../fixtures'
 import { PriceField } from '../PriceField'
-import { Meter, Panel, PixelText, Value } from '../../ui'
+import { KeyHints, Meter, Panel, PixelText, Value } from '../../ui'
 import type { SpriteAnimation } from '../../ui'
 import type { CharacterId } from '../../config/brand'
 import type { ManualRange, RangeWidth } from '../../state/session'
@@ -211,12 +211,14 @@ export function InRange({
   // plan names its reason in player words and says no funds moved.
   if (!pool || !sim || !range || !edges) {
     return (
-      <div className="bg-screen flex h-full w-full flex-col items-center justify-center gap-3 p-4">
-        <Panel className="flex flex-col gap-2">
-          <PixelText role="title" upper>{planned.error ?? 'Position not found'}</PixelText>
-          <PixelText role="body">{planned.error ? 'FIXTURE range unavailable. TESTNET funds have not moved.' : 'This pool is not on the current save disk, or it was withdrawn already.'}</PixelText>
-        </Panel>
-        <PixelText role="micro" tone="dim" upper>B back</PixelText>
+      <div className="bg-screen flex h-full w-full flex-col gap-2 p-2">
+        <div className="flex flex-1 items-center justify-center">
+          <Panel className="flex flex-col gap-2">
+            <PixelText role="title" upper>{planned.error ?? 'Position not found'}</PixelText>
+            <PixelText role="body">{planned.error ? 'FIXTURE range unavailable. TESTNET funds have not moved.' : 'This pool is not on the current save disk, or it was withdrawn already.'}</PixelText>
+          </Panel>
+        </div>
+        <KeyHints hints={[{ key: 'B', label: 'Back' }]} />
       </div>
     )
   }
@@ -267,7 +269,7 @@ export function InRange({
           <PixelText role="micro">Best streak {duration(sim.bestStreakSeconds)}; elapsed {duration(sim.elapsedSeconds)}.</PixelText>
           <PixelText role="micro">Feed {priceFeed?.freshness ?? 'fixture'}{priceFeed?.note ? ': ' + priceFeed.note : ''}</PixelText>
         </Panel>
-        <PixelText role="micro" upper>B or Start close inputs</PixelText>
+        <KeyHints className="mt-auto" hints={[{ key: 'B', label: 'Close' }]} />
       </div>
     )
   }
@@ -347,7 +349,7 @@ export function InRange({
             {price(highPrice)}
           </PixelText>
         </div>
-        <PixelText role="micro" tone="dim" upper>TESTNET / Start inputs</PixelText>
+        <PixelText role="micro" tone="dim" upper>Testnet</PixelText>
         <div className="flex items-baseline gap-1">
           <PixelText role="micro" tone="dim" upper>
             Now
@@ -447,25 +449,12 @@ export function InRange({
           </PixelText>
         </div>
 
-        {/* Controls, pinned to the corners. A is jump in range, recentre out
-            of range. SELECT nudges price toward the nearer edge, so the
-            out-of-range moment can be demonstrated on demand. B always
-            withdraws. A real rebalance costs a swap and gas, so the out of
-            range label says so in the same line rather than offering a free
-            action. No dollar figure: there is no swap quote path yet, and a
-            number this screen made up would be exactly the kind of claim the
-            product rules forbid. */}
-        <div className="screen-footer flex items-center justify-between">
-          <PixelText role="micro" upper>
-            A {paused ? 'Paused' : state === 'OUT_OF_RANGE' ? 'Recentre, costs a swap' : 'Jump'}
-          </PixelText>
-          <PixelText role="micro" upper>
-            Select {paused ? 'Paused' : 'nudge'}
-          </PixelText>
-          <PixelText role="micro" upper>
-            B Withdraw
-          </PixelText>
-        </div>
+        <KeyHints hints={[
+          { key: 'A', label: state === 'OUT_OF_RANGE' ? 'Recenter' : 'Jump', disabled: paused },
+          { key: 'SELECT', label: 'Nudge', disabled: paused },
+          { key: 'START', label: 'Inputs' },
+          { key: 'B', label: 'Withdraw' },
+        ]} />
       </div>
     </div>
   )

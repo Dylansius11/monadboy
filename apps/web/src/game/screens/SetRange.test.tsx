@@ -337,7 +337,7 @@ describe('the width row is three positions, not two', () => {
   })
 
   it('cancelling out of the editor leaves MANUAL cursored but not applied', () => {
-    const { getByText, queryByText, onChangeManualRange } = renderSetRange()
+    const { getByText, getByRole, queryByText, onChangeManualRange } = renderSetRange()
 
     press('DOWN', 'RIGHT', 'RIGHT', 'A') 
     press('B') 
@@ -345,7 +345,7 @@ describe('the width row is three positions, not two', () => {
     expect(onChangeManualRange).not.toHaveBeenCalled()
     expect(queryByText(/manual range/i)).not.toBeInTheDocument()
 
-    expect(getByText(/A edit range/i)).toBeInTheDocument()
+    expect(getByRole('button', { name: 'A Edit' })).toBeInTheDocument()
     
     expect(getByText(/vol 60% ->/)).toBeInTheDocument()
   })

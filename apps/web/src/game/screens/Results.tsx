@@ -3,7 +3,7 @@ import { useConsoleIntent } from '../../console/useConsoleInput'
 import { characters } from '../../config/brand'
 import { duration, pct, usd, usdFine } from '../../lib/format'
 import { DAMAGE_APR, FEE_APR, REBALANCE_COST_FRACTION, STEP_SECONDS } from '../sim'
-import { Dialog, Meter, Panel, PixelText, Sprite, Value } from '../../ui'
+import { Dialog, KeyHints, Meter, Panel, PixelText, Sprite, Value } from '../../ui'
 import type { SpriteAnimation } from '../../ui'
 import type { CharacterId } from '../../config/brand'
 import type { RunSummary } from '../sim'
@@ -95,37 +95,37 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
 
   if (!run) {
     return (
-      <div className="bg-screen flex h-full w-full flex-col items-center justify-center gap-3 p-4">
-        <Panel className="flex flex-col gap-2">
-          <PixelText role="title" upper>
-            No session to report
-          </PixelText>
-          <PixelText role="body">
-            Nothing has finished yet. Play a round and come back.
-          </PixelText>
-        </Panel>
-        <PixelText role="micro" tone="dim" upper>
-          A back to disks
-        </PixelText>
+      <div className="bg-screen flex h-full w-full flex-col gap-2 p-2">
+        <div className="flex flex-1 items-center justify-center">
+          <Panel className="flex flex-col gap-2">
+            <PixelText role="title" upper>
+              No session to report
+            </PixelText>
+            <PixelText role="body">
+              Nothing has finished yet. Play a round and come back.
+            </PixelText>
+          </Panel>
+        </div>
+        <KeyHints hints={[{ key: 'A', label: 'Disks' }]} />
       </div>
     )
   }
 
   if (!pool) {
     return (
-      <div className="bg-screen flex h-full w-full flex-col items-center justify-center gap-3 p-4">
-        <Panel className="flex flex-col gap-2">
-          <PixelText role="title" upper>
-            Pool not found
-          </PixelText>
-          <PixelText role="body">
-            This pool is not on the current save disk. The run still happened,
-            its numbers are just not shown here.
-          </PixelText>
-        </Panel>
-        <PixelText role="micro" tone="dim" upper>
-          A back to disks
-        </PixelText>
+      <div className="bg-screen flex h-full w-full flex-col gap-2 p-2">
+        <div className="flex flex-1 items-center justify-center">
+          <Panel className="flex flex-col gap-2">
+            <PixelText role="title" upper>
+              Pool not found
+            </PixelText>
+            <PixelText role="body">
+              This pool is not on the current save disk. The run still happened,
+              its numbers are just not shown here.
+            </PixelText>
+          </Panel>
+        </div>
+        <KeyHints hints={[{ key: 'A', label: 'Disks' }]} />
       </div>
     )
   }
@@ -145,7 +145,7 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
           <PixelText role="micro">{`FIXTURE SCORE: ${pct(FEE_APR * 100, 0)} annually while in range; outside damage: ${pct(DAMAGE_APR * 100, 0)} annually.`}</PixelText>
           <PixelText role="micro">{`Manual re-center damage: ${pct(REBALANCE_COST_FRACTION * 100, 2)} of the deposit. A tick represents ${duration(STEP_SECONDS)}.`}</PixelText>
         </Panel>
-        <PixelText role="micro" upper>B or Start close inputs</PixelText>
+        <KeyHints className="mt-auto" hints={[{ key: 'B', label: 'Close' }]} />
       </div>
     )
   }
@@ -297,14 +297,10 @@ export function Results({ pool, run, amount, characterId, onBackToDisks }: Resul
         {LINE_BY_OUTCOME[outcome]}
       </Dialog>
 
-      {/* Footer, pinned to the bottom whatever the block above it needed.
-          START opens the inputs view behind the numbers on this screen. */}
-      <div className="screen-footer mt-auto flex items-center justify-between">
-        <PixelText role="micro" upper>
-          A back to disks
-        </PixelText>
-        <PixelText role="micro" upper>Start inputs</PixelText>
-      </div>
+      <KeyHints className="mt-auto" hints={[
+        { key: 'A', label: 'Disks' },
+        { key: 'START', label: 'Inputs' },
+      ]} />
     </div>
   )
 }

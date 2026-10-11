@@ -8,7 +8,7 @@ import { planForOffsets, planForSession } from '../../lib/range/plan'
 import { FALLBACK_REALIZED_VOL } from '../sim'
 import { pct, price, usd } from '../../lib/format'
 import { NO_MARKET_RULES_COPY, ladderErrorCopy } from '../../lib/range/ladder-copy'
-import { Panel, PixelText, Toggle, Value } from '../../ui'
+import { KeyHints, Panel, PixelText, Toggle, Value } from '../../ui'
 import type { PlannedRange, RangePlan } from '../../lib/range/plan'
 import type { Ladder, MarketParams } from '@monadboy/sdk'
 import type { ManualRange, RangeWidth } from '../../state/session'
@@ -303,19 +303,19 @@ export function SetRange({
   // Not a throw, not a spinner: a real panel with a real way out.
   if (!pool) {
     return (
-      <div className="bg-screen flex h-full w-full flex-col items-center justify-center gap-3 p-4">
-        <Panel className="flex flex-col gap-2">
-          <PixelText role="title" upper>
-            Pool not found
-          </PixelText>
-          <PixelText role="body">
-            This pool is not on the current save disk, or it never made this
-            tier&apos;s cut.
-          </PixelText>
-        </Panel>
-        <PixelText role="micro" tone="dim" upper>
-          B back
-        </PixelText>
+      <div className="bg-screen flex h-full w-full flex-col gap-2 p-2">
+        <div className="flex flex-1 items-center justify-center">
+          <Panel className="flex flex-col gap-2">
+            <PixelText role="title" upper>
+              Pool not found
+            </PixelText>
+            <PixelText role="body">
+              This pool is not on the current save disk, or it never made this
+              tier&apos;s cut.
+            </PixelText>
+          </Panel>
+        </div>
+        <KeyHints hints={[{ key: 'B', label: 'Back' }]} />
       </div>
     )
   }
@@ -362,7 +362,7 @@ export function SetRange({
             <PixelText role="micro">{error}</PixelText>
           )}
         </Panel>
-        <PixelText role="micro" upper>B or Start close inputs</PixelText>
+        <KeyHints className="mt-auto" hints={[{ key: 'B', label: 'Close' }]} />
       </div>
     )
   }
@@ -384,12 +384,6 @@ export function SetRange({
             Fixture
           </PixelText>
         </div>
-        {/* Names the key behind the inputs view, where the numbers below are
-            sourced. Plain text, not a button: a pressable here would add its
-            padding to the header row and cost the picture below 8px. */}
-        <PixelText role="micro" tone="dim" upper>
-          Start inputs
-        </PixelText>
         <PixelText role="body" upper>
           {pool.tokenX.symbol} / {pool.tokenY.symbol}
         </PixelText>
@@ -669,39 +663,17 @@ export function SetRange({
       </div>
       </div>
 
-      {/* Footer. Bare text, the same shape as every other screen's key legend:
-          bordered boxes would make this one screen's footer look like a
-          toolbar, and a control row that changes shape between screens is a
-          control row a player has to re-learn each time. They are still
-          <button>s, so a mouse and a thumb keep working.
-
-          Button name, then action. The KEY each button answers to is the
-          console shell's job, never a screen's. */}
-      <div className="screen-footer grid grid-cols-3 items-center gap-1">
-        {/* The one slot on this screen that rewrites itself, and it has to.
-            A means CONFIRM everywhere except on the MANUAL chip, where it
-            opens the editor, and a key that quietly means two things is how a
-            player funds a position they meant to edit. This label is the whole
-            licence for that branch in the intent handler. */}
-        {focusRow === 'width' && widthCursor === 'manual' ? (
-          <FooterButton
-            label="A edit range"
-            onClick={() => { if (range) setManualOpen(true) }}
-          />
-        ) : (
-          <FooterButton label="A confirm" onClick={() => { if (range) onConfirm() }} />
-        )}
-        <FooterButton label="B back" align="center" onClick={onBack} />
-        {/* "Select manual", not "manual range": the overlay's own heading
-            says "Manual range", and the test for "SELECT opens the editor"
-            checks that phrase is absent before the press. Two controls
-            saying the same two words would make that check meaningless. */}
-        <FooterButton
-          label="Select manual"
-          align="right"
-          onClick={() => { if (range) setManualOpen(true) }}
-        />
-      </div>
+      {/* A is CONFIRM everywhere except on the MANUAL chip, where it opens the
+          editor. The legend's A slot rewrites itself to say which one is live,
+          and that label is the whole licence for the branch in the handler. */}
+      <KeyHints className="mt-auto" hints={[
+        focusRow === 'width' && widthCursor === 'manual'
+          ? { key: 'A', label: 'Edit', disabled: !range }
+          : { key: 'A', label: 'Confirm', disabled: !range },
+        { key: 'B', label: 'Back' },
+        { key: 'SELECT', label: 'Manual', disabled: !range },
+        { key: 'START', label: 'Inputs' },
+      ]} />
 
       {manualOpen && range && params ? (
         <ManualRangeEditor
@@ -926,22 +898,11 @@ function ManualRangeEditor({
         </div>
       ) : null}
 
-      {/* Same three-slot footer as the base screen, same bare-text shape, and
-          each slot names its button. A fourth child in this grid would wrap
-          to a second row underneath the other three, which reads as a broken
-          toolbar. */}
-      <div className="screen-footer grid grid-cols-3 items-center gap-1">
-        <FooterButton
-          label="A apply"
-          onClick={() => { if (preview) onApply({ lowerPct: start, upperPct: end }) }}
-        />
-        <FooterButton label="B cancel" align="center" onClick={onCancel} />
-        <FooterButton
-          label="Select use suggestion"
-          align="right"
-          onClick={onUseSuggestion}
-        />
-      </div>
+      <KeyHints className="mt-auto" hints={[
+        { key: 'A', label: 'Apply', disabled: !preview },
+        { key: 'B', label: 'Cancel' },
+        { key: 'SELECT', label: 'Suggested' },
+      ]} />
     </div>
   )
 }
@@ -1004,40 +965,6 @@ function NowMarker({ leftPct }: { leftPct: number }) {
         </PixelText>
       </span>
     </div>
-  )
-}
-
-/**
- * A footer control.
- *
- * Bare text on purpose, so this screen's footer is the same shape as every
- * other screen's key legend. It is a real `<button>` underneath because a
- * phone has no A button, and `pressable` is the same 1px-down affordance the
- * console's other controls use, so it still answers a thumb. What it must not
- * do is grow a border and read as a toolbar.
- */
-function FooterButton({
-  label,
-  align = 'left',
-  onClick,
-}: {
-  label: string
-  align?: 'left' | 'center' | 'right'
-  onClick: () => void
-}) {
-  const justify =
-    align === 'center'
-      ? 'justify-self-center'
-      : align === 'right'
-        ? 'justify-self-end'
-        : 'justify-self-start'
-
-  return (
-    <button type="button" onClick={onClick} className={`pressable ${justify}`}>
-      <PixelText role="micro" upper>
-        {label}
-      </PixelText>
-    </button>
   )
 }
 

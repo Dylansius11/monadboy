@@ -141,7 +141,7 @@ describe('the out-of-range moment', () => {
   })
 
   it('keeps the instruments on screen while the alarm is up', () => {
-    const { getByText } = renderInRange()
+    const { getByText, getByRole } = renderInRange()
 
     press(
       'SELECT',
@@ -156,8 +156,9 @@ describe('the out-of-range moment', () => {
 
     expect(getByText(/OUT OF RANGE/)).toBeInTheDocument()
     expect(getByText(/AUTOPILOT ON/i)).toBeInTheDocument()
-    expect(getByText(/^B Withdraw$/i)).toBeInTheDocument()
-    expect(getByText(/^A Recentre, costs a swap$/i)).toBeInTheDocument()
+    expect(getByRole('button', { name: 'B Withdraw' })).toBeInTheDocument()
+    expect(getByRole('button', { name: 'A Recenter' })).toBeInTheDocument()
+    expect(getByText(/re-centering is manual and costs a swap/)).toBeInTheDocument()
   })
 
   it.each([true, false])('says you stopped earning, in player words, with autopilot %s', (autopilot) => {
@@ -348,7 +349,7 @@ describe('fixture freshness and inputs', () => {
       rerender(<InRange pool={POOL} amount={100} width="wide" manualRange={null}
         autopilot characterId="molandak" priceFeed={live(0.03314)}
         onWithdraw={onWithdraw} onRebalance={onRebalance} onBack={onBack} />)
-      expect(getByText(/^A Jump$/i)).toBeInTheDocument()
+      expect(getByRole('button', { name: 'A Jump' })).toBeEnabled()
       await tick(500, vi)
       press('B')
       expect(onWithdraw.mock.calls[1][0]).toMatchObject({ elapsedSeconds: 3600, timeInRangePct: 100 })

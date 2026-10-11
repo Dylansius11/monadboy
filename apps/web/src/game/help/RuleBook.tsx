@@ -210,9 +210,11 @@ export function RuleBook() {
                     </tbody>
                   </table>
                   <p>
-                    On a phone, use the on-screen buttons. H or ? toggles this
-                    guide; Escape closes it. No console input reaches the game
-                    while it is open.
+                    On a phone, use the on-screen buttons. The strip along the
+                    bottom of each screen names what A, B, SELECT and START do
+                    there; tapping a hint presses that button. H or ? toggles
+                    this guide; Escape closes it. No console input reaches the
+                    game while it is open.
                   </p>
                   <p>
                     SELECT fires when Shift is released, unless it was part of a
