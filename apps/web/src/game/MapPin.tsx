@@ -31,10 +31,14 @@ const MONAD_MARK =
 export const PIN_SIZE = 16
 export const PIN_SIZE_SELECTED = 20
 
+/** Four corner brackets standing off the disc: the playable reticle. */
+const RETICLE = 'M-3 2V-3H2M18 -3H23V2M23 18V23H18M2 23H-3V18'
+
 export function MapPin({
   band,
   filtered = false,
   selected = false,
+  playable = false,
   size = PIN_SIZE,
 }: {
   band: RiskBand
@@ -42,6 +46,9 @@ export function MapPin({
    * you cannot see working is the same as no filter. */
   filtered?: boolean
   selected?: boolean
+  /** A TESTNET market this tier can start a run on. A third shape, the
+   * reticle, so "you can play here" survives a grayscale screenshot. */
+  playable?: boolean
   size?: number
 }) {
   return (
@@ -50,9 +57,18 @@ export function MapPin({
       height={size}
       viewBox="0 0 20 20"
       role="img"
-      aria-label={`${band}${filtered ? ' filtered' : ''}`}
+      aria-label={`${band}${filtered ? ' filtered' : ''}${playable ? ' playable' : ''}`}
       className={filtered ? 'opacity-70' : undefined}
+      overflow="visible"
     >
+      {playable ? (
+        <g fill="none" strokeLinecap="square">
+          {/* A light halo under the accent, so the corners read on the
+              shaded pass region as well as on open water. */}
+          <path d={RETICLE} stroke="var(--color-panel)" strokeWidth={4} />
+          <path d={RETICLE} stroke="var(--color-accent)" strokeWidth={2} />
+        </g>
+      ) : null}
       <circle
         cx={10}
         cy={10}

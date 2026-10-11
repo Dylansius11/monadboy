@@ -27,3 +27,21 @@ export function executablePool(
   const entry = findPool(pairAddress, difficulty, godMode)
   return entry && isExecutable(entry) ? entry : undefined
 }
+
+const LOOSER: Record<Difficulty, ReadonlyArray<Difficulty>> = {
+  easy: ['normal', 'hard'],
+  normal: ['hard'],
+  hard: [],
+}
+
+/**
+ * The nearest looser tier whose own gates would admit an executable pool,
+ * asked of the caller's same read through `poolsAt`. Null when none would, so
+ * an empty tracker never offers a tier that would be just as empty.
+ */
+export function nextPlayableTier(
+  current: Difficulty,
+  poolsAt: (tier: Difficulty) => ReadonlyArray<TrackerPool>,
+): Difficulty | null {
+  return LOOSER[current].find((tier) => poolsAt(tier).some(isExecutable)) ?? null
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FIXTURE_MARKETS, scoredPools } from './fixtures'
-import { executablePool, isExecutable } from './eligibility'
+import { executablePool, isExecutable, nextPlayableTier } from './eligibility'
 import type { ScoredPool } from './fixtures'
 
 const TESTNET = FIXTURE_MARKETS.find(({ network }) => network === 'testnet')
@@ -46,5 +46,25 @@ describe('what a player may execute', () => {
   it('treats an unknown or null id as missing', () => {
     expect(executablePool('0xdead', 'easy', false)).toBeUndefined()
     expect(executablePool(null, 'easy', false)).toBeUndefined()
+  })
+})
+
+describe('the tier an empty tracker may offer', () => {
+  const playableAt = (tiers: ReadonlyArray<string>) => (tier: string) =>
+    tiers.includes(tier) ? scoredPools('hard') : scoredPools('hard').filter((entry) => !isExecutable(entry))
+
+  it('is the nearest looser tier whose own gates admit an executable pool', () => {
+    expect(nextPlayableTier('easy', playableAt(['normal', 'hard']))).toBe('normal')
+    expect(nextPlayableTier('easy', playableAt(['hard']))).toBe('hard')
+  })
+
+  it('is none when no looser tier admits one, and HARD has none to offer', () => {
+    expect(nextPlayableTier('easy', playableAt([]))).toBeNull()
+    expect(nextPlayableTier('hard', playableAt(['easy', 'normal', 'hard']))).toBeNull()
+  })
+
+  it('asks the fixture read itself, never a hard-coded answer', () => {
+    const expected = (['normal', 'hard'] as const).find((tier) => scoredPools(tier).some(isExecutable)) ?? null
+    expect(nextPlayableTier('easy', (tier) => scoredPools(tier))).toBe(expected)
   })
 })

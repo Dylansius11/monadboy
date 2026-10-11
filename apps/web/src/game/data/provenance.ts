@@ -39,3 +39,12 @@ export function provenanceBadge(p: TrackerProvenance): string {
   if (p.partial) return 'Partial'
   return 'Worker read'
 }
+
+/** The map's one-line version: what was read and how old it is. Read only
+ * and the snapshot time stay in the full line the inspect panel prints. */
+export function provenanceShort(p: TrackerProvenance): string {
+  if (p.kind === 'fixture') return 'Sample data · not live'
+  const age = p.ageMs === null ? 'age unknown' : `${duration(p.ageMs / 1000)} old`
+  const flags = [p.stale ? 'STALE' : null, p.partial ? 'PARTIAL' : null].filter(Boolean)
+  return [p.source, age, ...flags].join(' · ')
+}
