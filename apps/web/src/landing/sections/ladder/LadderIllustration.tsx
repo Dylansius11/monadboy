@@ -14,6 +14,8 @@ import type { LadderState } from './ladder-model'
 /** Left gutter: price pointer and rung ticks. */
 const GUTTER = 44
 const AXIS = 40
+/** The PRICE label after the marker: a 6px lead, 42px of text, 2px spare. */
+const PRICE_LABEL = 50
 /** Plot size before the first measurement, so the server render has a shape. */
 const FALLBACK = { w: 480, h: 480 }
 
@@ -46,7 +48,12 @@ export function LadderIllustration({ state, id }: { state: LadderState; id: stri
   const rowMid = (level: number) => rowTop(level) + Math.floor(cell / 2)
 
   const blockX = GUTTER
-  const blockW = Math.min(220, Math.round(w * (sprite === 64 ? 0.48 : 0.42)))
+  // Narrow plots give up block width first, so the PRICE label ends inside.
+  const blockW = Math.min(
+    220,
+    Math.round(w * (sprite === 64 ? 0.48 : 0.42)),
+    w - GUTTER - 14 - 46 - sprite - PRICE_LABEL,
+  )
   const arrowX = blockX + blockW + 14
   // Room for the FLIP label between the arrow and the marker.
   const spriteX = arrowX + 46
