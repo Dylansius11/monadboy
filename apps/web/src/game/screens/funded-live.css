@@ -7,7 +7,10 @@
 
 /* SCORE and DAMAGE: equal cells, equal type. NET reads beneath them. */
 .funded-live-hud { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 8px; }
-.funded-hud-cell, .funded-hud-net { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.funded-hud-cell, .funded-hud-net { display: flex; flex-direction: column; min-width: 0; white-space: nowrap; }
+/* A figure never wraps: SCORE and DAMAGE share one size that shrinks with the cell. */
+.funded-hud-cell { container-type: inline-size; }
+.funded-hud-cell > .text-value { font-size: min(var(--text-value), 15cqw); }
 .funded-live-hud > :nth-child(2) { text-align: center; }
 .funded-live-hud > :last-child { text-align: right; }
 .funded-hud-cell[data-flash='true'] { animation: funded-hud-flash 600ms steps(3, end) 1; }
@@ -67,7 +70,7 @@
 .funded-result-banner { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 12px; padding: 8px; border: 1px solid var(--color-edge); background: var(--color-panel); box-shadow: inset 4px 0 var(--color-gain), var(--shadow-hard); }
 .screen-funded-results .funded-numbers { gap: 0 8px; padding: 4px 8px; }
 .screen-funded-results .funded-numbers > span { align-self: center; }
-.screen-funded-results .funded-numbers > div { display: flex; align-items: center; justify-content: end; }
+.screen-funded-results .funded-numbers > div { display: flex; align-items: center; justify-content: end; overflow-wrap: normal; white-space: nowrap; }
 .funded-result-save { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--color-edge); background: var(--color-panel); padding: 4px 8px; }
 .funded-result-save > :empty { display: none; }
 .funded-result-save a,

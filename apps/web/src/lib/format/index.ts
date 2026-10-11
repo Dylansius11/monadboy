@@ -43,6 +43,31 @@ export function usdFine(amount: number): string {
   return USD_FINE.format(amount)
 }
 
+/** Most places a tiny score or damage may show; wider would not fit a half-width cell. */
+const TINY_MAX_DECIMALS = 5
+
+/**
+ * Decimals for a group of money figures shown side by side (SCORE, DAMAGE,
+ * NET). One count for the whole group, so the figures always read at the same
+ * precision.
+ *
+ * A testnet run earns fractions of a cent, so two decimals would read as $0.00
+ * for a real, nonzero amount. The rule: cents at or above one dollar, otherwise
+ * two significant digits of the smallest nonzero figure, never more than
+ * `TINY_MAX_DECIMALS`. Zero and dust below that precision stay at cents, so a
+ * figure never prints a string of zeros that implies a measurement.
+ */
+export function usdDecimals(...amounts: ReadonlyArray<number>): number {
+  let decimals = 2
+  for (const amount of amounts) {
+    const size = Math.abs(amount)
+    if (!Number.isFinite(size) || size < 0.5 * 10 ** -TINY_MAX_DECIMALS || size >= 0.1) continue
+    const needed = -Math.floor(Math.log10(size)) + 1
+    decimals = Math.max(decimals, Math.min(TINY_MAX_DECIMALS, needed))
+  }
+  return decimals
+}
+
 /** `$412K`. For pool-sized numbers, which never need the cents. */
 export function compactUsd(amount: number): string {
   return USD_COMPACT.format(amount)

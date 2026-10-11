@@ -3,7 +3,7 @@ import { rangeState } from '@monadboy/sdk'
 import { useConsoleIntent } from '../../console/useConsoleInput'
 import { useSession } from '../../state/session'
 import { useSound } from '../../sound/SoundProvider'
-import { price } from '../../lib/format'
+import { price, usdDecimals } from '../../lib/format'
 import { KeyHints, Meter, Panel, PixelText, Value } from '../../ui'
 import { PriceField } from '../PriceField'
 import {
@@ -152,6 +152,7 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
   )
   if (inspect) return <Inputs state={state} onClose={() => setInspect(false)}>{details}</Inputs>
   const valuation = position.valuation
+  const figureDecimals = usdDecimals(valuation?.score ?? 0, valuation?.damage ?? 0, valuation?.net ?? 0)
   const proximity = mid !== null && low !== null && high !== null && high > low
     ? Math.max(0, Math.min(100, Math.min(mid - low, high - mid) / ((high - low) / 2) * 100))
     : 0
@@ -170,15 +171,15 @@ export function FundedLive({ state, actions }: FundedScreenProps) {
       <div className="funded-live-hud">
         <div key={`score-${flips}`} className="funded-hud-cell" data-flash={flips > 0}>
           <PixelText role="micro" tone="dim" upper>Score</PixelText>
-          {valuation ? <Value amount={valuation.score} prefix="+$" decimals={6} tone="gain" /> : <PixelText role="value" tone="gain">Unavailable</PixelText>}
+          {valuation ? <Value amount={valuation.score} prefix="+$" decimals={figureDecimals} tone="gain" /> : <PixelText role="value" tone="gain">Unavailable</PixelText>}
         </div>
         <div className="funded-hud-cell">
           <PixelText role="micro" tone="dim" upper>Damage</PixelText>
-          {valuation ? <Value amount={valuation.damage} prefix="-$" decimals={6} tone="loss" /> : <PixelText role="value" tone="loss">Unavailable</PixelText>}
+          {valuation ? <Value amount={valuation.damage} prefix="-$" decimals={figureDecimals} tone="loss" /> : <PixelText role="value" tone="loss">Unavailable</PixelText>}
         </div>
         <div className="funded-hud-net">
           <PixelText role="micro" tone="dim" upper>Net vs hold</PixelText>
-          {valuation ? <Value amount={valuation.net} prefix="$" decimals={6} signed role="body" /> : <PixelText role="body">Unavailable</PixelText>}
+          {valuation ? <Value amount={valuation.net} prefix="$" decimals={figureDecimals} signed role="body" /> : <PixelText role="body">Unavailable</PixelText>}
         </div>
       </div>
       <div className="funded-live-range">

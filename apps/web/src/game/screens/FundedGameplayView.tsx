@@ -1,7 +1,7 @@
 import { mainnetMarkets, monad } from '@monadboy/sdk'
 import { explorerAddressUrl, explorerTxUrl } from '../../chain/config'
 import { useConsoleIntent } from '../../console/useConsoleInput'
-import { price } from '../../lib/format'
+import { price, usdDecimals } from '../../lib/format'
 import { KeyHints, Panel, PixelText, Value } from '../../ui'
 import type { GameplayState } from '../../chain/gameplay-store'
 import type { ExecutionStep } from '../../chain/market-execution'
@@ -144,6 +144,7 @@ export function Numbers({
   damage: number | null
   net: number | null
 }) {
+  const decimals = usdDecimals(score ?? 0, damage ?? 0, net ?? 0)
   return (
     <Panel flush className="funded-numbers grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 p-2">
       <PixelText role="body" upper>
@@ -153,7 +154,7 @@ export function Numbers({
         {score === null ? (
           <PixelText role="value">Unavailable</PixelText>
         ) : (
-          <Value amount={score} prefix="$" decimals={6} tone="gain" />
+          <Value amount={score} prefix="$" decimals={decimals} tone="gain" />
         )}
       </div>
       <PixelText role="body" upper>
@@ -163,7 +164,7 @@ export function Numbers({
         {damage === null ? (
           <PixelText role="value">Unavailable</PixelText>
         ) : (
-          <Value amount={damage} prefix="-$" decimals={6} tone="loss" />
+          <Value amount={damage} prefix="-$" decimals={decimals} tone="loss" />
         )}
       </div>
       <PixelText role="micro" upper>
@@ -173,7 +174,7 @@ export function Numbers({
         {net === null ? (
           <PixelText role="micro">Unavailable</PixelText>
         ) : (
-          <Value amount={net} prefix="$" decimals={6} signed />
+          <Value amount={net} prefix="$" decimals={decimals} signed />
         )}
       </div>
     </Panel>

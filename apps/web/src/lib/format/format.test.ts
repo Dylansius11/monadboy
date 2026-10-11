@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ageInDays, compactUsd, duration, pct, price, usd, usdFine } from './index'
+import { ageInDays, compactUsd, duration, pct, price, usd, usdDecimals, usdFine } from './index'
 
 describe('money', () => {
   it('always shows cents on an amount a user holds', () => {
@@ -17,6 +17,22 @@ describe('money', () => {
     expect(usdFine(1.42)).toBe('$1.42')
     expect(usdFine(0)).toBe('$0.00')
     expect(usdFine(-0.38)).toBe('-$0.38')
+  })
+
+  it('gives a group of tiny run figures one shared precision', () => {
+    // SCORE 0 beside DAMAGE 0.000291 reads $0.00000 and $0.00029, not $0.000000 and $0.000291.
+    expect(usdDecimals(0, 0.000291)).toBe(5)
+    expect(usdDecimals(0.00189, 0, 0.00189)).toBe(4)
+    expect(usdDecimals(0.0123)).toBe(3)
+    expect(usdDecimals(0.35)).toBe(2)
+  })
+
+  it('stays at cents for zero, whole dollars and dust, and caps the width', () => {
+    expect(usdDecimals(0, 0)).toBe(2)
+    expect(usdDecimals(12.34, 1.5)).toBe(2)
+    expect(usdDecimals(0.000001)).toBe(2)
+    expect(usdDecimals(0.000009)).toBe(5)
+    expect(usdDecimals(Number.NaN)).toBe(2)
   })
 })
 
