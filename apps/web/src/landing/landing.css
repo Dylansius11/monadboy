@@ -894,6 +894,22 @@ body:has(.landing) {
   .landing .topbar-nav {
     gap: 16px;
   }
+  .landing .brand-wordmark {
+    width: 128px;
+    height: auto;
+  }
+  /* The key takes the TESTNET tag's place instead of sharing the bar with it,
+     so nothing is cut off at the right edge and the tag never sits against
+     the wordmark. The hero's console still says TESTNET. */
+  .landing .topbar-start {
+    display: none;
+  }
+  .landing .topbar.is-docked .topbar-start {
+    display: inline-flex;
+  }
+  .landing .topbar.is-docked .tag {
+    display: none;
+  }
 
   .landing .part a {
     grid-template-columns: minmax(0, 1fr) auto;
