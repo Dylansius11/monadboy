@@ -15,6 +15,14 @@ export const SOURCE_STALE_MS = 30_000
 export const PAUSE_AFTER_FAILURES = 3
 // [I] User-approved wide-book pause policy. 2% is an operator limit, not a market measurement.
 export const MAX_SOURCE_SPREAD = 0.02
+// A wide top of book does not say where the price is, but the last trade does. It is used
+// only while the book is not broken (up to 10% wide), only when the trade is recent, and
+// it is clamped inside the quoted bid and ask. Measured 2026-10-12: MON_USDC traded in
+// 6,762 transactions in 24 hours (median gap 1 s, p99 175 s) while its book sat 3.5% wide.
+export const MAX_FALLBACK_SPREAD = 0.1
+export const TRADE_REFERENCE_MS = 600_000
+
+export type SourceBasis = 'book-mid' | 'last-trade'
 const RETENTION_MS = 14 * 86_400_000
 
 export type TestnetMidState = {
@@ -28,6 +36,7 @@ export type MidState = {
   succeeded: number
   consecutiveFailures: number
   status: 'running' | 'paused'
+  basis: SourceBasis | null
   targetMid: number | null
   at: number | null
   lastAttemptAt: number | null
@@ -41,6 +50,7 @@ export function createMidState(): MidState {
     succeeded: 0,
     consecutiveFailures: 0,
     status: 'paused',
+    basis: null,
     targetMid: null,
     at: null,
     lastAttemptAt: null,
@@ -61,21 +71,36 @@ export type BookClient = {
   }) => Promise<readonly [bigint, bigint]>
 }
 
-async function readMid(
-  client: BookClient,
-  address: Address,
-  maxSpread = Number.POSITIVE_INFINITY,
-): Promise<number | null> {
-  const { bid, ask } = bestBidAsk1e18(
+async function readBook(client: BookClient, address: Address) {
+  return bestBidAsk1e18(
     await client.readContract({
       address,
       abi: kuruOrderbookAbi,
       functionName: 'bestBidAsk',
     }),
   )
+}
+
+async function readMid(client: BookClient, address: Address): Promise<number | null> {
+  const { bid, ask } = await readBook(client, address)
+  if (bid === null || ask === null || bid <= 0 || ask < bid) return null
+  return (bid + ask) / 2
+}
+
+async function readSource(
+  client: BookClient,
+  address: Address,
+  lastTrade: () => number | null,
+): Promise<{ price: number; basis: SourceBasis } | null> {
+  const { bid, ask } = await readBook(client, address)
   if (bid === null || ask === null || bid <= 0 || ask < bid) return null
   const mid = (bid + ask) / 2
-  return (ask - bid) / mid > maxSpread ? null : mid
+  const spread = (ask - bid) / mid
+  if (spread <= MAX_SOURCE_SPREAD) return { price: mid, basis: 'book-mid' }
+  if (spread > MAX_FALLBACK_SPREAD) return null
+  const trade = lastTrade()
+  if (trade === null) return null
+  return { price: Math.min(Math.max(trade, bid), ask), basis: 'last-trade' }
 }
 
 export function sourceAgeMs(state: MidState, now: number): number | null {
@@ -114,23 +139,32 @@ export function createMidSampler({
   const insert = db.query(
     'INSERT OR REPLACE INTO mid_samples (at, market, mid) VALUES (?, ?, ?)',
   )
+  const lastTradeRow = db.query(
+    'SELECT price FROM tracker_trades WHERE market = ?1 AND at >= ?2 ORDER BY at DESC, block DESC, log_index DESC LIMIT 1',
+  )
+  const sourceAddress = source.address.toLowerCase()
+  const lastTrade = () =>
+    (lastTradeRow.get(sourceAddress, now() - TRADE_REFERENCE_MS) as { price: number } | null)
+      ?.price ?? null
   let prunedAt = 0
 
   return async () => {
     state.attempted++
     state.lastAttemptAt = now()
     try {
-      const mid = await readMid(mainnet, source.address, MAX_SOURCE_SPREAD)
-      // Invalid or too-wide quotes invalidate the source immediately; RPC failures retain the three-read rule.
-      if (mid === null) {
+      const reading = await readSource(mainnet, source.address, lastTrade)
+      // Empty, crossed or broken quotes invalidate the source immediately; RPC failures retain the three-read rule.
+      if (reading === null) {
         state.status = 'paused'
         throw new Error('Empty, crossed or too-wide source book')
       }
+      const { price: mid, basis } = reading
       const at = now()
       insert.run(at, `mainnet:${SOURCE_MARKET}`, mid)
       Object.assign(state, {
         targetMid: mid,
         at,
+        basis,
         consecutiveFailures: 0,
         status: 'running',
       })
@@ -138,6 +172,7 @@ export function createMidSampler({
       logger('mid.sampled', {
         market: `mainnet:${SOURCE_MARKET}`,
         mid,
+        basis,
         sampledAt: at,
       })
     } catch (cause) {
@@ -191,6 +226,7 @@ export function sourceSection(
         name: SOURCE_NAME,
         state: paused ? 'paused' : 'running',
         mid: state.targetMid,
+        basis: state.basis,
         ageMs: sourceAgeMs(state, now()),
         samples: {
           attempted: state.attempted,

@@ -199,6 +199,52 @@ test('a wide source book pauses immediately without storing its midpoint and a t
   expect(state.consecutiveFailures).toBe(0)
 })
 
+test('a wide but intact source book is priced by its latest recent trade, clamped inside the quotes', async () => {
+  const { db, state } = setup()
+  const MARKET = mainnetMarkets.find((m) => m.symbol === 'MON_USDC')!.address.toLowerCase()
+  const trade = db.query(
+    'INSERT INTO tracker_trades (market, block, log_index, at, maker, price, size, tx_hash) VALUES (?, ?, 0, ?, ?, ?, 1, ?)',
+  )
+  const NOW = 2_000_000
+  // 3.6% wide, the shape the real MON_USDC book held for hours on 2026-10-12.
+  const wide: readonly [bigint, bigint] = [25_865_000_000_000_000n, 26_807_000_000_000_000n]
+  let book = wide
+  const sample = createMidSampler({
+    db, state, mainnet: { readContract: async () => book },
+    testnetMarkets: [], logger: quiet, now: () => NOW,
+  })
+
+  await sample()
+  expect(state.status).toBe('paused')
+
+  // Older than ten minutes: the price is unknown, not guessed.
+  trade.run(MARKET, 1, NOW - 700_000, '0xm', 0.03, '0xa')
+  await sample()
+  expect(state.status).toBe('paused')
+
+  trade.run(MARKET, 2, NOW - 5_000, '0xm', 0.0262, '0xb')
+  await sample()
+  expect(state).toMatchObject({ status: 'running', basis: 'last-trade', targetMid: 0.0262 })
+  expect(db.query("SELECT mid FROM mid_samples WHERE market = 'mainnet:MON_USDC'").all()).toEqual([
+    { mid: 0.0262 },
+  ])
+
+  // A trade outside the quotes means the book has moved since: clamp, never exceed the book.
+  trade.run(MARKET, 3, NOW - 1_000, '0xm', 0.0299, '0xc')
+  await sample()
+  expect(state.targetMid).toBe(0.026807)
+
+  // A broken book (over 10% wide) is not bounded by anything: pause even with a trade.
+  book = [20_000_000_000_000_000n, 26_807_000_000_000_000n]
+  await sample()
+  expect(state.status).toBe('paused')
+
+  // A tight book is always priced by its own mid.
+  book = GOOD
+  await sample()
+  expect(state).toMatchObject({ status: 'running', basis: 'book-mid', targetMid: 0.033 })
+})
+
 test('testnet observations expire at the same boundary in health and the mid route', async () => {
   for (const status of ['live', 'empty'] as const) {
     const state = createMidState()
