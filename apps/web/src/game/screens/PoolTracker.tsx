@@ -252,9 +252,10 @@ export function PoolTracker({
   )
 
   // No spinner is a terminal state, and "the filter removed every pool" is
-  // exactly as real a state as "here is the map." The map still draws, every
-  // pin outside the shaded pass region, so the refusal is seen rather than
-  // read, and the card under it names the way forward when one exists.
+  // exactly as real a state as "here is the map." It is the same map screen,
+  // every pin outside the shaded pass region, with a short notice where the
+  // selected pool would be: the refusal is seen, and the notice names the way
+  // forward when one exists. There is no cursor, so no zoom and no inspect.
   if (passing.length === 0) {
     // The playable pools come first: they are the ones another tier can open.
     const closest = [...pools]
@@ -263,49 +264,47 @@ export function PoolTracker({
     return (
       <div className="screen-tracker bg-screen flex h-full w-full flex-col gap-1 p-2">
         {header}
-        <div className="tracker-map flex min-h-0 flex-1 flex-col gap-1">
-          <Plot pools={pools} cursorIndex={null} gates={gates} zoom={1} />
-        </div>
-        <div className="tracker-empty border-edge bg-panel flex flex-col gap-1 border p-2">
-          <div className="flex items-baseline justify-between gap-2">
-            <PixelText role="title" upper>
-              Nothing passed
-            </PixelText>
-            <PixelText role="micro" tone="dim" upper>
-              {character.tier} filter
-            </PixelText>
-          </div>
-          <PixelText as="p" role="body">
-            {character.label}&apos;s {character.tier} filter removed every pool.{' '}
-            {nextCharacter
-              ? `${nextCharacter.label} · ${nextCharacter.tier} lets a playable TESTNET market through.`
-              : character.tier === 'HARD'
-                ? 'HARD is already the loosest filter; nothing on the market passes right now.'
-                : 'No looser tier admits a playable TESTNET market on this read either.'}
-          </PixelText>
-          {closest.length > 0 && (
-            <ul className="tracker-closest border-edge-soft flex flex-col gap-1 border-t pt-1">
-              {closest.map((entry) => (
-                <li key={entry.pool.pairAddress} className="flex items-start gap-2">
-                  <span className="mt-0.5 shrink-0">
-                    <MapPin band={riskBand(entry.score.safety)} filtered size={12} />
-                  </span>
-                  <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-2">
-                    <PixelText role="micro" upper>
-                      {entry.pool.tokenX.symbol} / {entry.pool.tokenY.symbol}
-                      {isTestnet(entry) ? ' · testnet' : ' · mainnet only'}
+        <MapView
+          pools={pools}
+          cursorIndex={null}
+          characterLabel={character.label}
+          gates={gates}
+          zoom={1}
+          onZoom={() => {}}
+          notice={
+            <div className="tracker-empty border-edge bg-panel flex flex-col gap-1 border p-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <PixelText role="title" upper>
+                  Nothing passed
+                </PixelText>
+                <PixelText role="micro" tone="dim" upper>
+                  {character.tier} filter
+                </PixelText>
+              </div>
+              <PixelText as="p" role="micro">
+                {character.label}&apos;s {character.tier} filter removed every pool.{' '}
+                {nextCharacter
+                  ? `${nextCharacter.label} · ${nextCharacter.tier} lets a playable TESTNET market through.`
+                  : character.tier === 'HARD'
+                    ? 'HARD is already the loosest filter; nothing on the market passes right now.'
+                    : 'No looser tier admits a playable TESTNET market on this read either.'}
+              </PixelText>
+              {closest[0] && (
+                <div className="border-edge-soft flex flex-wrap items-baseline justify-between gap-x-2 border-t pt-1">
+                  <PixelText role="micro" upper>
+                    {closest[0].pool.tokenX.symbol} / {closest[0].pool.tokenY.symbol}
+                    {isTestnet(closest[0]) ? ' · testnet' : ' · mainnet only'}
+                  </PixelText>
+                  {closest[0].gates.failures[0] && (
+                    <PixelText role="micro" tone="dim">
+                      {GATE_COPY[closest[0].gates.failures[0]]}
                     </PixelText>
-                    {entry.gates.failures[0] && (
-                      <PixelText role="micro" tone="dim">
-                        {GATE_COPY[entry.gates.failures[0]]}
-                      </PixelText>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                  )}
+                </div>
+              )}
+            </div>
+          }
+        />
         <KeyHints className="mt-auto" hints={[
           ...(nextCharacter && onTryTier ? [{ key: 'A' as const, label: `Try ${nextCharacter.label}` }] : []),
           { key: 'B', label: 'Back' },
@@ -536,16 +535,19 @@ function MapView({
   gates,
   zoom,
   onZoom,
+  notice,
 }: {
   pools: Array<TrackerPool>
-  cursorIndex: number
+  /** Null when nothing passed: there is no pool to select, so `notice` stands in. */
+  cursorIndex: number | null
   characterLabel: string
   gates: GateSet
   zoom: number
   onZoom: (delta: number) => void
+  notice?: ReactNode
 }) {
-  const entry = pools[cursorIndex]
-  const playable = isExecutable(entry)
+  const entry = cursorIndex === null ? null : pools[cursorIndex]
+  const playable = entry !== null && isExecutable(entry)
 
   return (
     <div className="tracker-map flex min-h-0 flex-1 flex-col gap-1">
@@ -563,7 +565,7 @@ function MapView({
           corner of a map covers data at exactly the zoom level where data got
           dense. Down here the targets are also big enough for a thumb.
         */}
-        <div className="flex items-center gap-1">
+        {cursorIndex !== null && <div className="flex items-center gap-1">
           <ZoomButton
             label="-"
             title="Zoom out"
@@ -583,7 +585,7 @@ function MapView({
             disabled={zoom === ZOOM_LEVELS[ZOOM_LEVELS.length - 1]}
             onClick={() => onZoom(1)}
           />
-        </div>
+        </div>}
       </div>
 
       {/* Colour is the SAFETY band and it means the same thing on every screen
@@ -622,7 +624,7 @@ function MapView({
       {/* The selected pool at a glance (portrait only). A playable one gets
           the heavier frame and the inverted tag: it is the answer to the
           question this screen exists to ask. */}
-      <div className={`tracker-selection bg-panel p-2 ${playable ? 'tracker-selection-playable border-ink shadow-hard border-2' : 'border-edge border'}`}>
+      {entry ? <div className={`tracker-selection bg-panel p-2 ${playable ? 'tracker-selection-playable border-ink shadow-hard border-2' : 'border-edge border'}`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <MapPin band={riskBand(entry.score.safety)} filtered={!entry.passes} playable={playable} />
@@ -636,7 +638,7 @@ function MapView({
           <PixelText role="micro">Safety {entry.score.safety}</PixelText>
           <PixelText role="micro">Heat {entry.score.heat}</PixelText>
         </div>
-      </div>
+      </div> : notice}
     </div>
   )
 }

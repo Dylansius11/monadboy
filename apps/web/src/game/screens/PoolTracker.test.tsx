@@ -222,12 +222,17 @@ describe('leaving the map', () => {
 
 describe('missing data, Gate 2.4', () => {
   it('zero passing pools renders the defined empty state, not a spinner', () => {
-    const { getByText, onBack, queryByRole } = renderTracker({
+    const { container, getByText, onBack, queryByRole, queryByTitle } = renderTracker({
       pools: [scoredPool({ failures: ['tvl-too-low'] })],
     })
 
     expect(getByText(/Nothing passed/i)).toBeInTheDocument()
     expect(queryByRole('progressbar')).not.toBeInTheDocument()
+    // The same map screen as every other read: the legend stays, the notice
+    // replaces the selected pool, and there is no cursor to zoom around.
+    expect(container.querySelector('.tracker-map-legend')).not.toBeNull()
+    expect(container.querySelector('.tracker-selection')).toBeNull()
+    expect(queryByTitle('Zoom in')).not.toBeInTheDocument()
 
     press('B')
     expect(onBack).toHaveBeenCalledTimes(1)
