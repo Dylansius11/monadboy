@@ -550,3 +550,5 @@ Proof files remain outside Git: demand-production-probe.json,
 demand-production-receipts.json, demand-release-ledger.json and demand-release-health.json.
 
 [V, 2026-10-11] A second 200 MON went from the BOT wallet into its Kuru margin with `sweep.ts --deposit-bot 200` (`0xbfdcf140967ce603c973607175f5f5b5f16f396d0cca6ef58759eb99c79f5521`, block 70321332, TESTNET): wallet 341.75 to 141.75 MON, margin 65 to 265 MON.
+
+[V, 2026-10-12] The owner hit TESTNET FUNDING LIMIT REACHED while recording: not out of funds (drip wallet 15.96 MON / 250 AUSD, 5 of 20 daily drips used) but the per-IP limit of 3 per 24 h (`PER_IP_DAILY` in `operations.ts`; three sent drips from one IP at 09:03, 09:13 and 09:54 UTC, then two `ip-limit` refusals). At his request the three counted rows for that IP hash were re-tagged `quota-reset:<hash prefix>` in the worker SQLite (address, amounts and tx hashes unchanged), which frees that IP for three more drips. The 20 per day total and the one-per-address rule were not touched.
