@@ -548,3 +548,5 @@ Health recovered green with live Envio after an initial not-yet-observed state.
 No new player maker fill, guaranteed book depth or24-hour availability is implied.
 Proof files remain outside Git: demand-production-probe.json,
 demand-production-receipts.json, demand-release-ledger.json and demand-release-health.json.
+
+[V, 2026-10-11] A second 200 MON went from the BOT wallet into its Kuru margin with `sweep.ts --deposit-bot 200` (`0xbfdcf140967ce603c973607175f5f5b5f16f396d0cca6ef58759eb99c79f5521`, block 70321332, TESTNET): wallet 341.75 to 141.75 MON, margin 65 to 265 MON.
